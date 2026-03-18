@@ -124,21 +124,85 @@
 
 ## Phase 4: DM・モデレーション・設定 — 未着手
 
-- [ ] ダイレクトメッセージ（ConversationListView, MessageThreadView, ChatViewModel）
-- [ ] コンテンツモデレーション（ModerationService, ContentWarningView）
-- [ ] 通報機能
-- [ ] テーマ切り替え（ライト/ダーク/システム）
-- [ ] 多言語対応（Localizable.xcstrings, 11言語）
-- [ ] 設定画面（SettingsView, SettingsViewModel）
+### 4-A: 投稿アクション補完（優先度：高）
+- [ ] **投稿削除** — 自分の投稿の三点メニューから削除（PostCardView + ThreadView）
+- [ ] **投稿の三点メニュー** — 翻訳（Google翻訳を外部ブラウザで開く）、リンクコピー、通報
+- [ ] **メンションオートコンプリート** — ComposeView で `@` 入力時に `searchActorsTypeahead` で候補表示
+
+### 4-B: 画像・動画添付（優先度：高）
+- [ ] **画像添付** — ComposeView: フォトライブラリ選択 + `uploadBlob` + プレビュー表示（最大4枚）
+- [ ] **画像 Alt テキスト入力** — 各画像に Alt テキストを設定するダイアログ
+- [ ] **動画添付** — ComposeView: フォトライブラリ選択 + `uploadBlob`（最大100MB, MP4/MOV等）
+
+### 4-C: コンテンツモデレーション（優先度：高）
+- [ ] **ラベル判定** — `moderatePost` / `moderateProfile` 相当のロジック実装
+- [ ] **投稿フィルタ** — `filter` 判定で投稿をタイムライン・検索から除外
+- [ ] **投稿ブラー** — `blur` 判定でオーバーレイ表示、「表示する」ボタンで解除
+- [ ] **メディアブラー** — 画像のみブラー（本文は表示）
+- [ ] **ContentWarningView** — モデレーション警告UI共通コンポーネント
+- [ ] **通報機能** — 投稿/ユーザーの通報（`com.atproto.moderation.createReport`、理由選択付き）
+
+### 4-D: 設定画面（優先度：中）
+- [ ] **設定画面** — SettingsView + SettingsViewModel
+- [ ] **テーマ切り替え** — ライト / ダーク / システム連動（現状はシステム連動のみ）
+- [ ] **投稿元表示（via）** — 投稿レコードにクライアント名を付与するオン/オフ設定
+  - `PostRecordCreate` に `via` フィールド追加（`app.bsky.feed.post` の `$type` + `createdAt` と同列）
+  - 実装: `"via": {"$type": "com.atproto.repo.applyWrites#create", ...}` ではなく、`record.createdAt` と同階層に `"langs"` と共に追加するシンプルな方式
+- [ ] **モデレーション設定** — 成人向けコンテンツ表示 ON/OFF、ラベル別設定（hide/warn/ignore）
+- [ ] **ポーリング間隔設定** — タイムライン自動更新の間隔（30〜120秒）
+
+### 4-E: プロフィール機能補完（優先度：中）
+- [ ] **プロフィール追加タブ** — 返信一覧 / いいね一覧 / メディア一覧
+  - `getAuthorFeed(filter: posts_with_replies)` / `getActorLikes` / `getAuthorFeed(filter: posts_with_media)`
+- [ ] **ピン留め投稿表示** — プロフィール先頭にピン留め投稿を表示
+- [ ] **プロフィール内検索** — `searchPosts(author: actor, q: query)` でタブ内絞り込み
+
+### 4-F: ダイレクトメッセージ（優先度：中）
+- [ ] **会話一覧** — `chat.bsky.convo.listConvos`、未読バッジ
+- [ ] **メッセージ送受信** — `chat.bsky.convo.getMessages` / `sendMessage`
+- [ ] **メッセージ削除** — `chat.bsky.convo.deleteMessageForSelf`
+- [ ] **新規会話作成** — `chat.bsky.convo.getConvoForMembers`（ユーザー検索から開始）
+- [ ] **既読処理** — `chat.bsky.convo.updateRead`
+- [ ] **会話ミュート/退出** — `muteConvo` / `leaveConvo`
+- [ ] **メッセージリクエスト承認** — `acceptConvo`
+- [ ] **自動更新** — 15秒ポーリング（メッセージ）、30秒ポーリング（未読数）
+
+### 4-G: 多言語対応（優先度：低）
+- [ ] **多言語対応** — Localizable.xcstrings（11言語: ja, en, pt, de, zh-TW, zh-CN, fr, ko, es, ru, id）
+  - デスクトップ版 `src/i18n/locales/*.json` を `.xcstrings` 形式に変換して流用
 
 ---
 
 ## Phase 5: BSAF・高度な機能 — 未着手
 
-- [ ] BSAF対応（BSAFService, BSAFSettingsView）
-- [ ] スレッドゲート / ポストゲート
-- [ ] 共有シート連携（Share Extension）
-- [ ] ディープリンク（Universal Links）
+### 5-A: BSAF対応（優先度：中）
+- [ ] **BSAF マスタートグル** — 設定画面でオン/オフ
+- [ ] **Bot 定義 JSON パーサー & バリデーター** — デスクトップ版 `bsaf.ts` のロジックを移植
+- [ ] **Bot 登録** — URL 入力で Bot 定義を fetch・登録
+- [ ] **Bot 登録解除** — 登録解除 + 自動アンフォロー
+- [ ] **動的フィルタ UI** — Bot 定義に基づくフィルタ選択肢の自動生成
+- [ ] **タイムライン BSAF フィルタリング** — AND 条件フィルタ
+- [ ] **重複投稿検出 & 折りたたみ** — 同一イベントの折りたたみ
+- [ ] **深刻度カラーボーダー表示** — BSAF 投稿の左ボーダー色
+- [ ] **BSAF タグ表示** — 投稿本文下にタグバッジ表示
+- [ ] **Bot Definition 自動更新チェック** — アプリ起動時に更新確認
+
+### 5-B: 投稿作成補完（優先度：中）
+- [ ] **スレッドゲート** — 返信制限設定（全員/メンション/フォロワー/フォロー中/不可）
+- [ ] **ポストゲート** — 引用制限設定（引用を許可しない）
+- [ ] **スレッド投稿** — 複数ポストを繋いで一括投稿
+
+### 5-C: モバイル固有機能（優先度：低）
+- [ ] **共有シート連携（受信）** — Share Extension: 他アプリからテキスト/URLを受け取り投稿作成画面を開く
+- [ ] **共有シート連携（送信）** — `UIActivityViewController` で投稿URLを共有
+- [ ] **ディープリンク** — Universal Links / カスタムURLスキーム（`kazahana://`）
+- [ ] **バックグラウンドポーリング** — `BGAppRefreshTask` による通知・タイムライン更新
+
+### 5-D: プロフィール追加機能（優先度：低）
+- [ ] **スターターパック閲覧** — `app.bsky.graph.getStarterPack` / `getActorStarterPacks`
+- [ ] **カスタムフィード一覧** — `app.bsky.feed.getActorFeeds`（プロフィールタブ）
+- [ ] **リスト一覧** — `app.bsky.graph.getLists`（プロフィールタブ）
+- [ ] **リストフィード閲覧** — `app.bsky.feed.getListFeed`
 
 ---
 
@@ -173,15 +237,20 @@
 
 ## 既知の課題・TODO
 
-- [ ] **画像添付**: ComposeView のフォトライブラリ選択・uploadBlob は未実装（Phase 2.5）
-- [ ] **メンション DID 解決**: RichTextParser.detectFacets でメンションを検出するが、resolveHandle による DID 解決は未実装。投稿時メンションのリンクが効かない
+- [ ] **画像添付**: ComposeView のフォトライブラリ選択・uploadBlob は未実装 → Phase 4-B
+- [ ] **メンション DID 解決**: RichTextParser.detectFacets でメンションを検出するが、resolveHandle による DID 解決は未実装。投稿時メンションのリンクが効かない → Phase 4-A（メンションオートコンプリートと同時実装予定）
 - [ ] **ブックマーク**: AT Protocol にネイティブブックマーク API がないため設計要検討
 - [ ] **画像読み込み**: 現在 `AsyncImage` を使用。Kingfisher or Nuke の導入を Phase 4 以降で検討
-- [ ] **バックグラウンドポーリング**: BGAppRefreshTask 未実装（Phase 4以降）
+- [ ] **バックグラウンドポーリング**: BGAppRefreshTask 未実装 → Phase 5-C
 - [ ] **Unit Tests**: テストは空のまま。Phase 4 以降でモデル・サービス層を追加予定
 - [ ] **Bundle ID**: 現在 Xcode デフォルト。`com.kazahana.app` への変更が必要（App Store 配布前）
 - [ ] **検索デバウンス**: SearchViewModel は Task キャンセルで対応しているが、厳密なデバウンス実装は未対応
-- [ ] **引用数タップ**: ThreadView の引用数は PostActorListView 非対応（app.bsky.feed.getQuotes API は未実装）
+- [ ] **引用数タップ**: ThreadView の引用数は PostActorListView 非対応（`app.bsky.feed.getQuotes` API は未実装）
+- [ ] **コンテンツモデレーション**: タイムライン・検索・プロフィールでのラベル判定・ブラー・フィルタが未実装 → Phase 4-C
+- [ ] **投稿削除**: 自分の投稿の三点メニューから削除する機能が未実装 → Phase 4-A
+- [ ] **投稿元表示（via）**: 設定に基づきレコードにクライアント名を付与する機能が未実装 → Phase 4-D
+- [ ] **DM（ダイレクトメッセージ）**: `chat.bsky.convo.*` API 全体が未実装 → Phase 4-F
+- [ ] **プロフィール追加タブ**: 返信/いいね/メディア一覧が未実装 → Phase 4-E
 
 ---
 
