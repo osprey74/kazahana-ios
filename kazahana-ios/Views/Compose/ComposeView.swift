@@ -65,9 +65,12 @@ struct ComposeView: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                // リプライ先プレビュー
+                // 返信先・引用元プレビュー（上部に統一表示）
                 if let replyTo = replyToPost {
-                    replyPreview(post: replyTo)
+                    referencePreview(post: replyTo, label: "返信先")
+                    Divider()
+                } else if let quoted = quotePost {
+                    referencePreview(post: quoted, label: "引用元")
                     Divider()
                 }
 
@@ -92,12 +95,6 @@ struct ComposeView: View {
                 if !selectedImages.isEmpty {
                     Divider()
                     imagePreviewRow
-                }
-
-                // 引用投稿プレビュー
-                if let quoted = quotePost {
-                    Divider()
-                    quotePreview(post: quoted)
                 }
 
                 // 文字数インジケーター
@@ -312,34 +309,19 @@ struct ComposeView: View {
 
     // MARK: - Subviews
 
-    private func quotePreview(post: PostView) -> some View {
-        HStack(alignment: .top, spacing: 10) {
-            AvatarView(url: post.author.avatar, size: 28)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(post.author.displayNameOrHandle)
-                    .font(.caption.weight(.semibold))
-                Text(post.record.text)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(2)
-            }
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .overlay(
-            RoundedRectangle(cornerRadius: 8)
-                .stroke(Color.secondary.opacity(0.3), lineWidth: 1)
-        )
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-    }
-
-    private func replyPreview(post: PostView) -> some View {
+    /// 返信先・引用元の共通プレビュー（上部に統一表示）
+    private func referencePreview(post: PostView, label: String) -> some View {
         HStack(alignment: .top, spacing: 10) {
             AvatarView(url: post.author.avatar, size: 36)
             VStack(alignment: .leading, spacing: 2) {
-                Text(post.author.displayNameOrHandle)
-                    .font(.footnote.weight(.semibold))
+                HStack(spacing: 4) {
+                    Text(label)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Text(post.author.displayNameOrHandle)
+                        .font(.footnote.weight(.semibold))
+                        .lineLimit(1)
+                }
                 Text(post.record.text)
                     .font(.footnote)
                     .foregroundStyle(.secondary)
