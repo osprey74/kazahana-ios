@@ -45,6 +45,12 @@ struct ComposeView: View {
     @State private var selectedVideo: SelectedVideo? = nil
     @State private var videoPickerItem: PhotosPickerItem? = nil
 
+    // スレッドゲート / ポストゲート
+    @State private var threadgateSetting: ThreadgateSetting = .everyone
+    @State private var disableEmbedding: Bool = false
+    @State private var showThreadgateSheet: Bool = false
+    @State private var showPostgateSheet: Bool = false
+
     // メンションオートコンプリート
     @State private var mentionCandidates: [ProfileViewBasic] = []
     @State private var mentionQuery: String? = nil   // nil = 非アクティブ
@@ -224,7 +230,7 @@ struct ComposeView: View {
             let detected = RichTextParser.detectFacets(in: text)
             let facets = RichTextParser.buildFacets(from: detected, resolvedMentions: resolvedMentions)
             let via = appSettings.showVia ? appSettings.viaName : nil
-            _ = try await postService.createPost(
+            let response = try await postService.createPost(
                 text: text,
                 facets: facets.isEmpty ? nil : facets,
                 replyTo: replyTarget,
@@ -233,6 +239,14 @@ struct ComposeView: View {
                 video: uploadedVideo,
                 via: via
             )
+            // スレッドゲート（返信制限）—— 返信投稿には設定不可
+            if replyTarget == nil && threadgateSetting != .everyone {
+                try? await postService.createThreadgate(postURI: response.uri, setting: threadgateSetting)
+            }
+            // ポストゲート（引用制限）
+            if disableEmbedding {
+                try? await postService.createPostgate(postURI: response.uri, disableEmbedding: true)
+            }
             dismiss()
         } catch {
             errorMessage = error.localizedDescription
@@ -717,6 +731,67 @@ struct ComposeView: View {
                     .foregroundStyle((!selectedImages.isEmpty || selectedVideo != nil) ? .tertiary : .secondary)
             }
             .disabled(!selectedImages.isEmpty || selectedVideo != nil)
+
+            // スレッドゲート（返信制限）—— 返信投稿では非表示
+            if replyTarget == nil {
+                // スレッドゲートボタン
+                Button {
+                    showThreadgateSheet = true
+                } label: {
+                    Image(systemName: threadgateSetting == .everyone
+                          ? "bubble.left.and.bubble.right"
+                          : "bubble.left.and.exclamationmark.bubble.right")
+                        .font(.system(size: 20))
+                        .foregroundStyle(threadgateSetting == .everyone ? Color.secondary : Color.accentColor)
+                }
+                .confirmationDialog(
+                    String(localized: "compose.threadgate.title"),
+                    isPresented: $showThreadgateSheet,
+                    titleVisibility: .visible
+                ) {
+                    ForEach(ThreadgateSetting.allCases, id: \.self) { setting in
+                        // 現在選択中の項目には先頭に ✓ を付けて判別できるようにする
+                        Button {
+                            threadgateSetting = setting
+                        } label: {
+                            Text(threadgateSetting == setting
+                                 ? "✓ \(setting.displayName)"
+                                 : setting.displayName)
+                        }
+                    }
+                    Button(String(localized: "common.cancel"), role: .cancel) {}
+                }
+
+                // ポストゲートボタン（引用制限）
+                Button {
+                    showPostgateSheet = true
+                } label: {
+                    Image(systemName: disableEmbedding ? "quote.bubble.fill" : "quote.bubble")
+                        .font(.system(size: 20))
+                        .foregroundStyle(disableEmbedding ? Color.accentColor : Color.secondary)
+                }
+                .confirmationDialog(
+                    String(localized: "compose.postgate.title"),
+                    isPresented: $showPostgateSheet,
+                    titleVisibility: .visible
+                ) {
+                    Button {
+                        disableEmbedding = false
+                    } label: {
+                        Text(!disableEmbedding
+                             ? "✓ \(String(localized: "compose.postgate.allow"))"
+                             : String(localized: "compose.postgate.allow"))
+                    }
+                    Button {
+                        disableEmbedding = true
+                    } label: {
+                        Text(disableEmbedding
+                             ? "✓ \(String(localized: "compose.postgate.disable"))"
+                             : String(localized: "compose.postgate.disable"))
+                    }
+                    Button(String(localized: "common.cancel"), role: .cancel) {}
+                }
+            }
 
             Spacer()
         }

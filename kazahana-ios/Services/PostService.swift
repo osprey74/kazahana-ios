@@ -203,6 +203,40 @@ final class PostService {
         return response.posts
     }
 
+    // MARK: - スレッドゲート / ポストゲート
+
+    /// スレッドゲートを作成する（投稿直後に呼ぶ）
+    /// - Parameters:
+    ///   - postURI: 投稿の AT-URI（createPost の戻り値 .uri）
+    ///   - setting: 返信制限設定
+    func createThreadgate(postURI: String, setting: ThreadgateSetting) async throws {
+        guard setting != .everyone else { return } // everyone は制限なしなのでレコード不要
+        guard let did = client.currentSession?.did else { throw ATProtoError.unauthorized }
+        // AT-URI の末尾が rkey（投稿と同じ rkey を使う仕様）
+        let rkey = postURI.components(separatedBy: "/").last ?? ""
+        let record = ThreadgateCreate(
+            post: postURI,
+            allow: setting.rules,
+            createdAt: ISO8601DateFormatter().string(from: Date())
+        )
+        let requestWithRkey = CreateRecordRequestWithRkey(repo: did, collection: "app.bsky.feed.threadgate", rkey: rkey, record: record)
+        let _: CreateRecordResponse = try await client.post(nsid: "com.atproto.repo.createRecord", body: requestWithRkey)
+    }
+
+    /// ポストゲートを作成する（引用禁止）
+    func createPostgate(postURI: String, disableEmbedding: Bool) async throws {
+        guard disableEmbedding else { return }
+        guard let did = client.currentSession?.did else { throw ATProtoError.unauthorized }
+        let rkey = postURI.components(separatedBy: "/").last ?? ""
+        let record = PostgateCreate(
+            post: postURI,
+            embeddingRules: [PostgateEmbeddingRule()],
+            createdAt: ISO8601DateFormatter().string(from: Date())
+        )
+        let requestWithRkey = CreateRecordRequestWithRkey(repo: did, collection: "app.bsky.feed.postgate", rkey: rkey, record: record)
+        let _: CreateRecordResponse = try await client.post(nsid: "com.atproto.repo.createRecord", body: requestWithRkey)
+    }
+
     // MARK: - 通報
 
     func reportPost(uri: String, cid: String, reasonType: ReportReasonType, reason: String?) async throws {
@@ -223,6 +257,14 @@ final class PostService {
 struct CreateRecordRequest<R: Encodable>: Encodable {
     let repo: String
     let collection: String
+    let record: R
+}
+
+/// rkey 指定付き createRecord（スレッドゲート・ポストゲートは投稿と同じ rkey を使う仕様）
+struct CreateRecordRequestWithRkey<R: Encodable>: Encodable {
+    let repo: String
+    let collection: String
+    let rkey: String
     let record: R
 }
 

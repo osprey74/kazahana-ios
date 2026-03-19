@@ -1,6 +1,6 @@
 # kazahana-ios 開発タスク・進捗記録
 
-最終更新: 2026-03-19 (Phase 4 完了: ポーリング間隔設定・DM検索履歴・タイムラインUI改善)
+最終更新: 2026-03-20 (Phase 5-B: スレッドゲート・ポストゲート実装)
 
 ---
 
@@ -11,7 +11,7 @@
 - Phase 3 (通知・プロフィール・検索): 6/6 ✅ 完了
 - Phase 3.5 (UX改善・バグ修正): 12/12 ✅ 完了
 - Phase 4 (DM・モデレーション・設定): 28/28 ✅ 完了
-- Phase 5 (BSAF・高度な機能): 0/4
+- Phase 5 (BSAF・高度な機能): 2/4
 
 ---
 
@@ -260,8 +260,14 @@
 - [ ] **Bot Definition 自動更新チェック** — アプリ起動時に更新確認
 
 ### 5-B: 投稿作成補完（優先度：中）
-- [ ] **スレッドゲート** — 返信制限設定（全員/メンション/フォロワー/フォロー中/不可）
-- [ ] **ポストゲート** — 引用制限設定（引用を許可しない）
+- [x] **スレッドゲート** — 返信制限設定（全員/メンション/フォロワー/フォロー中/不可）
+  - `ThreadgateSetting` enum (7種) + `ThreadgateRule` + `ThreadgateCreate` モデル追加（`Post.swift`）
+  - `PostService.createThreadgate(postURI:setting:)` — 投稿と同 rkey で `app.bsky.feed.threadgate` レコード作成
+  - `ComposeView`: ボトムバーに返信制限ボタン追加（confirmationDialog で選択・現在値に ✓ 表示・制限中はアクセントカラー）
+- [x] **ポストゲート** — 引用制限設定（引用を許可しない）
+  - `PostgateCreate` + `PostgateEmbeddingRule` モデル追加（`Post.swift`）
+  - `PostService.createPostgate(postURI:disableEmbedding:)` — `app.bsky.feed.postgate` レコード作成
+  - `ComposeView`: ボトムバーに引用制限ボタン追加（confirmationDialog で「引用を許可する / 引用を制限する」選択・現在値に ✓ 表示・制限中はアクセントカラー）
 - [ ] **スレッド投稿** — 複数ポストを繋いで一括投稿
 
 ### 5-C: モバイル固有機能（優先度：低）

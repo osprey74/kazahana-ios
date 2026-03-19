@@ -1123,6 +1123,171 @@
         }
       }
     },
+    "compose.threadgate.title" : {
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Wer kann antworten?" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Who can reply?" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "¿Quién puede responder?" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Qui peut répondre ?" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Siapa yang bisa membalas?" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "返信できるユーザー" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "댓글을 달 수 있는 사람" } },
+        "pt" : { "stringUnit" : { "state" : "translated", "value" : "Quem pode responder?" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Кто может отвечать?" } },
+        "zh-CN" : { "stringUnit" : { "state" : "translated", "value" : "谁可以回复？" } },
+        "zh-TW" : { "stringUnit" : { "state" : "translated", "value" : "誰可以回覆？" } }
+      }
+    },
+    "compose.threadgate.everyone" : {
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Alle" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Everyone" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Todos" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Tout le monde" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Semua orang" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "全員" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "모든 사람" } },
+        "pt" : { "stringUnit" : { "state" : "translated", "value" : "Todos" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Все" } },
+        "zh-CN" : { "stringUnit" : { "state" : "translated", "value" : "所有人" } },
+        "zh-TW" : { "stringUnit" : { "state" : "translated", "value" : "所有人" } }
+      }
+    },
+    "compose.threadgate.noOne" : {
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Niemand" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "No one" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Nadie" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Personne" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Tidak ada" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "誰も返信できない" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "아무도 안 됨" } },
+        "pt" : { "stringUnit" : { "state" : "translated", "value" : "Ninguém" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Никто" } },
+        "zh-CN" : { "stringUnit" : { "state" : "translated", "value" : "没有人" } },
+        "zh-TW" : { "stringUnit" : { "state" : "translated", "value" : "沒有人" } }
+      }
+    },
+    "compose.threadgate.mention" : {
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Erwähnte Nutzer" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Mentioned users" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Usuarios mencionados" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Utilisateurs mentionnés" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Pengguna yang disebut" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "メンションしたユーザー" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "멘션한 사용자" } },
+        "pt" : { "stringUnit" : { "state" : "translated", "value" : "Usuários mencionados" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Упомянутые пользователи" } },
+        "zh-CN" : { "stringUnit" : { "state" : "translated", "value" : "被提及的用户" } },
+        "zh-TW" : { "stringUnit" : { "state" : "translated", "value" : "被提及的用戶" } }
+      }
+    },
+    "compose.threadgate.follower" : {
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Follower" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Followers" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Seguidores" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Abonnés" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Pengikut" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "フォロワー" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "팔로워" } },
+        "pt" : { "stringUnit" : { "state" : "translated", "value" : "Seguidores" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Подписчики" } },
+        "zh-CN" : { "stringUnit" : { "state" : "translated", "value" : "关注者" } },
+        "zh-TW" : { "stringUnit" : { "state" : "translated", "value" : "跟隨者" } }
+      }
+    },
+    "compose.threadgate.following" : {
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Folge ich" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Following" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Siguiendo" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Abonnements" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Mengikuti" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "フォロー中のユーザー" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "팔로잉" } },
+        "pt" : { "stringUnit" : { "state" : "translated", "value" : "Seguindo" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Отслеживаемые" } },
+        "zh-CN" : { "stringUnit" : { "state" : "translated", "value" : "正在关注" } },
+        "zh-TW" : { "stringUnit" : { "state" : "translated", "value" : "正在跟隨" } }
+      }
+    },
+    "compose.threadgate.mentionAndFollower" : {
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Erwähnte + Follower" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Mentioned + Followers" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Mencionados + Seguidores" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Mentionnés + Abonnés" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Disebut + Pengikut" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "メンション + フォロワー" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "멘션 + 팔로워" } },
+        "pt" : { "stringUnit" : { "state" : "translated", "value" : "Mencionados + Seguidores" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Упомянутые + Подписчики" } },
+        "zh-CN" : { "stringUnit" : { "state" : "translated", "value" : "提及 + 关注者" } },
+        "zh-TW" : { "stringUnit" : { "state" : "translated", "value" : "提及 + 跟隨者" } }
+      }
+    },
+    "compose.threadgate.mentionAndFollowing" : {
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Erwähnte + Folge ich" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Mentioned + Following" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Mencionados + Siguiendo" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Mentionnés + Abonnements" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Disebut + Mengikuti" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "メンション + フォロー中" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "멘션 + 팔로잉" } },
+        "pt" : { "stringUnit" : { "state" : "translated", "value" : "Mencionados + Seguindo" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Упомянутые + Отслеживаемые" } },
+        "zh-CN" : { "stringUnit" : { "state" : "translated", "value" : "提及 + 正在关注" } },
+        "zh-TW" : { "stringUnit" : { "state" : "translated", "value" : "提及 + 正在跟隨" } }
+      }
+    },
+    "compose.postgate.title" : {
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Zitat-Einschränkung" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Quote restriction" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Restricción de citas" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Restriction des citations" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Pembatasan kutipan" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "引用制限" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "인용 제한" } },
+        "pt" : { "stringUnit" : { "state" : "translated", "value" : "Restrição de citações" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Ограничение цитирования" } },
+        "zh-CN" : { "stringUnit" : { "state" : "translated", "value" : "引用限制" } },
+        "zh-TW" : { "stringUnit" : { "state" : "translated", "value" : "引用限制" } }
+      }
+    },
+    "compose.postgate.allow" : {
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Zitate erlauben" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Allow quoting" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Permitir citas" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Autoriser les citations" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Izinkan kutipan" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "引用を許可する" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "인용 허용" } },
+        "pt" : { "stringUnit" : { "state" : "translated", "value" : "Permitir citações" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Разрешить цитирование" } },
+        "zh-CN" : { "stringUnit" : { "state" : "translated", "value" : "允许引用" } },
+        "zh-TW" : { "stringUnit" : { "state" : "translated", "value" : "允許引用" } }
+      }
+    },
+    "compose.postgate.disable" : {
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Zitate deaktivieren" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Disable quoting" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Deshabilitar citas" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Désactiver les citations" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Nonaktifkan kutipan" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "引用を制限する" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "인용 비활성화" } },
+        "pt" : { "stringUnit" : { "state" : "translated", "value" : "Desativar citações" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Запретить цитирование" } },
+        "zh-CN" : { "stringUnit" : { "state" : "translated", "value" : "禁止引用" } },
+        "zh-TW" : { "stringUnit" : { "state" : "translated", "value" : "禁止引用" } }
+      }
+    },
     "compose.cancel" : {
       "localizations" : {
         "de" : {

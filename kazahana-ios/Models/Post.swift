@@ -480,3 +480,123 @@ struct RepostSubject: Codable {
     let uri: String?
     let cid: String?
 }
+
+// MARK: - スレッドゲート（app.bsky.feed.threadgate）
+
+/// スレッドゲート作成リクエスト
+struct ThreadgateCreate: Encodable {
+    let post: String           // 対象投稿の AT-URI
+    let allow: [ThreadgateRule]?   // nil = 制限なし, 空配列 = 全員禁止
+    let createdAt: String
+
+    enum CodingKeys: String, CodingKey {
+        case post, allow, createdAt
+        case type = "$type"
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode("app.bsky.feed.threadgate", forKey: .type)
+        try container.encode(post, forKey: .post)
+        try container.encodeIfPresent(allow, forKey: .allow)
+        try container.encode(createdAt, forKey: .createdAt)
+    }
+}
+
+/// スレッドゲートのルール（多態性：$type で種類を判別）
+enum ThreadgateRule: Encodable {
+    case mention    // メンションされたユーザー
+    case follower   // フォロワー
+    case following  // フォロー中のユーザー
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        switch self {
+        case .mention:   try container.encode("app.bsky.feed.threadgate#mentionRule",   forKey: .type)
+        case .follower:  try container.encode("app.bsky.feed.threadgate#followerRule",  forKey: .type)
+        case .following: try container.encode("app.bsky.feed.threadgate#followingRule", forKey: .type)
+        }
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case type = "$type"
+    }
+}
+
+/// スレッドゲートの UI 設定値
+enum ThreadgateSetting: CaseIterable, Equatable {
+    case everyone       // 制限なし（デフォルト）
+    case noOne          // 全員禁止
+    case mention        // メンションのみ
+    case follower       // フォロワーのみ
+    case following      // フォロー中のみ
+    case mentionAndFollower   // メンション + フォロワー
+    case mentionAndFollowing  // メンション + フォロー中
+
+    /// nil = 制限なし（everyone）、空配列 = 全員禁止（noOne）
+    var rules: [ThreadgateRule]? {
+        switch self {
+        case .everyone:             return nil
+        case .noOne:                return []
+        case .mention:              return [.mention]
+        case .follower:             return [.follower]
+        case .following:            return [.following]
+        case .mentionAndFollower:   return [.mention, .follower]
+        case .mentionAndFollowing:  return [.mention, .following]
+        }
+    }
+
+    var displayName: String {
+        switch self {
+        case .everyone:             return String(localized: "compose.threadgate.everyone")
+        case .noOne:                return String(localized: "compose.threadgate.noOne")
+        case .mention:              return String(localized: "compose.threadgate.mention")
+        case .follower:             return String(localized: "compose.threadgate.follower")
+        case .following:            return String(localized: "compose.threadgate.following")
+        case .mentionAndFollower:   return String(localized: "compose.threadgate.mentionAndFollower")
+        case .mentionAndFollowing:  return String(localized: "compose.threadgate.mentionAndFollowing")
+        }
+    }
+
+    var iconName: String {
+        switch self {
+        case .everyone:   return "bubble.left.and.bubble.right"
+        case .noOne:      return "bubble.left.and.exclamationmark.bubble.right"
+        default:          return "bubble.left.and.bubble.right.fill"
+        }
+    }
+}
+
+// MARK: - ポストゲート（app.bsky.feed.postgate）
+
+/// ポストゲート作成リクエスト
+struct PostgateCreate: Encodable {
+    let post: String
+    let embeddingRules: [PostgateEmbeddingRule]?
+    let createdAt: String
+
+    enum CodingKeys: String, CodingKey {
+        case post, embeddingRules, createdAt
+        case type = "$type"
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode("app.bsky.feed.postgate", forKey: .type)
+        try container.encode(post, forKey: .post)
+        try container.encodeIfPresent(embeddingRules, forKey: .embeddingRules)
+        try container.encode(createdAt, forKey: .createdAt)
+    }
+}
+
+/// 引用禁止ルール（app.bsky.feed.postgate#disableRule）
+struct PostgateEmbeddingRule: Encodable {
+    enum CodingKeys: String, CodingKey {
+        case type = "$type"
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode("app.bsky.feed.postgate#disableRule", forKey: .type)
+    }
+}
