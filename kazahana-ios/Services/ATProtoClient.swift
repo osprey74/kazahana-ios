@@ -203,6 +203,11 @@ final class ATProtoClient {
 
     // MARK: - Token Refresh
 
+    /// 外部から呼び出し可能なトークンリフレッシュ（起動時など）
+    func refreshSessionPublic() async throws {
+        try await refreshToken()
+    }
+
     private func refreshToken() async throws {
         guard let session = currentSession else {
             throw ATProtoError.unauthorized

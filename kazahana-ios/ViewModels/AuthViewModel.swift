@@ -36,6 +36,24 @@ final class AuthViewModel {
                 self?.isLoggedIn = session != nil
             }
         }
+
+        // 保存済みセッションがある場合、起動時にリフレッシュを試みる
+        if client.currentSession != nil {
+            Task {
+                await refreshSessionOnLaunch()
+            }
+        }
+    }
+
+    /// 起動時のトークンリフレッシュ（サイレント失敗 → ログアウト）
+    private func refreshSessionOnLaunch() async {
+        do {
+            try await client.refreshSessionPublic()
+        } catch {
+            // リフレッシュトークンも無効な場合はログアウト扱い
+            await MainActor.run { isLoggedIn = false }
+            client.updateSession(nil)
+        }
     }
 
     // MARK: - Actions
