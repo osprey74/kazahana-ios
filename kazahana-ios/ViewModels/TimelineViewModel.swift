@@ -24,6 +24,9 @@ final class TimelineViewModel {
     private var cursor: String? = nil
     private var hasMore: Bool = true
 
+    // ポーリング
+    private var pollingTask: Task<Void, Never>? = nil
+
     // MARK: - Dependencies
 
     private let feedService: FeedService
@@ -125,6 +128,28 @@ final class TimelineViewModel {
     @MainActor
     func removePost(uri: String) {
         posts.removeAll { $0.post.uri == uri }
+    }
+
+    // MARK: - ポーリング
+
+    /// 自動更新ポーリングを開始する（指定間隔で refresh を繰り返す）
+    @MainActor
+    func startPolling(intervalSeconds: Int) {
+        stopPolling()
+        pollingTask = Task { [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(intervalSeconds))
+                guard !Task.isCancelled, let self else { break }
+                await self.refresh()
+            }
+        }
+    }
+
+    /// ポーリングを停止する
+    @MainActor
+    func stopPolling() {
+        pollingTask?.cancel()
+        pollingTask = nil
     }
 
     // MARK: - Private

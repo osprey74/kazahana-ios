@@ -32,10 +32,34 @@ final class AppSettings {
         }
     }
 
+    // MARK: - ポーリング間隔設定
+
+    /// タイムライン自動更新の間隔（秒）
+    enum PollingInterval: Int, CaseIterable {
+        case sec30  = 30
+        case sec60  = 60
+        case sec90  = 90
+        case sec120 = 120
+
+        var displayName: String {
+            switch self {
+            case .sec30:  return String(localized: "settings.polling.30s")
+            case .sec60:  return String(localized: "settings.polling.60s")
+            case .sec90:  return String(localized: "settings.polling.90s")
+            case .sec120: return String(localized: "settings.polling.120s")
+            }
+        }
+    }
+
     // MARK: - 設定値
 
     var theme: Theme {
         didSet { UserDefaults.standard.set(theme.rawValue, forKey: "theme") }
+    }
+
+    /// タイムライン自動更新の間隔
+    var timelinePollingInterval: PollingInterval {
+        didSet { UserDefaults.standard.set(timelinePollingInterval.rawValue, forKey: "timelinePollingInterval") }
     }
 
     /// 投稿元（via）をレコードに付与するか
@@ -158,6 +182,8 @@ final class AppSettings {
     init() {
         let themeRaw = UserDefaults.standard.string(forKey: "theme") ?? Theme.system.rawValue
         self.theme = Theme(rawValue: themeRaw) ?? .system
+        let pollingRaw = UserDefaults.standard.integer(forKey: "timelinePollingInterval")
+        self.timelinePollingInterval = PollingInterval(rawValue: pollingRaw) ?? .sec60
         self.showVia = UserDefaults.standard.object(forKey: "showVia") as? Bool ?? false
         self.adultContentEnabled = UserDefaults.standard.object(forKey: "adultContentEnabled") as? Bool ?? false
         self.claudeApiKey = UserDefaults.standard.string(forKey: "claudeApiKey") ?? ""

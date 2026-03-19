@@ -15,7 +15,11 @@ struct NewConversationView: View {
     @State private var isCreating = false
     @State private var errorMessage: String?
     @State private var searchTask: Task<Void, Never>?
+    @State private var dmSearchHistory: [String] = []
     @Environment(\.dismiss) private var dismiss
+
+    private static let historyKey = "dmUserSearchHistory"
+    private static let historyLimit = 20
 
     var body: some View {
         NavigationStack {
@@ -23,12 +27,16 @@ struct NewConversationView: View {
                 if isSearching {
                     HStack { Spacer(); ProgressView(); Spacer() }
                         .listRowSeparator(.hidden)
-                } else if results.isEmpty && !searchText.isEmpty {
+                } else if searchText.isEmpty {
+                    // 検索ワード未入力時は履歴表示
+                    historySection
+                } else if results.isEmpty {
                     ContentUnavailableView.search(text: searchText)
                         .listRowSeparator(.hidden)
                 } else {
                     ForEach(results, id: \.did) { actor in
                         Button {
+                            addToHistory(searchText)
                             startConversation(with: actor)
                         } label: {
                             HStack(spacing: 12) {
@@ -78,7 +86,90 @@ struct NewConversationView: View {
             } message: {
                 if let msg = errorMessage { Text(msg) }
             }
+            .onAppear {
+                loadHistory()
+            }
         }
+    }
+
+    // MARK: - 履歴 UI
+
+    @ViewBuilder
+    private var historySection: some View {
+        if dmSearchHistory.isEmpty {
+            VStack(spacing: 12) {
+                Image(systemName: "clock")
+                    .font(.largeTitle)
+                    .foregroundStyle(.secondary)
+                Text(String(localized: "search.noHistory"))
+                    .foregroundStyle(.secondary)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.top, 40)
+            .listRowSeparator(.hidden)
+        } else {
+            Section {
+                ForEach(dmSearchHistory, id: \.self) { term in
+                    Button {
+                        searchText = term
+                    } label: {
+                        HStack {
+                            Image(systemName: "clock")
+                                .foregroundStyle(.secondary)
+                                .frame(width: 20)
+                            Text(term)
+                                .foregroundStyle(.primary)
+                            Spacer()
+                        }
+                    }
+                    .buttonStyle(.plain)
+                }
+                .onDelete { offsets in
+                    deleteHistory(at: offsets)
+                }
+            } header: {
+                HStack {
+                    Text(String(localized: "search.history"))
+                    Spacer()
+                    Button(String(localized: "search.clearAll")) {
+                        clearAllHistory()
+                    }
+                    .font(.caption)
+                    .foregroundStyle(.red)
+                }
+            }
+        }
+    }
+
+    // MARK: - 履歴ロジック
+
+    private func loadHistory() {
+        dmSearchHistory = UserDefaults.standard.stringArray(forKey: Self.historyKey) ?? []
+    }
+
+    private func saveHistory() {
+        UserDefaults.standard.set(dmSearchHistory, forKey: Self.historyKey)
+    }
+
+    private func addToHistory(_ term: String) {
+        let trimmed = term.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else { return }
+        dmSearchHistory.removeAll { $0 == trimmed }
+        dmSearchHistory.insert(trimmed, at: 0)
+        if dmSearchHistory.count > Self.historyLimit {
+            dmSearchHistory = Array(dmSearchHistory.prefix(Self.historyLimit))
+        }
+        saveHistory()
+    }
+
+    private func deleteHistory(at offsets: IndexSet) {
+        dmSearchHistory.remove(atOffsets: offsets)
+        saveHistory()
+    }
+
+    private func clearAllHistory() {
+        dmSearchHistory.removeAll()
+        saveHistory()
     }
 
     // MARK: - Search

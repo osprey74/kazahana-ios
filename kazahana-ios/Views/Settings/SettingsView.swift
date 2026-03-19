@@ -23,6 +23,11 @@ struct SettingsView: View {
                             Text(theme.displayName).tag(theme)
                         }
                     }
+                    Picker(String(localized: "settings.pollingInterval"), selection: $settings.timelinePollingInterval) {
+                        ForEach(AppSettings.PollingInterval.allCases, id: \.self) { interval in
+                            Text(interval.displayName).tag(interval)
+                        }
+                    }
                 }
 
                 // MARK: - 言語設定

@@ -1,6 +1,6 @@
 # kazahana-ios 開発タスク・進捗記録
 
-最終更新: 2026-03-19 (DM 実装完了)
+最終更新: 2026-03-19 (Phase 4 完了: ポーリング間隔設定・DM検索履歴・タイムラインUI改善)
 
 ---
 
@@ -10,7 +10,7 @@
 - Phase 2 (コア機能): 8/8 ✅ 完了
 - Phase 3 (通知・プロフィール・検索): 6/6 ✅ 完了
 - Phase 3.5 (UX改善・バグ修正): 12/12 ✅ 完了
-- Phase 4 (DM・モデレーション・設定): 27/28
+- Phase 4 (DM・モデレーション・設定): 28/28 ✅ 完了
 - Phase 5 (BSAF・高度な機能): 0/4
 
 ---
@@ -182,7 +182,15 @@
 - [x] **検索履歴** — 検索履歴の永続化（UserDefaults・最大20件）、個別削除・一括削除
   - `SearchViewModel`: `searchHistory` / `addToHistory` / `deleteHistory(at:)` / `clearAllHistory()`
   - `SearchView`: クエリ空時に履歴一覧表示（タップで再検索・スワイプ削除・一括削除ボタン）
-- [ ] **ポーリング間隔設定** — タイムライン自動更新の間隔（30〜120秒）
+- [x] **ポーリング間隔設定** — タイムライン自動更新の間隔（30〜120秒）
+  - `AppSettings.PollingInterval` enum (30/60/90/120秒、デフォルト60秒) + `UserDefaults` 永続化
+  - `TimelineViewModel`: `startPolling(intervalSeconds:)` / `stopPolling()` 追加（Task ベース）
+  - `TimelineView`: `.task` でポーリング開始、`.onChange` で設定変更時に即時反映
+  - `SettingsView`: 表示設定セクションに「自動更新の間隔」Picker 追加
+- [x] **DM 新規会話作成 — 検索履歴** — `NewConversationView` にユーザー検索履歴機能追加
+  - `UserDefaults` 永続化（最大20件）、個別削除（スワイプ）、一括削除
+  - 未入力時に履歴一覧表示（タップで再検索）
+- [x] **タイムライン再読み込みボタン除去** — 自動ポーリングで代替のため右上ボタンを削除
 
 ### 4-E: プロフィール機能補完（優先度：中）
 - [x] **プロフィール追加タブ** — 返信一覧 / いいね一覧 / メディア一覧

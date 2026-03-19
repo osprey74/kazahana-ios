@@ -7,6 +7,7 @@ import SwiftUI
 struct TimelineView: View {
 
     @Environment(AuthViewModel.self) private var authVM
+    @Environment(AppSettings.self) private var settings
     @State private var viewModel: TimelineViewModel
     @State private var showCompose: Bool = false
     @State private var replyToPost: PostView? = nil
@@ -67,13 +68,7 @@ struct TimelineView: View {
                         }
                     }
                 }
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button {
-                        Task { await viewModel.refresh() }
-                    } label: {
-                        Image(systemName: "arrow.clockwise")
-                    }
-                }
+
             }
             .sheet(isPresented: $showFeedSelector) {
                 FeedSelectorView(viewModel: viewModel, isPresented: $showFeedSelector)
@@ -102,6 +97,10 @@ struct TimelineView: View {
         .task {
             await viewModel.loadInitial()
             await viewModel.loadSavedFeeds()
+            viewModel.startPolling(intervalSeconds: settings.timelinePollingInterval.rawValue)
+        }
+        .onChange(of: settings.timelinePollingInterval) { _, newInterval in
+            viewModel.startPolling(intervalSeconds: newInterval.rawValue)
         }
     }
 
