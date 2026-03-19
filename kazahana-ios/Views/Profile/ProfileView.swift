@@ -15,11 +15,8 @@ struct ProfileScreenView: View {
     @State private var showCompose = false
     @State private var quotePost: PostView? = nil
     @State private var replyToPost: PostView? = nil
-    /// スクロール量（0 = 最上部）
-    @State private var scrollOffset: CGFloat = 0
-
-    /// コンパクトヘッダー表示フラグ（少しでもスクロールしたら表示）
-    private var showCompact: Bool { scrollOffset > 8 }
+    /// コンパクトヘッダー表示フラグ（スクロール開始後に true）
+    @State private var showCompact: Bool = false
 
     var body: some View {
         Group {
@@ -142,7 +139,14 @@ struct ProfileScreenView: View {
             }
             .coordinateSpace(name: "profileScroll")
             .onPreferenceChange(ScrollOffsetPreferenceKey.self) { offset in
-                scrollOffset = offset
+                let compact = offset > 8
+                DispatchQueue.main.async {
+                    if showCompact != compact {
+                        withAnimation(.easeInOut(duration: 0.15)) {
+                            showCompact = compact
+                        }
+                    }
+                }
             }
             .refreshable {
                 await vm.refresh()
@@ -158,7 +162,6 @@ struct ProfileScreenView: View {
                 }
                 .background(Color(.systemBackground))
                 .transition(.opacity)
-                .animation(.easeInOut(duration: 0.15), value: showCompact)
             }
         }
         .overlay(alignment: .bottomTrailing) {
