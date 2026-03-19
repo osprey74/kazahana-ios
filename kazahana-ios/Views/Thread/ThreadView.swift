@@ -177,8 +177,9 @@ struct ThreadView: View {
                 }
             }
 
-            // langs / via
-            if post.record.via != nil || !(post.record.langs ?? []).isEmpty {
+            // langs / via / モデレーションラベル
+            let activeLabels = focusedActiveLabels(post: post)
+            if post.record.via != nil || !(post.record.langs ?? []).isEmpty || !activeLabels.isEmpty {
                 HStack(spacing: 4) {
                     if let langs = post.record.langs, !langs.isEmpty {
                         Text(langs.joined(separator: ", "))
@@ -192,6 +193,14 @@ struct ThreadView: View {
                         Text("via \(via)")
                             .font(.caption2)
                             .foregroundStyle(.tertiary)
+                    }
+                    ForEach(activeLabels, id: \.self) { label in
+                        Text(focusedLabelBadgeName(label))
+                            .font(.caption2)
+                            .foregroundStyle(.orange)
+                            .padding(.horizontal, 4)
+                            .padding(.vertical, 1)
+                            .background(Color.orange.opacity(0.12), in: RoundedRectangle(cornerRadius: 3))
                     }
                 }
             }
@@ -390,6 +399,24 @@ struct ThreadView: View {
     }
 
     // MARK: - Helpers
+
+    private func focusedActiveLabels(post: PostView) -> [String] {
+        let systemLabels: Set<String> = ["!hide", "!warn", "!no-unauthenticated"]
+        return (post.labels ?? [])
+            .filter { $0.neg != true && !systemLabels.contains($0.val) }
+            .map { $0.val }
+    }
+
+    private func focusedLabelBadgeName(_ val: String) -> String {
+        switch val {
+        case "porn":          return "ポルノ"
+        case "sexual":        return "性的"
+        case "nudity":        return "ヌード"
+        case "graphic-media": return "グロ画像"
+        case "gore":          return "暴力"
+        default:              return val
+        }
+    }
 
     private func countItem(count: Int, label: String) -> some View {
         HStack(spacing: 4) {

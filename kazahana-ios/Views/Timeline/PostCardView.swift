@@ -103,8 +103,8 @@ struct PostCardView: View {
                                 replyIndicator(parentUri: parentUri)
                             }
 
-                            // langs / via ラベル
-                            if post.record.via != nil || !(post.record.langs ?? []).isEmpty {
+                            // langs / via / モデレーションラベル
+                            if post.record.via != nil || !(post.record.langs ?? []).isEmpty || !activeLabels.isEmpty {
                                 langsViaRow
                             }
 
@@ -185,6 +185,33 @@ struct PostCardView: View {
                     .font(.caption2)
                     .foregroundStyle(.tertiary)
             }
+            ForEach(activeLabels, id: \.self) { label in
+                Text(labelBadgeName(label))
+                    .font(.caption2)
+                    .foregroundStyle(.orange)
+                    .padding(.horizontal, 4)
+                    .padding(.vertical, 1)
+                    .background(Color.orange.opacity(0.12), in: RoundedRectangle(cornerRadius: 3))
+            }
+        }
+    }
+
+    /// 表示するモデレーションラベル値（neg=true・システムラベルを除外）
+    private var activeLabels: [String] {
+        let systemLabels: Set<String> = ["!hide", "!warn", "!no-unauthenticated"]
+        return (post.labels ?? [])
+            .filter { $0.neg != true && !systemLabels.contains($0.val) }
+            .map { $0.val }
+    }
+
+    private func labelBadgeName(_ val: String) -> String {
+        switch val {
+        case "porn":          return "ポルノ"
+        case "sexual":        return "性的"
+        case "nudity":        return "ヌード"
+        case "graphic-media": return "グロ画像"
+        case "gore":          return "暴力"
+        default:              return val
         }
     }
 
