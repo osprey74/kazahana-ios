@@ -29,7 +29,7 @@ struct SettingsView: View {
                 } header: {
                     Text("投稿")
                 } footer: {
-                    Text("オンにすると投稿に「\(settings.viaName)」というクライアント名が付与されます。")
+                    Text("オンにすると投稿レコードに $via: \"\(settings.viaName)\" が付与されます。")
                 }
 
                 // MARK: - アカウント

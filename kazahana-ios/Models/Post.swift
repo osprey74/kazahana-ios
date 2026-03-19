@@ -302,14 +302,16 @@ struct PostRecordCreate: Encodable {
 
     enum CodingKeys: String, CodingKey {
         case type = "$type"
-        case text, createdAt, langs, facets, reply, embed, via
+        case text, createdAt, langs, facets, reply, embed
+        case via = "$via"
     }
 
-    init(text: String, langs: [String]? = ["ja"], facets: [Facet]? = nil, replyRef: PostReplyRef? = nil, embed: PostEmbedCreate? = nil, via: String? = nil) {
+    init(text: String, langs: [String]? = nil, facets: [Facet]? = nil, replyRef: PostReplyRef? = nil, embed: PostEmbedCreate? = nil, via: String? = nil) {
         self.type = "app.bsky.feed.post"
         self.text = text
         self.createdAt = ISO8601DateFormatter().string(from: Date())
-        self.langs = langs
+        // langs 未指定の場合は端末のロケール言語コードを使用（例: "ja", "en"）
+        self.langs = langs ?? [Locale.current.language.languageCode?.identifier ?? "ja"]
         self.facets = facets
         self.reply = replyRef
         self.embed = embed

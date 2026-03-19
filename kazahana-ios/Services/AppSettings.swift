@@ -43,8 +43,8 @@ final class AppSettings {
         didSet { UserDefaults.standard.set(showVia, forKey: "showVia") }
     }
 
-    /// via として付与するクライアント名
-    let viaName: String = "Kazahana for iOS"
+    /// via として付与するクライアント名（デスクトップ版と統一）
+    let viaName: String = "kazahana"
 
     // MARK: - Init
 
