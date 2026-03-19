@@ -57,18 +57,7 @@ struct ProfileScreenView: View {
             ComposeView(postService: PostService(client: authVM.client), replyTo: replyTo)
                 .environment(AppSettings.shared)
         }
-        .toolbar {
-            // 自分のプロフィールの場合のみ設定ボタンを表示
-            if authVM.client.currentSession?.did == actor {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        showSettings = true
-                    } label: {
-                        Image(systemName: "gearshape")
-                    }
-                }
-            }
-        }
+        .navigationBarTitleDisplayMode(.inline)
     }
 
     private func setupViewModel() {
@@ -121,7 +110,8 @@ struct ProfileScreenView: View {
                             vm: vm,
                             isSelf: authVM.client.currentSession?.did == actor,
                             onTapFollowers: { userListType = .followers(actor: actor) },
-                            onTapFollowing: { userListType = .following(actor: actor) }
+                            onTapFollowing: { userListType = .following(actor: actor) },
+                            onTapSettings: { showSettings = true }
                         )
                         .padding(.bottom, 4)
 
@@ -191,6 +181,7 @@ struct ProfileHeaderView: View {
     var isSelf: Bool = false
     var onTapFollowers: (() -> Void)? = nil
     var onTapFollowing: (() -> Void)? = nil
+    var onTapSettings: (() -> Void)? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -210,11 +201,28 @@ struct ProfileHeaderView: View {
 
             // アバター + フォローボタン
             HStack(alignment: .bottom) {
-                AvatarView(url: vm.profile?.avatar, size: 72)
-                    .padding(4)
-                    .background(Color(.systemBackground), in: Circle())
-                    .offset(y: -36)
-                    .padding(.leading, 16)
+                ZStack(alignment: .bottomTrailing) {
+                    AvatarView(url: vm.profile?.avatar, size: 72)
+                        .padding(4)
+                        .background(Color(.systemBackground), in: Circle())
+
+                    // 自分のプロフィールの場合のみ設定ボタンをアバター右下に表示
+                    if isSelf {
+                        Button {
+                            onTapSettings?()
+                        } label: {
+                            Image(systemName: "gearshape.fill")
+                                .font(.system(size: 14))
+                                .foregroundStyle(.white)
+                                .frame(width: 26, height: 26)
+                                .background(Color(.systemGray), in: Circle())
+                                .overlay(Circle().stroke(Color(.systemBackground), lineWidth: 2))
+                        }
+                        .offset(x: 2, y: 2)
+                    }
+                }
+                .offset(y: -36)
+                .padding(.leading, 16)
 
                 Spacer()
 
