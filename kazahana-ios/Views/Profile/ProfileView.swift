@@ -17,6 +17,8 @@ struct ProfileScreenView: View {
     @State private var replyToPost: PostView? = nil
     /// コンパクトヘッダー表示フラグ（スクロール開始後に true）
     @State private var showCompact: Bool = false
+    /// タブ切替直後の誤検知を防ぐフラグ
+    @State private var ignoreNextGeometryUpdate: Bool = false
 
     var body: some View {
         Group {
@@ -60,6 +62,10 @@ struct ProfileScreenView: View {
                 .environment(AppSettings.shared)
         }
         .toolbar(.hidden, for: .navigationBar)
+        .onDisappear {
+            // 画面を離れたらコンパクトヘッダーをリセット（戻ってきたとき初期状態にする）
+            showCompact = false
+        }
     }
 
     private func setupViewModel() {
@@ -88,12 +94,21 @@ struct ProfileScreenView: View {
                     .background(
                         GeometryReader { geo -> Color in
                             let maxY = geo.frame(in: .global).maxY
-                            // ProfileHeaderView の下端が画面上部(100pt以内)に来たらコンパクト表示
-                            // 一度 true になったら false には戻さない（タブ切替時のリセット防止）
-                            if !showCompact && maxY < 100 {
-                                DispatchQueue.main.async {
+                            DispatchQueue.main.async {
+                                // タブ切替直後は誤検知を無視
+                                if ignoreNextGeometryUpdate {
+                                    ignoreNextGeometryUpdate = false
+                                    return
+                                }
+                                if !showCompact && maxY < 100 {
+                                    // スクロールアップしてヘッダーが画面外に → コンパクト表示
                                     withAnimation(.easeInOut(duration: 0.15)) {
                                         showCompact = true
+                                    }
+                                } else if showCompact && maxY > 200 {
+                                    // スクロールダウンしてヘッダーが再び見えてきた → 通常表示に戻す
+                                    withAnimation(.easeInOut(duration: 0.15)) {
+                                        showCompact = false
                                     }
                                 }
                             }
@@ -220,6 +235,8 @@ struct ProfileScreenView: View {
             ForEach(ProfileTab.allCases, id: \.self) { tab in
                 Button {
                     if vm.selectedTab != tab {
+                        // タブ切替時は次の GeometryReader 更新を1回無視する
+                        ignoreNextGeometryUpdate = true
                         vm.selectedTab = tab
                         if vm.tabFeeds[tab]?.isEmpty ?? true {
                             Task { await vm.loadTab(tab) }
