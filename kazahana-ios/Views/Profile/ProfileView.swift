@@ -13,6 +13,8 @@ struct ProfileScreenView: View {
     @State private var userListType: UserListType? = nil
     @State private var showSettings = false
     @State private var showCompose = false
+    @State private var quotePost: PostView? = nil
+    @State private var replyToPost: PostView? = nil
 
     var body: some View {
         Group {
@@ -45,6 +47,14 @@ struct ProfileScreenView: View {
         }
         .sheet(isPresented: $showCompose) {
             ComposeView(postService: PostService(client: authVM.client))
+                .environment(AppSettings.shared)
+        }
+        .sheet(item: $quotePost) { quoted in
+            ComposeView(postService: PostService(client: authVM.client), quotedPost: quoted)
+                .environment(AppSettings.shared)
+        }
+        .sheet(item: $replyToPost) { replyTo in
+            ComposeView(postService: PostService(client: authVM.client), replyTo: replyTo)
                 .environment(AppSettings.shared)
         }
         .toolbar {
@@ -90,6 +100,8 @@ struct ProfileScreenView: View {
                             feedPost: feedPost,
                             postService: PostService(client: authVM.client),
                             onTapPost: { _ in selectedPost = feedPost },
+                            onTapReply: { post in replyToPost = post },
+                            onTapQuote: { post in quotePost = post },
                             onDelete: { post in vm.removePost(uri: post.uri) },
                             currentUserDID: authVM.client.currentSession?.did
                         )
