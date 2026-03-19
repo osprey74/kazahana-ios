@@ -1,6 +1,6 @@
 # kazahana-ios 開発タスク・進捗記録
 
-最終更新: 2026-03-19 (Phase 4-A/B/D 追加修正・プロフィール画面 FAB 追加)
+最終更新: 2026-03-19 (Phase 4-E プロフィール追加タブ実装完了)
 
 ---
 
@@ -10,7 +10,7 @@
 - Phase 2 (コア機能): 8/8 ✅ 完了
 - Phase 3 (通知・プロフィール・検索): 6/6 ✅ 完了
 - Phase 3.5 (UX改善・バグ修正): 12/12 ✅ 完了
-- Phase 4 (DM・モデレーション・設定): 5/7
+- Phase 4 (DM・モデレーション・設定): 6/7
 - Phase 5 (BSAF・高度な機能): 0/4
 
 ---
@@ -164,8 +164,10 @@
 - [ ] **ポーリング間隔設定** — タイムライン自動更新の間隔（30〜120秒）
 
 ### 4-E: プロフィール機能補完（優先度：中）
-- [ ] **プロフィール追加タブ** — 返信一覧 / いいね一覧 / メディア一覧
+- [x] **プロフィール追加タブ** — 返信一覧 / いいね一覧 / メディア一覧
   - `getAuthorFeed(filter: posts_with_replies)` / `getActorLikes` / `getAuthorFeed(filter: posts_with_media)`
+  - `ProfileTab` enum (.posts/.replies/.media/.likes) + タブ別フィードキャッシュ
+  - LazyVStack pinnedViews でプロフィールヘッダー＋タブバーを固定表示
 - [ ] **ピン留め投稿表示** — プロフィール先頭にピン留め投稿を表示
 - [ ] **プロフィール内検索** — `searchPosts(author: actor, q: query)` でタブ内絞り込み
 
@@ -262,11 +264,11 @@
 - [x] **投稿削除**: 自分の投稿の三点メニューから削除する機能が未実装 → Phase 4-A（実装済み）
 - [x] **投稿元表示（via）**: 設定に基づきレコードにクライアント名を付与する機能が未実装 → Phase 4-D（実装済み）
 - [ ] **DM（ダイレクトメッセージ）**: `chat.bsky.convo.*` API 全体が未実装 → Phase 4-F
-- [ ] **プロフィール追加タブ**: 返信/いいね/メディア一覧が未実装 → Phase 4-E
+- [x] **プロフィール追加タブ**: 返信/いいね/メディア一覧が未実装 → Phase 4-E（実装済み）
 
 ---
 
-## ファイル構成（2026-03-19 Phase 4-A/B/D 完了時点）
+## ファイル構成（2026-03-19 Phase 4-E 完了時点）
 
 ```
 kazahana-ios/
@@ -286,7 +288,7 @@ kazahana-ios/
 │   ├── PostService.swift          # createPost(images対応) / uploadImage / getLikes / getRepostedBy
 │   ├── RichTextParser.swift       # Facet 解析・AttributedString 変換・自動検出
 │   ├── NotificationService.swift  # listNotifications / getUnreadCount / updateSeen
-│   ├── GraphService.swift         # follow / unfollow / getFollowers / getFollows
+│   ├── GraphService.swift         # follow / unfollow / getFollowers / getFollows / getAuthorFeed(filter) / getActorLikes
 │   ├── SearchService.swift        # searchActors / searchPosts
 │   └── FeedService.swift          # getSavedFeeds / getFeed / getTimeline + FeedSource enum
 ├── ViewModels/
@@ -295,7 +297,7 @@ kazahana-ios/
 │   ├── ComposeViewModel.swift
 │   ├── ThreadViewModel.swift
 │   ├── NotificationViewModel.swift # resolvedRepostURIs キャッシュ
-│   ├── ProfileViewModel.swift     # フォロー楽観的 UI 対応
+│   ├── ProfileViewModel.swift     # フォロー楽観的 UI + ProfileTab enum + タブ別フィード管理
 │   └── SearchViewModel.swift      # タブ切り替え・Task キャンセルデバウンス
 ├── Views/
 │   ├── Auth/
@@ -311,7 +313,7 @@ kazahana-ios/
 │   │   ├── NotificationListView.swift
 │   │   └── NotificationItemView.swift
 │   ├── Profile/
-│   │   ├── ProfileView.swift      # ProfileScreenView + ProfileHeaderView（設定ボタン追加）
+│   │   ├── ProfileView.swift      # ProfileScreenView + ProfileHeaderView + タブバー UI（4タブ）
 │   │   └── UserListView.swift     # フォロワー/フォロー中一覧 + フォロー/解除ボタン
 │   ├── Search/
 │   │   └── SearchView.swift       # SearchView + ActorRowView + SearchPostRowView（スレッド遷移）
