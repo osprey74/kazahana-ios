@@ -160,6 +160,25 @@ struct ThreadView: View {
                 embedView(embed)
             }
 
+            // langs / via
+            if post.record.via != nil || !(post.record.langs ?? []).isEmpty {
+                HStack(spacing: 4) {
+                    if let langs = post.record.langs, !langs.isEmpty {
+                        Text(langs.joined(separator: ", "))
+                            .font(.caption2)
+                            .foregroundStyle(.tertiary)
+                            .padding(.horizontal, 4)
+                            .padding(.vertical, 1)
+                            .background(Color.secondary.opacity(0.1), in: RoundedRectangle(cornerRadius: 3))
+                    }
+                    if let via = post.record.via {
+                        Text("via \(via)")
+                            .font(.caption2)
+                            .foregroundStyle(.tertiary)
+                    }
+                }
+            }
+
             // 投稿日時
             Text(formattedDate(post.indexedAt))
                 .font(.caption)
