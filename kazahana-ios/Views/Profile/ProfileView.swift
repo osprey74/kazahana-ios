@@ -57,7 +57,7 @@ struct ProfileScreenView: View {
             ComposeView(postService: PostService(client: authVM.client), replyTo: replyTo)
                 .environment(AppSettings.shared)
         }
-        .navigationBarTitleDisplayMode(.inline)
+        .toolbar(.hidden, for: .navigationBar)
     }
 
     private func setupViewModel() {
@@ -185,44 +185,43 @@ struct ProfileHeaderView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // バナー
-            if let bannerURL = vm.profile?.banner, let url = URL(string: bannerURL) {
-                AsyncImage(url: url) { image in
-                    image.resizable().scaledToFill()
-                } placeholder: {
-                    Color.gray.opacity(0.3)
-                }
-                .frame(height: 120)
-                .clipped()
-            } else {
-                Color.gray.opacity(0.2)
+            // バナー（自分のプロフィールの場合のみ右上に設定ボタンをオーバーレイ）
+            ZStack(alignment: .topTrailing) {
+                if let bannerURL = vm.profile?.banner, let url = URL(string: bannerURL) {
+                    AsyncImage(url: url) { image in
+                        image.resizable().scaledToFill()
+                    } placeholder: {
+                        Color.gray.opacity(0.3)
+                    }
                     .frame(height: 120)
+                    .clipped()
+                } else {
+                    Color.gray.opacity(0.2)
+                        .frame(height: 120)
+                }
+
+                if isSelf {
+                    Button {
+                        onTapSettings?()
+                    } label: {
+                        Image(systemName: "gearshape.fill")
+                            .font(.system(size: 16))
+                            .foregroundStyle(.white)
+                            .frame(width: 32, height: 32)
+                            .background(Color.black.opacity(0.35), in: Circle())
+                    }
+                    .padding(.top, 12)
+                    .padding(.trailing, 16)
+                }
             }
 
             // アバター + フォローボタン
             HStack(alignment: .bottom) {
-                ZStack(alignment: .bottomTrailing) {
-                    AvatarView(url: vm.profile?.avatar, size: 72)
-                        .padding(4)
-                        .background(Color(.systemBackground), in: Circle())
-
-                    // 自分のプロフィールの場合のみ設定ボタンをアバター右下に表示
-                    if isSelf {
-                        Button {
-                            onTapSettings?()
-                        } label: {
-                            Image(systemName: "gearshape.fill")
-                                .font(.system(size: 14))
-                                .foregroundStyle(.white)
-                                .frame(width: 26, height: 26)
-                                .background(Color(.systemGray), in: Circle())
-                                .overlay(Circle().stroke(Color(.systemBackground), lineWidth: 2))
-                        }
-                        .offset(x: 2, y: 2)
-                    }
-                }
-                .offset(y: -36)
-                .padding(.leading, 16)
+                AvatarView(url: vm.profile?.avatar, size: 72)
+                    .padding(4)
+                    .background(Color(.systemBackground), in: Circle())
+                    .offset(y: -36)
+                    .padding(.leading, 16)
 
                 Spacer()
 
