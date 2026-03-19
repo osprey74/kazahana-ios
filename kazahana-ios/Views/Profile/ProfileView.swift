@@ -17,8 +17,6 @@ struct ProfileScreenView: View {
     @State private var replyToPost: PostView? = nil
     /// コンパクトヘッダー表示フラグ（スクロール開始後に true）
     @State private var showCompact: Bool = false
-    /// タブ切替直後の誤検知を防ぐフラグ
-    @State private var ignoreNextGeometryUpdate: Bool = false
 
     var body: some View {
         Group {
@@ -62,10 +60,6 @@ struct ProfileScreenView: View {
                 .environment(AppSettings.shared)
         }
         .toolbar(.hidden, for: .navigationBar)
-        .onDisappear {
-            // 画面を離れたらコンパクトヘッダーをリセット（戻ってきたとき初期状態にする）
-            showCompact = false
-        }
     }
 
     private func setupViewModel() {
@@ -83,37 +77,12 @@ struct ProfileScreenView: View {
             ScrollView {
                 LazyVStack(spacing: 0) {
                     // バナー＋フルプロフィール情報（スクロールで流れる）
-                    // background の GeometryReader でグローバル位置を監視
                     ProfileHeaderView(
                         vm: vm,
                         isSelf: isSelf,
                         onTapFollowers: { userListType = .followers(actor: actor) },
                         onTapFollowing: { userListType = .following(actor: actor) },
                         onTapSettings: { showSettings = true }
-                    )
-                    .background(
-                        GeometryReader { geo -> Color in
-                            let maxY = geo.frame(in: .global).maxY
-                            DispatchQueue.main.async {
-                                // タブ切替直後は誤検知を無視
-                                if ignoreNextGeometryUpdate {
-                                    ignoreNextGeometryUpdate = false
-                                    return
-                                }
-                                if !showCompact && maxY < 100 {
-                                    // スクロールアップしてヘッダーが画面外に → コンパクト表示
-                                    withAnimation(.easeInOut(duration: 0.15)) {
-                                        showCompact = true
-                                    }
-                                } else if showCompact && maxY > 200 {
-                                    // スクロールダウンしてヘッダーが再び見えてきた → 通常表示に戻す
-                                    withAnimation(.easeInOut(duration: 0.15)) {
-                                        showCompact = false
-                                    }
-                                }
-                            }
-                            return Color.clear
-                        }
                     )
 
                     // タブバー（ScrollView内・スクロールで流れる位置に配置）
@@ -159,11 +128,16 @@ struct ProfileScreenView: View {
                     }
                 }
             }
-            .refreshable {
-                // プルリフレッシュ時はコンパクトヘッダーをリセット
+            .onScrollGeometryChange(for: Bool.self) { geometry in
+                // contentInsets.top はセーフエリア等の自動インセットを除いた位置
+                geometry.contentOffset.y > geometry.contentInsets.top + 160
+            } action: { _, isScrolled in
                 withAnimation(.easeInOut(duration: 0.15)) {
-                    showCompact = false
+                    showCompact = isScrolled
                 }
+            }
+            .refreshable {
+                // プルリフレッシュ時はコンパクトヘッダーをリセット（ScrollViewがトップに戻るので自動的に showCompact = false になるが念のため）
                 await vm.refresh()
             }
 
@@ -235,8 +209,6 @@ struct ProfileScreenView: View {
             ForEach(ProfileTab.allCases, id: \.self) { tab in
                 Button {
                     if vm.selectedTab != tab {
-                        // タブ切替時は次の GeometryReader 更新を1回無視する
-                        ignoreNextGeometryUpdate = true
                         vm.selectedTab = tab
                         if vm.tabFeeds[tab]?.isEmpty ?? true {
                             Task { await vm.loadTab(tab) }
