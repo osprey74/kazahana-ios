@@ -130,7 +130,7 @@ struct PostCardView: View {
 
             Divider()
         }
-        .confirmationDialog("投稿を削除します", isPresented: $showDeleteConfirm, titleVisibility: .visible) {
+        .alert("投稿を削除します", isPresented: $showDeleteConfirm) {
             Button("削除する", role: .destructive) {
                 Task { await deletePost() }
             }

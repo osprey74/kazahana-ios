@@ -257,7 +257,7 @@ struct ThreadView: View {
             .padding(.vertical, 4)
         }
         .padding(16)
-        .confirmationDialog("投稿を削除します", isPresented: $showFocusedDeleteConfirm, titleVisibility: .visible) {
+        .alert("投稿を削除します", isPresented: $showFocusedDeleteConfirm) {
             Button("削除する", role: .destructive) {
                 Task {
                     if let post = viewModel.thread?.post {
