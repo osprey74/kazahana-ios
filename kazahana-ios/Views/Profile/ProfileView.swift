@@ -75,23 +75,30 @@ struct ProfileScreenView: View {
         ZStack(alignment: .top) {
             // ── スクロールエリア ────────────────────────────
             ScrollView {
-                // offset 検知アンカー
-                GeometryReader { geo in
-                    Color.clear.preference(
-                        key: ScrollOffsetPreferenceKey.self,
-                        value: -geo.frame(in: .named("profileScroll")).minY
-                    )
-                }
-                .frame(height: 0)
-
                 LazyVStack(spacing: 0) {
                     // バナー＋フルプロフィール情報（スクロールで流れる）
+                    // background の GeometryReader でグローバル位置を監視
                     ProfileHeaderView(
                         vm: vm,
                         isSelf: isSelf,
                         onTapFollowers: { userListType = .followers(actor: actor) },
                         onTapFollowing: { userListType = .following(actor: actor) },
                         onTapSettings: { showSettings = true }
+                    )
+                    .background(
+                        GeometryReader { geo -> Color in
+                            let maxY = geo.frame(in: .global).maxY
+                            // ProfileHeaderView の下端が画面上部(100pt以内)に来たらコンパクト表示
+                            let compact = maxY < 100
+                            if compact != showCompact {
+                                DispatchQueue.main.async {
+                                    withAnimation(.easeInOut(duration: 0.15)) {
+                                        showCompact = compact
+                                    }
+                                }
+                            }
+                            return Color.clear
+                        }
                     )
 
                     // タブバー（ScrollView内・スクロールで流れる位置に配置）
@@ -133,17 +140,6 @@ struct ProfileScreenView: View {
                         }
                         if vm.isCurrentTabLoading {
                             ProgressView().padding()
-                        }
-                    }
-                }
-            }
-            .coordinateSpace(name: "profileScroll")
-            .onPreferenceChange(ScrollOffsetPreferenceKey.self) { offset in
-                let compact = offset > 8
-                DispatchQueue.main.async {
-                    if showCompact != compact {
-                        withAnimation(.easeInOut(duration: 0.15)) {
-                            showCompact = compact
                         }
                     }
                 }
@@ -388,11 +384,4 @@ struct ProfileHeaderView: View {
     }
 }
 
-// MARK: - ScrollView offset 検知用 PreferenceKey
 
-private struct ScrollOffsetPreferenceKey: PreferenceKey {
-    static var defaultValue: CGFloat = 0
-    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
-        value = nextValue()
-    }
-}
