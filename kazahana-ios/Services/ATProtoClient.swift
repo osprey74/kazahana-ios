@@ -102,6 +102,16 @@ final class ATProtoClient {
         return try await perform(request: request)
     }
 
+    /// バイナリデータのアップロード（uploadBlob）
+    func uploadBlob(data: Data, mimeType: String) async throws -> UploadBlobResponse {
+        let host = currentSession?.pdsHost ?? "https://bsky.social"
+        let url = URL(string: "\(host)/xrpc/com.atproto.repo.uploadBlob")!
+        var request = try buildRequest(url: url, method: "POST", authenticated: true)
+        request.httpBody = data
+        request.setValue(mimeType, forHTTPHeaderField: "Content-Type")
+        return try await perform(request: request)
+    }
+
     /// ボディなし POST
     func postEmpty<Response: Decodable>(
         nsid: String,

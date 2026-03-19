@@ -11,6 +11,7 @@ struct ProfileScreenView: View {
     @State private var viewModel: ProfileViewModel?
     @State private var selectedPost: FeedViewPost?
     @State private var userListType: UserListType? = nil
+    @State private var showSettings = false
 
     var body: some View {
         Group {
@@ -36,14 +37,19 @@ struct ProfileScreenView: View {
             UserListView(listType: listType)
                 .environment(authVM)
         }
+        .sheet(isPresented: $showSettings) {
+            SettingsView()
+                .environment(authVM)
+                .environment(AppSettings.shared)
+        }
         .toolbar {
-            // 自分のプロフィールの場合のみログアウトボタンを表示
+            // 自分のプロフィールの場合のみ設定ボタンを表示
             if authVM.client.currentSession?.did == actor {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button(role: .destructive) {
-                        Task { await authVM.logout() }
+                    Button {
+                        showSettings = true
                     } label: {
-                        Image(systemName: "rectangle.portrait.and.arrow.right")
+                        Image(systemName: "gearshape")
                     }
                 }
             }

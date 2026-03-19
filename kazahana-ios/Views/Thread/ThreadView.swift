@@ -47,9 +47,11 @@ struct ThreadView: View {
         }
         .sheet(item: $replyToPost) { replyTo in
             ComposeView(postService: postService, replyTo: replyTo)
+                .environment(AppSettings.shared)
         }
         .sheet(item: $quotePost) { quoted in
             ComposeView(postService: postService, quotedPost: quoted)
+                .environment(AppSettings.shared)
         }
         .navigationDestination(item: $postActorListType) { listType in
             PostActorListView(listType: listType)
@@ -93,7 +95,8 @@ struct ThreadView: View {
                                 feedPost: feedPost,
                                 postService: postService,
                                 onTapPost: { post in selectedPost = post },
-                                onTapReply: { post in replyToPost = post }
+                                onTapReply: { post in replyToPost = post },
+                                currentUserDID: authVM.client.currentSession?.did
                             )
                             Divider().padding(.leading, 16)
                         }
@@ -115,7 +118,8 @@ struct ThreadView: View {
                     feedPost: FeedViewPost(post: post, reply: nil, reason: nil),
                     postService: postService,
                     onTapPost: { p in selectedPost = p },
-                    onTapReply: { post in replyToPost = post }
+                    onTapReply: { post in replyToPost = post },
+                    currentUserDID: authVM.client.currentSession?.did
                 )
                 HStack {
                     Spacer().frame(width: 28 + 16)

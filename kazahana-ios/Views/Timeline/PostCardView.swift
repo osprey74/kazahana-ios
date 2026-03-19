@@ -20,6 +20,10 @@ struct PostCardView: View {
     var onTapRepostCount: ((PostView) -> Void)?
     /// 引用投稿ボタンタップ
     var onTapQuote: ((PostView) -> Void)?
+    /// 投稿削除後の通知
+    var onDelete: ((PostView) -> Void)?
+    /// 現在ログイン中のユーザー DID（自分の投稿かどうかの判定に使用）
+    var currentUserDID: String?
 
     // ローカル状態（楽観的 UI 更新用）
     @State private var isLiked: Bool
@@ -40,7 +44,9 @@ struct PostCardView: View {
         onTapReply: ((PostView) -> Void)? = nil,
         onTapLikeCount: ((PostView) -> Void)? = nil,
         onTapRepostCount: ((PostView) -> Void)? = nil,
-        onTapQuote: ((PostView) -> Void)? = nil
+        onTapQuote: ((PostView) -> Void)? = nil,
+        onDelete: ((PostView) -> Void)? = nil,
+        currentUserDID: String? = nil
     ) {
         self.feedPost = feedPost
         self.postService = postService
@@ -50,6 +56,8 @@ struct PostCardView: View {
         self.onTapLikeCount = onTapLikeCount
         self.onTapRepostCount = onTapRepostCount
         self.onTapQuote = onTapQuote
+        self.onDelete = onDelete
+        self.currentUserDID = currentUserDID
         _isLiked     = State(initialValue: feedPost.post.viewer?.like != nil)
         _likeCount   = State(initialValue: feedPost.post.likeCount ?? 0)
         _isReposted  = State(initialValue: feedPost.post.viewer?.repost != nil)
@@ -148,7 +156,48 @@ struct PostCardView: View {
             Text(relativeTime(from: post.indexedAt))
                 .font(.caption)
                 .foregroundStyle(.secondary)
+            moreMenu
         }
+    }
+
+    @ViewBuilder
+    private var moreMenu: some View {
+        Menu {
+            // リンクをコピー
+            Button {
+                let url = "https://bsky.app/profile/\(author.handle)/post/\(post.uri.components(separatedBy: "/").last ?? "")"
+                UIPasteboard.general.string = url
+            } label: {
+                Label("リンクをコピー", systemImage: "link")
+            }
+
+            // 翻訳（外部ブラウザ）
+            Button {
+                let text = post.record.text.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+                if let url = URL(string: "https://translate.google.com/?text=\(text)&sl=auto&tl=ja") {
+                    UIApplication.shared.open(url)
+                }
+            } label: {
+                Label("翻訳", systemImage: "character.bubble")
+            }
+
+            // 自分の投稿の場合のみ削除ボタンを表示
+            if let currentUserDID, currentUserDID == author.did {
+                Divider()
+                Button(role: .destructive) {
+                    Task { await deletePost() }
+                } label: {
+                    Label("削除", systemImage: "trash")
+                }
+            }
+        } label: {
+            Image(systemName: "ellipsis")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .padding(.vertical, 4)
+                .padding(.leading, 4)
+        }
+        .buttonStyle(.plain)
     }
 
     private func replyIndicator(parentUri: String) -> some View {
@@ -334,6 +383,16 @@ struct PostCardView: View {
                 isReposted = false
                 repostCount = max(0, repostCount - 1)
             }
+        }
+    }
+
+    private func deletePost() async {
+        guard let postService else { return }
+        do {
+            try await postService.deletePost(uri: post.uri)
+            onDelete?(post)
+        } catch {
+            // 削除失敗は無視（UIフィードバックは将来的にアラートで対応）
         }
     }
 

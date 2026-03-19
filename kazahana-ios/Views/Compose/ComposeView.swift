@@ -1,17 +1,32 @@
 // ComposeView.swift
 // kazahana-ios
-// 投稿作成画面（新規投稿・リプライ対応）
+// 投稿作成画面（新規投稿・リプライ・引用・画像添付対応）
 
 import SwiftUI
+import PhotosUI
+import UIKit
+
+struct SelectedImage: Identifiable {
+    let id = UUID()
+    let image: UIImage
+    var alt: String = ""
+}
 
 struct ComposeView: View {
 
     @Environment(\.dismiss) private var dismiss
+    @Environment(AppSettings.self) private var appSettings
 
     // テキストは View の @State で直接管理（@Observable ViewModel の TextEditor バインディング問題を回避）
     @State private var text: String = ""
     @State private var isPosting = false
     @State private var errorMessage: String? = nil
+
+    // 画像添付
+    @State private var selectedImages: [SelectedImage] = []
+    @State private var photoPickerItems: [PhotosPickerItem] = []
+    @State private var editingAltIndex: Int? = nil
+    @State private var altText: String = ""
 
     private let postService: PostService
     private let replyToPost: PostView?
@@ -36,7 +51,7 @@ struct ComposeView: View {
 
     private var graphemeCount: Int { text.count }
     private var remaining: Int { 300 - graphemeCount }
-    private var canPost: Bool { graphemeCount > 0 && remaining >= 0 && !isPosting }
+    private var canPost: Bool { (graphemeCount > 0 || !selectedImages.isEmpty) && remaining >= 0 && !isPosting }
 
     var body: some View {
         NavigationStack {
@@ -53,6 +68,12 @@ struct ComposeView: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .padding(.horizontal, 12)
                     .scrollContentBackground(.hidden)
+
+                // 画像プレビュー
+                if !selectedImages.isEmpty {
+                    Divider()
+                    imagePreviewRow
+                }
 
                 // 引用投稿プレビュー
                 if let quoted = quotePost {
@@ -93,6 +114,25 @@ struct ComposeView: View {
             } message: {
                 Text(errorMessage ?? "")
             }
+            // Alt テキスト入力ダイアログ
+            .alert("Alt テキスト", isPresented: Binding(
+                get: { editingAltIndex != nil },
+                set: { if !$0 { editingAltIndex = nil } }
+            )) {
+                TextField("画像の説明（任意）", text: $altText)
+                Button("完了") {
+                    if let idx = editingAltIndex {
+                        selectedImages[idx].alt = altText
+                    }
+                    editingAltIndex = nil
+                }
+                Button("キャンセル", role: .cancel) { editingAltIndex = nil }
+            } message: {
+                Text("画像の内容を説明するテキストを入力してください")
+            }
+            .onChange(of: photoPickerItems) { _, newItems in
+                Task { await loadPickedImages(items: newItems) }
+            }
             .overlay {
                 if isPosting {
                     Color.black.opacity(0.2)
@@ -112,13 +152,25 @@ struct ComposeView: View {
         errorMessage = nil
 
         do {
+            // 画像をアップロード
+            var uploadedImages: [(blob: BlobRef, alt: String)] = []
+            for selected in selectedImages {
+                if let data = selected.image.jpegData(compressionQuality: 0.9) {
+                    let blob = try await postService.uploadImage(data: data, mimeType: "image/jpeg")
+                    uploadedImages.append((blob: blob, alt: selected.alt))
+                }
+            }
+
             let detected = RichTextParser.detectFacets(in: text)
             let facets = RichTextParser.buildFacets(from: detected)
+            let via = appSettings.showVia ? appSettings.viaName : nil
             _ = try await postService.createPost(
                 text: text,
                 facets: facets.isEmpty ? nil : facets,
                 replyTo: replyTarget,
-                quotePost: quotePost
+                quotePost: quotePost,
+                images: uploadedImages.isEmpty ? nil : uploadedImages,
+                via: via
             )
             dismiss()
         } catch {
@@ -126,6 +178,20 @@ struct ComposeView: View {
         }
 
         isPosting = false
+    }
+
+    private func loadPickedImages(items: [PhotosPickerItem]) async {
+        var results: [SelectedImage] = []
+        for item in items.prefix(4) {
+            if let data = try? await item.loadTransferable(type: Data.self),
+               let uiImage = UIImage(data: data) {
+                results.append(SelectedImage(image: uiImage))
+            }
+        }
+        await MainActor.run {
+            selectedImages = results
+            photoPickerItems = []
+        }
     }
 
     // MARK: - Subviews
@@ -193,12 +259,66 @@ struct ComposeView: View {
         .animation(.easeInOut(duration: 0.15), value: remaining)
     }
 
+    private var imagePreviewRow: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(Array(selectedImages.enumerated()), id: \.element.id) { index, selected in
+                    ZStack(alignment: .topTrailing) {
+                        Image(uiImage: selected.image)
+                            .resizable()
+                            .scaledToFill()
+                            .frame(width: 80, height: 80)
+                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                            .onTapGesture {
+                                altText = selected.alt
+                                editingAltIndex = index
+                            }
+
+                        // 削除ボタン
+                        Button {
+                            selectedImages.remove(at: index)
+                        } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .font(.system(size: 18))
+                                .foregroundStyle(.white)
+                                .shadow(radius: 2)
+                        }
+                        .padding(4)
+
+                        // ALT バッジ（alt が設定されている場合）
+                        if !selected.alt.isEmpty {
+                            Text("ALT")
+                                .font(.system(size: 9, weight: .bold))
+                                .foregroundStyle(.white)
+                                .padding(.horizontal, 4)
+                                .padding(.vertical, 2)
+                                .background(Color.black.opacity(0.6), in: RoundedRectangle(cornerRadius: 3))
+                                .padding(4)
+                                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
+                        }
+                    }
+                    .frame(width: 80, height: 80)
+                }
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+        }
+    }
+
     private var bottomBar: some View {
         HStack {
-            Image(systemName: "photo")
-                .font(.system(size: 20))
-                .foregroundStyle(.secondary)
-                .opacity(0.5)
+            // フォトピッカー（最大4枚、画像添付済みの場合は4枚未満のみ）
+            PhotosPicker(
+                selection: $photoPickerItems,
+                maxSelectionCount: max(0, 4 - selectedImages.count),
+                matching: .images
+            ) {
+                Image(systemName: "photo")
+                    .font(.system(size: 20))
+                    .foregroundStyle(selectedImages.count >= 4 ? .tertiary : .secondary)
+            }
+            .disabled(selectedImages.count >= 4)
+
             Spacer()
         }
         .padding(.horizontal, 16)

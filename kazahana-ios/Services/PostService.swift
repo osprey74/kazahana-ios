@@ -14,7 +14,14 @@ final class PostService {
 
     // MARK: - 投稿作成
 
-    func createPost(text: String, facets: [Facet]? = nil, replyTo: ReplyTarget? = nil, quotePost: PostView? = nil) async throws -> CreateRecordResponse {
+    func createPost(
+        text: String,
+        facets: [Facet]? = nil,
+        replyTo: ReplyTarget? = nil,
+        quotePost: PostView? = nil,
+        images: [(blob: BlobRef, alt: String)]? = nil,
+        via: String? = nil
+    ) async throws -> CreateRecordResponse {
         guard let did = client.currentSession?.did else { throw ATProtoError.unauthorized }
 
         var replyRef: PostReplyRef? = nil
@@ -25,14 +32,31 @@ final class PostService {
             )
         }
 
-        var quoteEmbed: QuoteEmbedRecord? = nil
-        if let quotePost {
-            quoteEmbed = QuoteEmbedRecord(uri: quotePost.uri, cid: quotePost.cid)
+        // embed の組み立て（画像 / 引用 / 画像+引用）
+        let embed: PostEmbedCreate?
+        if let images, !images.isEmpty {
+            let imageEmbed = ImageEmbedCreate(images: images.map { ImageEmbedItem(image: $0.blob, alt: $0.alt, aspectRatio: nil) })
+            if let quotePost {
+                embed = .recordWithMedia(imageEmbed, QuoteEmbedRecord(uri: quotePost.uri, cid: quotePost.cid))
+            } else {
+                embed = .images(imageEmbed)
+            }
+        } else if let quotePost {
+            embed = .record(QuoteEmbedRecord(uri: quotePost.uri, cid: quotePost.cid))
+        } else {
+            embed = nil
         }
 
-        let record = PostRecordCreate(text: text, facets: facets, replyRef: replyRef, quoteEmbed: quoteEmbed)
+        let record = PostRecordCreate(text: text, facets: facets, replyRef: replyRef, embed: embed, via: via)
         let body = CreateRecordRequest(repo: did, collection: "app.bsky.feed.post", record: record)
         return try await client.post(nsid: "com.atproto.repo.createRecord", body: body)
+    }
+
+    // MARK: - 画像アップロード
+
+    func uploadImage(data: Data, mimeType: String) async throws -> BlobRef {
+        let response = try await client.uploadBlob(data: data, mimeType: mimeType)
+        return response.blob
     }
 
     // MARK: - 投稿削除

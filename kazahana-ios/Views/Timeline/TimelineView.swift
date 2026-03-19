@@ -96,6 +96,7 @@ struct TimelineView: View {
             // 投稿作成シート（新規投稿 or 返信 or 引用投稿）
             .sheet(isPresented: $showCompose, onDismiss: { replyToPost = nil; quotePost = nil }) {
                 ComposeView(postService: postService, replyTo: replyToPost, quotedPost: quotePost)
+                    .environment(AppSettings.shared)
             }
         }
         .task {
@@ -117,7 +118,9 @@ struct TimelineView: View {
                     onTapReply: { post in replyToPost = post; showCompose = true },
                     onTapLikeCount: { post in postActorListType = .likes(postURI: post.uri) },
                     onTapRepostCount: { post in postActorListType = .reposts(postURI: post.uri) },
-                    onTapQuote: { post in quotePost = post; showCompose = true }
+                    onTapQuote: { post in quotePost = post; showCompose = true },
+                    onDelete: { post in viewModel.removePost(uri: post.uri) },
+                    currentUserDID: authVM.client.currentSession?.did
                 )
                 .listRowInsets(EdgeInsets())
                 .listRowSeparator(.hidden)

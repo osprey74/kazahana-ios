@@ -277,7 +277,7 @@ struct ContentLabel: Codable {
 
 // MARK: - 投稿作成リクエスト
 
-struct CreatePostRequest: Codable {
+struct CreatePostRequest: Encodable {
     let repo: String
     let collection: String
     let record: PostRecordCreate
@@ -289,28 +289,31 @@ struct CreatePostRequest: Codable {
     }
 }
 
-struct PostRecordCreate: Codable {
+struct PostRecordCreate: Encodable {
     let type: String
     let text: String
     let createdAt: String
     let langs: [String]?
     let facets: [Facet]?
     let reply: PostReplyRef?
-    let embed: QuoteEmbedRecord?
+    let embed: PostEmbedCreate?
+    /// 投稿元クライアント名（設定でオンの場合のみセット）
+    let via: String?
 
     enum CodingKeys: String, CodingKey {
         case type = "$type"
-        case text, createdAt, langs, facets, reply, embed
+        case text, createdAt, langs, facets, reply, embed, via
     }
 
-    init(text: String, langs: [String]? = ["ja"], facets: [Facet]? = nil, replyRef: PostReplyRef? = nil, quoteEmbed: QuoteEmbedRecord? = nil) {
+    init(text: String, langs: [String]? = ["ja"], facets: [Facet]? = nil, replyRef: PostReplyRef? = nil, embed: PostEmbedCreate? = nil, via: String? = nil) {
         self.type = "app.bsky.feed.post"
         self.text = text
         self.createdAt = ISO8601DateFormatter().string(from: Date())
         self.langs = langs
         self.facets = facets
         self.reply = replyRef
-        self.embed = quoteEmbed
+        self.embed = embed
+        self.via = via
     }
 }
 
@@ -330,7 +333,78 @@ struct QuoteEmbedRecord: Codable {
     }
 }
 
+/// 投稿作成時の embed（画像/引用）を統一する enum（Encodable）
+enum PostEmbedCreate: Encodable {
+    case images(ImageEmbedCreate)
+    case record(QuoteEmbedRecord)
+    case recordWithMedia(ImageEmbedCreate, QuoteEmbedRecord)
 
+    func encode(to encoder: Encoder) throws {
+        switch self {
+        case .images(let v): try v.encode(to: encoder)
+        case .record(let v): try v.encode(to: encoder)
+        case .recordWithMedia(let media, let rec):
+            var container = encoder.container(keyedBy: RecordWithMediaCodingKeys.self)
+            try container.encode("app.bsky.embed.recordWithMedia", forKey: .type)
+            try container.encode(media, forKey: .media)
+            try container.encode(rec, forKey: .record)
+        }
+    }
+
+    enum RecordWithMediaCodingKeys: String, CodingKey {
+        case type = "$type"
+        case media, record
+    }
+}
+
+/// 画像 embed（app.bsky.embed.images）書き込み用
+struct ImageEmbedCreate: Encodable {
+    let type: String = "app.bsky.embed.images"
+    let images: [ImageEmbedItem]
+
+    enum CodingKeys: String, CodingKey {
+        case type = "$type"
+        case images
+    }
+}
+
+struct ImageEmbedItem: Encodable {
+    let image: BlobRef
+    let alt: String
+    let aspectRatio: AspectRatioCreate?
+}
+
+struct AspectRatioCreate: Encodable {
+    let width: Int
+    let height: Int
+}
+
+
+
+// MARK: - uploadBlob レスポンス
+
+struct UploadBlobResponse: Codable {
+    let blob: BlobRef
+}
+
+struct BlobRef: Codable {
+    let type: String
+    let ref: BlobLink?
+    let mimeType: String?
+    let size: Int?
+
+    enum CodingKeys: String, CodingKey {
+        case type = "$type"
+        case ref, mimeType, size
+    }
+}
+
+struct BlobLink: Codable {
+    let link: String
+    enum CodingKeys: String, CodingKey {
+        case link = "$link"
+    }
+}
 
 // MARK: - getPosts レスポンス
 

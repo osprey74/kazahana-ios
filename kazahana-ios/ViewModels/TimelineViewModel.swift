@@ -121,6 +121,12 @@ final class TimelineViewModel {
         isLoading = false
     }
 
+    /// 投稿削除後にローカルリストから除去
+    @MainActor
+    func removePost(uri: String) {
+        posts.removeAll { $0.post.uri == uri }
+    }
+
     // MARK: - Private
 
     private func fetchFeed(cursor: String?) async throws -> TimelineResponse {

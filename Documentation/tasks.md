@@ -1,6 +1,6 @@
 # kazahana-ios 開発タスク・進捗記録
 
-最終更新: 2026-03-18
+最終更新: 2026-03-19
 
 ---
 
@@ -10,7 +10,7 @@
 - Phase 2 (コア機能): 8/8 ✅ 完了
 - Phase 3 (通知・プロフィール・検索): 6/6 ✅ 完了
 - Phase 3.5 (UX改善・バグ修正): 12/12 ✅ 完了
-- Phase 4 (DM・モデレーション・設定): 0/6
+- Phase 4 (DM・モデレーション・設定): 3/7
 - Phase 5 (BSAF・高度な機能): 0/4
 
 ---
@@ -125,13 +125,22 @@
 ## Phase 4: DM・モデレーション・設定 — 未着手
 
 ### 4-A: 投稿アクション補完（優先度：高）
-- [ ] **投稿削除** — 自分の投稿の三点メニューから削除（PostCardView + ThreadView）
-- [ ] **投稿の三点メニュー** — 翻訳（Google翻訳を外部ブラウザで開く）、リンクコピー、通報
+- [x] **投稿削除** — 自分の投稿の三点メニューから削除（PostCardView + ThreadView）
+- [x] **投稿の三点メニュー** — 翻訳（Google翻訳を外部ブラウザで開く）、リンクコピー
+  - PostCardView `authorRow` に三点メニュー（`ellipsis`）ボタンを追加
+  - 自分の投稿の場合のみ「削除」を表示（`currentUserDID` 比較）
+  - TimelineViewModel に `removePost(uri:)` を追加（削除後のローカル除去）
 - [ ] **メンションオートコンプリート** — ComposeView で `@` 入力時に `searchActorsTypeahead` で候補表示
 
 ### 4-B: 画像・動画添付（優先度：高）
-- [ ] **画像添付** — ComposeView: フォトライブラリ選択 + `uploadBlob` + プレビュー表示（最大4枚）
-- [ ] **画像 Alt テキスト入力** — 各画像に Alt テキストを設定するダイアログ
+- [x] **画像添付** — ComposeView: PhotosPicker + `uploadBlob` + プレビュー表示（最大4枚）
+  - `ATProtoClient.uploadBlob(data:mimeType:)` 追加
+  - `PostService.uploadImage(data:mimeType:)` 追加
+  - `PostEmbedCreate` enum: `.images` / `.record` / `.recordWithMedia` で embed を統一
+  - `PostRecordCreate.embed` の型を `QuoteEmbedRecord?` → `PostEmbedCreate?` に変更
+  - `ImageEmbedCreate`, `ImageEmbedItem`, `BlobRef`, `UploadBlobResponse` モデル追加
+  - ComposeView: `PhotosPicker` ボタン、画像プレビュー行（削除・Alt入力対応）
+- [x] **画像 Alt テキスト入力** — 各画像サムネイルタップで Alert ダイアログ入力
 - [ ] **動画添付** — ComposeView: フォトライブラリ選択 + `uploadBlob`（最大100MB, MP4/MOV等）
 
 ### 4-C: コンテンツモデレーション（優先度：高）
@@ -143,11 +152,14 @@
 - [ ] **通報機能** — 投稿/ユーザーの通報（`com.atproto.moderation.createReport`、理由選択付き）
 
 ### 4-D: 設定画面（優先度：中）
-- [ ] **設定画面** — SettingsView + SettingsViewModel
-- [ ] **テーマ切り替え** — ライト / ダーク / システム連動（現状はシステム連動のみ）
-- [ ] **投稿元表示（via）** — 投稿レコードにクライアント名を付与するオン/オフ設定
-  - `PostRecordCreate` に `via` フィールド追加（`app.bsky.feed.post` の `$type` + `createdAt` と同列）
-  - 実装: `"via": {"$type": "com.atproto.repo.applyWrites#create", ...}` ではなく、`record.createdAt` と同階層に `"langs"` と共に追加するシンプルな方式
+- [x] **設定画面** — SettingsView + AppSettings（@Observable singleton、UserDefaults永続化）
+  - `AppSettings.swift`: theme / showVia を UserDefaults で永続化
+  - `SettingsView.swift`: Form UI（テーマ Picker・via Toggle・アカウント情報・バージョン）
+  - プロフィール画面ツールバーに設定ボタン（`gearshape`）追加、ログアウトを設定画面内に移動
+  - `kazahana_iosApp`: `preferredColorScheme` でテーマをウィンドウ全体に適用
+- [x] **テーマ切り替え** — ライト / ダーク / システム連動
+- [x] **投稿元表示（via）** — `PostRecordCreate` に `via: String?` フィールド追加
+  - ComposeView で AppSettings.showVia に基づき "Kazahana for iOS" を渡す
 - [ ] **モデレーション設定** — 成人向けコンテンツ表示 ON/OFF、ラベル別設定（hide/warn/ignore）
 - [ ] **ポーリング間隔設定** — タイムライン自動更新の間隔（30〜120秒）
 
@@ -254,23 +266,24 @@
 
 ---
 
-## ファイル構成（2026-03-18 Phase 3.5 完了時点）
+## ファイル構成（2026-03-19 Phase 4-A/B/D 完了時点）
 
 ```
 kazahana-ios/
-├── kazahana_iosApp.swift
+├── kazahana_iosApp.swift          # AppSettings環境注入・preferredColorScheme適用
 ├── ContentView.swift              # ルートビュー + MainTabView（Phase 3 タブ更新済み）
 ├── Models/
 │   ├── Session.swift
-│   ├── Post.swift                 # PostRecordCreate(embed対応), QuoteEmbedRecord, FeedViewPost(Hashable) 等
+│   ├── Post.swift                 # PostEmbedCreate / ImageEmbedCreate / BlobRef / UploadBlobResponse 追加
 │   ├── Profile.swift
 │   └── Notification.swift        # AppNotification, isViaRepost, reasonLabel/Icon/Color
 ├── Services/
-│   ├── ATProtoClient.swift        # XRPC クライアント + getRecord
+│   ├── ATProtoClient.swift        # XRPC クライアント + getRecord + uploadBlob
 │   ├── AuthService.swift
 │   ├── SessionStore.swift
+│   ├── AppSettings.swift          # テーマ/via 設定（@Observable singleton）
 │   ├── TimelineService.swift
-│   ├── PostService.swift          # createPost(quotePost対応) / getLikes / getRepostedBy
+│   ├── PostService.swift          # createPost(images対応) / uploadImage / getLikes / getRepostedBy
 │   ├── RichTextParser.swift       # Facet 解析・AttributedString 変換・自動検出
 │   ├── NotificationService.swift  # listNotifications / getUnreadCount / updateSeen
 │   ├── GraphService.swift         # follow / unfollow / getFollowers / getFollows
@@ -278,7 +291,7 @@ kazahana-ios/
 │   └── FeedService.swift          # getSavedFeeds / getFeed / getTimeline + FeedSource enum
 ├── ViewModels/
 │   ├── AuthViewModel.swift
-│   ├── TimelineViewModel.swift    # FeedSource 対応（following / custom feed）
+│   ├── TimelineViewModel.swift    # FeedSource対応 + removePost(uri:)
 │   ├── ComposeViewModel.swift
 │   ├── ThreadViewModel.swift
 │   ├── NotificationViewModel.swift # resolvedRepostURIs キャッシュ
@@ -289,19 +302,21 @@ kazahana-ios/
 │   │   └── LoginView.swift
 │   ├── Timeline/
 │   │   ├── TimelineView.swift     # FAB・返信・引用・いいね/リポストユーザー一覧遷移
-│   │   └── PostCardView.swift     # onTapReply / onTapLikeCount / onTapRepostCount / onTapQuote
+│   │   └── PostCardView.swift     # 三点メニュー(削除/翻訳/リンクコピー) + currentUserDID
 │   ├── Compose/
-│   │   └── ComposeView.swift      # 返信・引用投稿プレビュー対応
+│   │   └── ComposeView.swift      # 返信・引用投稿・画像添付（PhotosPicker+Alt入力）対応
 │   ├── Thread/
 │   │   └── ThreadView.swift       # 統計行タップ→ユーザーリスト・引用投稿ボタン
 │   ├── Notification/
 │   │   ├── NotificationListView.swift
 │   │   └── NotificationItemView.swift
 │   ├── Profile/
-│   │   ├── ProfileView.swift      # ProfileScreenView + ProfileHeaderView（isSelf対応）
+│   │   ├── ProfileView.swift      # ProfileScreenView + ProfileHeaderView（設定ボタン追加）
 │   │   └── UserListView.swift     # フォロワー/フォロー中一覧 + フォロー/解除ボタン
 │   ├── Search/
 │   │   └── SearchView.swift       # SearchView + ActorRowView + SearchPostRowView（スレッド遷移）
+│   ├── Settings/
+│   │   └── SettingsView.swift     # テーマ切り替え・via表示・アカウント情報・ログアウト
 │   └── Common/
 │       ├── AvatarView.swift
 │       ├── ImageGridView.swift    # Color.clear overlay パターン（画像はみ出し修正済み）
