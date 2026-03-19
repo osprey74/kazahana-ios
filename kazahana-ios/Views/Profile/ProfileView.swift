@@ -73,26 +73,24 @@ struct ProfileScreenView: View {
         let isSelf = authVM.client.currentSession?.did == actor
 
         ScrollView {
+            // スクロール offset 検知用アンカー
+            GeometryReader { geo in
+                Color.clear.preference(
+                    key: ScrollOffsetPreferenceKey.self,
+                    value: -geo.frame(in: .named("profileScroll")).minY
+                )
+            }
+            .frame(height: 0)
+
             LazyVStack(spacing: 0, pinnedViews: .sectionHeaders) {
                 Section {
-                    // バナー＋フルプロフィール情報（スクロールアウトする部分）
+                    // バナー＋フルプロフィール情報（スクロールで流れる部分）
                     ProfileHeaderView(
                         vm: vm,
                         isSelf: isSelf,
                         onTapFollowers: { userListType = .followers(actor: actor) },
                         onTapFollowing: { userListType = .following(actor: actor) },
                         onTapSettings: { showSettings = true }
-                    )
-                    // このビューが画面外に出たか検知するアンカー
-                    .background(
-                        GeometryReader { geo in
-                            Color.clear.onChange(of: geo.frame(in: .global).maxY) { _, maxY in
-                                // ステータスバー高さ相当(~100pt)以下になったらコンパクト表示
-                                withAnimation(.easeInOut(duration: 0.15)) {
-                                    isProfileScrolledOut = maxY < 100
-                                }
-                            }
-                        }
                     )
 
                     Divider()
@@ -132,7 +130,7 @@ struct ProfileScreenView: View {
                     }
                 } header: {
                     VStack(spacing: 0) {
-                        // コンパクトヘッダー（スクロールアウト後に表示）
+                        // コンパクトヘッダー（スクロール開始で表示）
                         if isProfileScrolledOut {
                             compactHeader(vm: vm, isSelf: isSelf)
                                 .transition(.opacity)
@@ -141,8 +139,15 @@ struct ProfileScreenView: View {
                         profileTabBar(vm: vm)
                         Divider()
                     }
+                    // 不透明背景で投稿が透けないようにする
                     .background(Color(.systemBackground))
                 }
+            }
+        }
+        .coordinateSpace(name: "profileScroll")
+        .onPreferenceChange(ScrollOffsetPreferenceKey.self) { offset in
+            withAnimation(.easeInOut(duration: 0.15)) {
+                isProfileScrolledOut = offset > 8
             }
         }
         .refreshable {
@@ -369,5 +374,14 @@ struct ProfileHeaderView: View {
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
         }
+    }
+}
+
+// MARK: - ScrollView offset 検知用 PreferenceKey
+
+private struct ScrollOffsetPreferenceKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = nextValue()
     }
 }
