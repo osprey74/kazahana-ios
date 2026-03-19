@@ -22,17 +22,21 @@ struct PreferenceItem: Codable {
     let pinned: [String]?
     let saved: [String]?
 
+    // languagesPref の postLanguages
+    let postLanguages: [String]?
+
     enum CodingKeys: String, CodingKey {
         case type = "$type"
-        case items, pinned, saved
+        case items, pinned, saved, postLanguages
     }
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
-        self.type    = (try? container.decode(String.self, forKey: .type)) ?? ""
-        self.items   = try? container.decodeIfPresent([SavedFeedPrefV2].self, forKey: .items)
-        self.pinned  = try? container.decodeIfPresent([String].self, forKey: .pinned)
-        self.saved   = try? container.decodeIfPresent([String].self, forKey: .saved)
+        self.type          = (try? container.decode(String.self, forKey: .type)) ?? ""
+        self.items         = try? container.decodeIfPresent([SavedFeedPrefV2].self, forKey: .items)
+        self.pinned        = try? container.decodeIfPresent([String].self, forKey: .pinned)
+        self.saved         = try? container.decodeIfPresent([String].self, forKey: .saved)
+        self.postLanguages = try? container.decodeIfPresent([String].self, forKey: .postLanguages)
     }
 }
 

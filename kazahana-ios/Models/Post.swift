@@ -310,8 +310,10 @@ struct PostRecordCreate: Encodable {
         self.type = "app.bsky.feed.post"
         self.text = text
         self.createdAt = ISO8601DateFormatter().string(from: Date())
-        // langs 未指定の場合は端末のロケール言語コードを使用（例: "ja", "en"）
-        self.langs = langs ?? [Locale.current.language.languageCode?.identifier ?? "ja"]
+        // langs: 引数指定 → Bluesky プリファレンス → 端末ロケールの優先順
+        let preferenceLangs = AppSettings.shared.postLanguages
+        let localeLang = Locale.current.language.languageCode?.identifier ?? "ja"
+        self.langs = langs ?? (preferenceLangs.isEmpty ? [localeLang] : preferenceLangs)
         self.facets = facets
         self.reply = replyRef
         self.embed = embed

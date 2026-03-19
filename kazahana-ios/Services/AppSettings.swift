@@ -46,6 +46,9 @@ final class AppSettings {
     /// via として付与するクライアント名（デスクトップ版と統一）
     let viaName: String = "kazahana"
 
+    /// Bluesky プリファレンスから取得した投稿言語設定（空の場合は端末ロケールを使用）
+    var postLanguages: [String] = []
+
     // MARK: - Init
 
     init() {

@@ -81,6 +81,19 @@ struct GraphService {
         if let cursor = cursor { params["cursor"] = cursor }
         return try await client.get(nsid: "app.bsky.graph.getFollows", params: params)
     }
+
+    // MARK: - ユーザープリファレンス
+
+    /// Bluesky のユーザープリファレンスから投稿言語設定を取得する
+    func getPostLanguages() async throws -> [String] {
+        let response: PreferencesResponse = try await client.get(nsid: "app.bsky.actor.getPreferences", params: [:])
+        for pref in response.preferences {
+            if pref.type == "app.bsky.actor.defs#languagesPref", let langs = pref.postLanguages, !langs.isEmpty {
+                return langs
+            }
+        }
+        return []
+    }
 }
 
 // MARK: - フォロワー/フォロー一覧レスポンス

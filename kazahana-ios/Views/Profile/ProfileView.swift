@@ -84,7 +84,9 @@ struct ProfileScreenView: View {
                         PostCardView(
                             feedPost: feedPost,
                             postService: PostService(client: authVM.client),
-                            onTapPost: { _ in selectedPost = feedPost }
+                            onTapPost: { _ in selectedPost = feedPost },
+                            onDelete: { post in vm.removePost(uri: post.uri) },
+                            currentUserDID: authVM.client.currentSession?.did
                         )
                         .padding(.horizontal, 16)
                         .padding(.vertical, 8)

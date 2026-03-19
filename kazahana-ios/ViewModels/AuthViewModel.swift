@@ -49,10 +49,22 @@ final class AuthViewModel {
     private func refreshSessionOnLaunch() async {
         do {
             try await client.refreshSessionPublic()
+            // リフレッシュ成功後に Bluesky プリファレンスから投稿言語を取得
+            await loadPostLanguages()
         } catch {
             // リフレッシュトークンも無効な場合はログアウト扱い
             await MainActor.run { isLoggedIn = false }
             client.updateSession(nil)
+        }
+    }
+
+    /// Bluesky プリファレンスから投稿言語設定を取得して AppSettings に反映
+    private func loadPostLanguages() async {
+        let graphService = GraphService(client: client)
+        if let langs = try? await graphService.getPostLanguages(), !langs.isEmpty {
+            await MainActor.run {
+                AppSettings.shared.postLanguages = langs
+            }
         }
     }
 

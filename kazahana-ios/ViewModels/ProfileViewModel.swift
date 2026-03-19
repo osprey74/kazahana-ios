@@ -104,6 +104,12 @@ final class ProfileViewModel {
         }
     }
 
+    /// 投稿削除後にローカルリストから除去
+    @MainActor
+    func removePost(uri: String) {
+        posts.removeAll { $0.post.uri == uri }
+    }
+
     // MARK: - フォロー / フォロー解除
 
     @MainActor
