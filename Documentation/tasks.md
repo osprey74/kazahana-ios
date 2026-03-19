@@ -1,6 +1,6 @@
 # kazahana-ios 開発タスク・進捗記録
 
-最終更新: 2026-03-19 (Phase 4-E プロフィール追加タブ実装完了)
+最終更新: 2026-03-19 (プロフィール画面 UX 改善・コンパクトヘッダー修正)
 
 ---
 
@@ -168,6 +168,13 @@
   - `getAuthorFeed(filter: posts_with_replies)` / `getActorLikes` / `getAuthorFeed(filter: posts_with_media)`
   - `ProfileTab` enum (.posts/.replies/.media/.likes) + タブ別フィードキャッシュ
   - LazyVStack pinnedViews でプロフィールヘッダー＋タブバーを固定表示
+- [x] **プロフィール画面 UX 改善** — ナビバー除去・設定ボタン配置変更・コンパクトヘッダー
+  - `.toolbar(.hidden, for: .navigationBar)` でナビバー全体非表示
+  - 設定ボタンをバナー右上にオーバーレイ（半透明黒円形）
+  - スクロールアップ時にコンパクトヘッダー（アバター小＋名前＋設定ボタン）＋タブバーを固定表示
+  - `onScrollGeometryChange(for:of:action:)` (iOS 17+) で `contentOffset.y` を直接監視
+    - `GeometryReader` + `DispatchQueue.main.async` 方式を廃止（タブ切替・画面遷移での誤検知を解消）
+    - タブ切替後も ScrollView の実際の offset を正確に反映、`ignoreNextGeometryUpdate` フラグ不要
 - [ ] **ピン留め投稿表示** — プロフィール先頭にピン留め投稿を表示
 - [ ] **プロフィール内検索** — `searchPosts(author: actor, q: query)` でタブ内絞り込み
 
@@ -251,8 +258,8 @@
 
 ## 既知の課題・TODO
 
-- [ ] **画像添付**: ComposeView のフォトライブラリ選択・uploadBlob は未実装 → Phase 4-B
-- [ ] **メンション DID 解決**: RichTextParser.detectFacets でメンションを検出するが、resolveHandle による DID 解決は未実装。投稿時メンションのリンクが効かない → Phase 4-A（メンションオートコンプリートと同時実装予定）
+- [x] **画像添付**: ComposeView のフォトライブラリ選択・uploadBlob は未実装 → Phase 4-B（実装済み）
+- [x] **メンション DID 解決**: RichTextParser.detectFacets でメンションを検出するが、resolveHandle による DID 解決は未実装 → Phase 4-A メンションオートコンプリートで対応（実装済み）
 - [ ] **ブックマーク**: AT Protocol にネイティブブックマーク API がないため設計要検討
 - [ ] **画像読み込み**: 現在 `AsyncImage` を使用。Kingfisher or Nuke の導入を Phase 4 以降で検討
 - [ ] **バックグラウンドポーリング**: BGAppRefreshTask 未実装 → Phase 5-C
@@ -268,7 +275,7 @@
 
 ---
 
-## ファイル構成（2026-03-19 Phase 4-E 完了時点）
+## ファイル構成（2026-03-19 Phase 4-E + プロフィール UX 改善時点）
 
 ```
 kazahana-ios/
@@ -313,7 +320,7 @@ kazahana-ios/
 │   │   ├── NotificationListView.swift
 │   │   └── NotificationItemView.swift
 │   ├── Profile/
-│   │   ├── ProfileView.swift      # ProfileScreenView + ProfileHeaderView + タブバー UI（4タブ）
+│   │   ├── ProfileView.swift      # ProfileScreenView + ProfileHeaderView + タブバー UI（4タブ）+ コンパクトヘッダー（onScrollGeometryChange）
 │   │   └── UserListView.swift     # フォロワー/フォロー中一覧 + フォロー/解除ボタン
 │   ├── Search/
 │   │   └── SearchView.swift       # SearchView + ActorRowView + SearchPostRowView（スレッド遷移）
