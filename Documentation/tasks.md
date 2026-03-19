@@ -130,7 +130,7 @@
   - PostCardView `authorRow` に三点メニュー（`ellipsis`）ボタンを追加
   - 自分の投稿の場合のみ「削除」を表示（`currentUserDID` 比較）
   - TimelineViewModel に `removePost(uri:)` を追加（削除後のローカル除去）
-- [x] **メンションオートコンプリート** — ComposeView で `@` 入力時に `searchActorsTypeahead` で候補表示
+- [x] **メンションオートコンプリート** — ComposeView で `@` 入力時に `searchActorsTypeahead` で候補表示、DID 解決も同時対応
 
 ### 4-B: 画像・動画添付（優先度：高）
 - [x] **画像添付** — ComposeView: PhotosPicker + `uploadBlob` + プレビュー表示（最大4枚）
