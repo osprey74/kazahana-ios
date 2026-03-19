@@ -50,6 +50,12 @@ struct PostRecord: Codable {
     let facets: [Facet]?
     let reply: ReplyRef?
     let embed: PostEmbed?
+    let via: String?
+
+    enum CodingKeys: String, CodingKey {
+        case text, createdAt, langs, facets, reply, embed
+        case via = "$via"
+    }
 }
 
 // MARK: - リッチテキスト Facets

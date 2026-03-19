@@ -32,6 +32,7 @@ struct PostCardView: View {
     @State private var repostCount: Int
     @State private var likeUri: String?
     @State private var repostUri: String?
+    @State private var showDeleteConfirm = false
 
     private var post: PostView { feedPost.post }
     private var author: ProfileViewBasic { post.author }
@@ -90,6 +91,11 @@ struct PostCardView: View {
                         replyIndicator(parentUri: parentUri)
                     }
 
+                    // langs / via ラベル
+                    if post.record.via != nil || !(post.record.langs ?? []).isEmpty {
+                        langsViaRow
+                    }
+
                     // 本文（リッチテキスト）
                     if !post.record.text.isEmpty {
                         Text(RichTextParser.attributedString(
@@ -124,9 +130,36 @@ struct PostCardView: View {
 
             Divider()
         }
+        .confirmationDialog("投稿を削除します", isPresented: $showDeleteConfirm, titleVisibility: .visible) {
+            Button("削除する", role: .destructive) {
+                Task { await deletePost() }
+            }
+            Button("キャンセル", role: .cancel) {}
+        } message: {
+            Text("この操作は取り消せません")
+        }
     }
 
     // MARK: - Subviews
+
+    @ViewBuilder
+    private var langsViaRow: some View {
+        HStack(spacing: 4) {
+            if let langs = post.record.langs, !langs.isEmpty {
+                Text(langs.joined(separator: ", "))
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+                    .padding(.horizontal, 4)
+                    .padding(.vertical, 1)
+                    .background(Color.secondary.opacity(0.1), in: RoundedRectangle(cornerRadius: 3))
+            }
+            if let via = post.record.via {
+                Text("via \(via)")
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+            }
+        }
+    }
 
     private func repostHeader(by profile: ProfileViewBasic?) -> some View {
         HStack(spacing: 6) {
@@ -185,7 +218,7 @@ struct PostCardView: View {
             if let currentUserDID, currentUserDID == author.did {
                 Divider()
                 Button(role: .destructive) {
-                    Task { await deletePost() }
+                    showDeleteConfirm = true
                 } label: {
                     Label("削除", systemImage: "trash")
                 }
