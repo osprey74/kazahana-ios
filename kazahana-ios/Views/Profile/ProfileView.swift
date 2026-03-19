@@ -89,11 +89,11 @@ struct ProfileScreenView: View {
                         GeometryReader { geo -> Color in
                             let maxY = geo.frame(in: .global).maxY
                             // ProfileHeaderView の下端が画面上部(100pt以内)に来たらコンパクト表示
-                            let compact = maxY < 100
-                            if compact != showCompact {
+                            // 一度 true になったら false には戻さない（タブ切替時のリセット防止）
+                            if !showCompact && maxY < 100 {
                                 DispatchQueue.main.async {
                                     withAnimation(.easeInOut(duration: 0.15)) {
-                                        showCompact = compact
+                                        showCompact = true
                                     }
                                 }
                             }
@@ -145,6 +145,10 @@ struct ProfileScreenView: View {
                 }
             }
             .refreshable {
+                // プルリフレッシュ時はコンパクトヘッダーをリセット
+                withAnimation(.easeInOut(duration: 0.15)) {
+                    showCompact = false
+                }
                 await vm.refresh()
             }
 
