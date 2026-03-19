@@ -15,6 +15,8 @@ struct ProfileScreenView: View {
     @State private var showCompose = false
     @State private var quotePost: PostView? = nil
     @State private var replyToPost: PostView? = nil
+    /// プロフィール情報部分がスクロールアウトしたか（コンパクトヘッダー表示フラグ）
+    @State private var isProfileScrolledOut = false
 
     var body: some View {
         Group {
@@ -68,9 +70,33 @@ struct ProfileScreenView: View {
 
     @ViewBuilder
     private func profileContent(vm: ProfileViewModel) -> some View {
+        let isSelf = authVM.client.currentSession?.did == actor
+
         ScrollView {
             LazyVStack(spacing: 0, pinnedViews: .sectionHeaders) {
                 Section {
+                    // バナー＋フルプロフィール情報（スクロールアウトする部分）
+                    ProfileHeaderView(
+                        vm: vm,
+                        isSelf: isSelf,
+                        onTapFollowers: { userListType = .followers(actor: actor) },
+                        onTapFollowing: { userListType = .following(actor: actor) },
+                        onTapSettings: { showSettings = true }
+                    )
+                    // このビューが画面外に出たか検知するアンカー
+                    .background(
+                        GeometryReader { geo in
+                            Color.clear.onChange(of: geo.frame(in: .global).maxY) { _, maxY in
+                                // ステータスバー高さ相当(~100pt)以下になったらコンパクト表示
+                                withAnimation(.easeInOut(duration: 0.15)) {
+                                    isProfileScrolledOut = maxY < 100
+                                }
+                            }
+                        }
+                    )
+
+                    Divider()
+
                     // タブ別フィード
                     let feed = vm.currentFeed
                     if vm.isCurrentTabLoading && feed.isEmpty {
@@ -106,20 +132,13 @@ struct ProfileScreenView: View {
                     }
                 } header: {
                     VStack(spacing: 0) {
-                        ProfileHeaderView(
-                            vm: vm,
-                            isSelf: authVM.client.currentSession?.did == actor,
-                            onTapFollowers: { userListType = .followers(actor: actor) },
-                            onTapFollowing: { userListType = .following(actor: actor) },
-                            onTapSettings: { showSettings = true }
-                        )
-                        .padding(.bottom, 4)
-
+                        // コンパクトヘッダー（スクロールアウト後に表示）
+                        if isProfileScrolledOut {
+                            compactHeader(vm: vm, isSelf: isSelf)
+                                .transition(.opacity)
+                        }
                         Divider()
-
-                        // タブバー
                         profileTabBar(vm: vm)
-
                         Divider()
                     }
                     .background(Color(.systemBackground))
@@ -143,6 +162,41 @@ struct ProfileScreenView: View {
             .padding(.trailing, 20)
             .padding(.bottom, 24)
         }
+    }
+
+    /// スクロール後に固定されるコンパクトヘッダー（アバター小＋名前＋設定ボタン）
+    private func compactHeader(vm: ProfileViewModel, isSelf: Bool) -> some View {
+        HStack(spacing: 12) {
+            AvatarView(url: vm.profile?.avatar, size: 36)
+
+            VStack(alignment: .leading, spacing: 1) {
+                if let profile = vm.profile {
+                    Text(profile.displayNameOrHandle)
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                        .lineLimit(1)
+                    Text("@\(profile.handle)")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+            }
+
+            Spacer()
+
+            if isSelf {
+                Button {
+                    showSettings = true
+                } label: {
+                    Image(systemName: "gearshape")
+                        .font(.system(size: 18))
+                        .foregroundStyle(.primary)
+                }
+                .padding(.trailing, 4)
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
     }
 
     private func profileTabBar(vm: ProfileViewModel) -> some View {
@@ -174,7 +228,7 @@ struct ProfileScreenView: View {
     }
 }
 
-// MARK: - プロフィールヘッダー
+// MARK: - プロフィールヘッダー（フル表示）
 
 struct ProfileHeaderView: View {
     let vm: ProfileViewModel
