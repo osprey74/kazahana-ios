@@ -64,10 +64,6 @@ open kazahana-ios.xcodeproj
 
 [MIT License](LICENSE)
 
-## ライセンス
-
-[MIT License](LICENSE)
-
 ## Support / 開発を応援する
 
 kazahana を気に入っていただけたら、開発の継続を応援してください ☕
