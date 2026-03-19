@@ -28,13 +28,22 @@ struct ComposeView: View {
     @State private var editingAltIndex: Int? = nil
     @State private var altText: String = ""
 
+    // メンションオートコンプリート
+    @State private var mentionCandidates: [ProfileViewBasic] = []
+    @State private var mentionQuery: String? = nil   // nil = 非アクティブ
+    @State private var mentionSearchTask: Task<Void, Never>? = nil
+    // 解決済みメンション DID（handle → did のキャッシュ）
+    @State private var resolvedMentions: [String: String] = [:]
+
     private let postService: PostService
+    private let searchService: SearchService
     private let replyToPost: PostView?
     private let replyTarget: ReplyTarget?
     private let quotePost: PostView?
 
-    init(postService: PostService, replyTo: PostView? = nil, quotedPost: PostView? = nil) {
+    init(postService: PostService, searchService: SearchService? = nil, replyTo: PostView? = nil, quotedPost: PostView? = nil) {
         self.postService = postService
+        self.searchService = searchService ?? SearchService(client: postService.atProtoClient)
         self.replyToPost = replyTo
         self.quotePost = quotedPost
         if let replyTo {
@@ -62,12 +71,22 @@ struct ComposeView: View {
                     Divider()
                 }
 
-                // 入力エリア
-                TextEditor(text: $text)
-                    .font(.body)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .padding(.horizontal, 12)
-                    .scrollContentBackground(.hidden)
+                // 入力エリア + メンション候補オーバーレイ
+                ZStack(alignment: .bottom) {
+                    TextEditor(text: $text)
+                        .font(.body)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .padding(.horizontal, 12)
+                        .scrollContentBackground(.hidden)
+                        .onChange(of: text) { _, newValue in
+                            updateMentionQuery(text: newValue)
+                        }
+
+                    // メンション候補リスト
+                    if !mentionCandidates.isEmpty {
+                        mentionSuggestionList
+                    }
+                }
 
                 // 画像プレビュー
                 if !selectedImages.isEmpty {
@@ -162,7 +181,7 @@ struct ComposeView: View {
             }
 
             let detected = RichTextParser.detectFacets(in: text)
-            let facets = RichTextParser.buildFacets(from: detected)
+            let facets = RichTextParser.buildFacets(from: detected, resolvedMentions: resolvedMentions)
             let via = appSettings.showVia ? appSettings.viaName : nil
             _ = try await postService.createPost(
                 text: text,
@@ -191,6 +210,103 @@ struct ComposeView: View {
         await MainActor.run {
             selectedImages = results
             photoPickerItems = []
+        }
+    }
+
+    // MARK: - メンションオートコンプリート
+
+    /// テキスト変更時に末尾の @query を検出してタイプアヘッド検索を起動
+    private func updateMentionQuery(text: String) {
+        // 最後の @ 以降のトークンを取得（空白が来たら終了）
+        let query = extractMentionQuery(from: text)
+        if query == mentionQuery { return }
+        mentionQuery = query
+        mentionSearchTask?.cancel()
+
+        guard let q = query, !q.isEmpty else {
+            mentionCandidates = []
+            return
+        }
+
+        mentionSearchTask = Task {
+            // 150ms デバウンス
+            try? await Task.sleep(for: .milliseconds(150))
+            guard !Task.isCancelled else { return }
+            if let result = try? await searchService.searchActorsTypeahead(query: q) {
+                await MainActor.run {
+                    mentionCandidates = result.actors
+                }
+            }
+        }
+    }
+
+    /// テキスト末尾から `@query` を抽出（空白・改行があれば nil）
+    private func extractMentionQuery(from text: String) -> String? {
+        // 末尾から遡って @ を探す
+        let chars = Array(text)
+        var i = chars.count - 1
+        while i >= 0 {
+            let c = chars[i]
+            if c == "@" {
+                let query = String(chars[(i + 1)...])
+                // query に空白・改行が含まれていたら無効
+                if query.contains(" ") || query.contains("\n") { return nil }
+                return query
+            }
+            // 空白・改行が現れたら @ は存在しない
+            if c == " " || c == "\n" { return nil }
+            i -= 1
+        }
+        return nil
+    }
+
+    /// 候補を選択してテキストを補完
+    private func applyMention(_ actor: ProfileViewBasic) {
+        guard let query = mentionQuery else { return }
+        // @query を @handle + スペースに置換
+        let suffix = "@\(query)"
+        if text.hasSuffix(suffix) {
+            text = String(text.dropLast(suffix.count)) + "@\(actor.handle) "
+        }
+        // DID をキャッシュ
+        resolvedMentions[actor.handle] = actor.did
+        mentionCandidates = []
+        mentionQuery = nil
+    }
+
+    private var mentionSuggestionList: some View {
+        VStack(spacing: 0) {
+            Divider()
+            ScrollView {
+                LazyVStack(spacing: 0) {
+                    ForEach(mentionCandidates, id: \.did) { actor in
+                        Button {
+                            applyMention(actor)
+                        } label: {
+                            HStack(spacing: 10) {
+                                AvatarView(url: actor.avatar, size: 32)
+                                VStack(alignment: .leading, spacing: 1) {
+                                    Text(actor.displayNameOrHandle)
+                                        .font(.subheadline.weight(.semibold))
+                                        .foregroundStyle(.primary)
+                                        .lineLimit(1)
+                                    Text("@\(actor.handle)")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                        .lineLimit(1)
+                                }
+                                Spacer()
+                            }
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 8)
+                        }
+                        .buttonStyle(.plain)
+                        Divider().padding(.leading, 58)
+                    }
+                }
+            }
+            .frame(maxHeight: 220)
+            .background(.regularMaterial)
         }
     }
 

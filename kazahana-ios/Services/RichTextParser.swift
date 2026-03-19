@@ -71,7 +71,6 @@ final class RichTextParser {
     ///       ここでは byteOffset 計算のみ行い DID は呼び出し側で補完する
     static func detectFacets(in text: String) -> [DetectedFacet] {
         var detected: [DetectedFacet] = []
-        let utf8Data = text.utf8
 
         // URL 検出
         let urlPattern = try! NSRegularExpression(
@@ -124,8 +123,9 @@ final class RichTextParser {
         return detected.sorted { $0.byteStart < $1.byteStart }
     }
 
-    /// DetectedFacet（DID解決済み）を Facet 配列に変換する
-    static func buildFacets(from detected: [DetectedFacet]) -> [Facet] {
+    /// DetectedFacet を Facet 配列に変換する
+    /// - Parameter resolvedMentions: handle → DID のキャッシュ（オートコンプリートで解決済みのもの）
+    static func buildFacets(from detected: [DetectedFacet], resolvedMentions: [String: String] = [:]) -> [Facet] {
         detected.compactMap { d in
             let index = ByteSlice(byteStart: d.byteStart, byteEnd: d.byteEnd)
             switch d.kind {
@@ -133,7 +133,9 @@ final class RichTextParser {
                 return Facet(index: index, features: [
                     FacetFeature(type: "app.bsky.richtext.facet#link", did: nil, uri: uri, tag: nil)
                 ])
-            case .mention(_, let did):
+            case .mention(let handle, let detectedDID):
+                // オートコンプリートで解決済み DID を優先、なければ検出済み DID を使用
+                let did = resolvedMentions[handle] ?? detectedDID
                 guard let did else { return nil } // DID 未解決は除外
                 return Facet(index: index, features: [
                     FacetFeature(type: "app.bsky.richtext.facet#mention", did: did, uri: nil, tag: nil)

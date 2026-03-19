@@ -8,6 +8,9 @@ final class PostService {
 
     private let client: ATProtoClient
 
+    /// SearchService など外部サービスが同一クライアントを使用できるよう公開
+    var atProtoClient: ATProtoClient { client }
+
     init(client: ATProtoClient) {
         self.client = client
     }

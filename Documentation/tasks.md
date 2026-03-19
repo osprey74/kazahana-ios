@@ -1,6 +1,6 @@
 # kazahana-ios 開発タスク・進捗記録
 
-最終更新: 2026-03-19
+最終更新: 2026-03-19 (Phase 4-A/B/D 追加修正・プロフィール画面 FAB 追加)
 
 ---
 
@@ -10,7 +10,7 @@
 - Phase 2 (コア機能): 8/8 ✅ 完了
 - Phase 3 (通知・プロフィール・検索): 6/6 ✅ 完了
 - Phase 3.5 (UX改善・バグ修正): 12/12 ✅ 完了
-- Phase 4 (DM・モデレーション・設定): 3/7
+- Phase 4 (DM・モデレーション・設定): 5/7
 - Phase 5 (BSAF・高度な機能): 0/4
 
 ---
@@ -130,7 +130,7 @@
   - PostCardView `authorRow` に三点メニュー（`ellipsis`）ボタンを追加
   - 自分の投稿の場合のみ「削除」を表示（`currentUserDID` 比較）
   - TimelineViewModel に `removePost(uri:)` を追加（削除後のローカル除去）
-- [ ] **メンションオートコンプリート** — ComposeView で `@` 入力時に `searchActorsTypeahead` で候補表示
+- [x] **メンションオートコンプリート** — ComposeView で `@` 入力時に `searchActorsTypeahead` で候補表示
 
 ### 4-B: 画像・動画添付（優先度：高）
 - [x] **画像添付** — ComposeView: PhotosPicker + `uploadBlob` + プレビュー表示（最大4枚）
@@ -259,8 +259,8 @@
 - [ ] **検索デバウンス**: SearchViewModel は Task キャンセルで対応しているが、厳密なデバウンス実装は未対応
 - [ ] **引用数タップ**: ThreadView の引用数は PostActorListView 非対応（`app.bsky.feed.getQuotes` API は未実装）
 - [ ] **コンテンツモデレーション**: タイムライン・検索・プロフィールでのラベル判定・ブラー・フィルタが未実装 → Phase 4-C
-- [ ] **投稿削除**: 自分の投稿の三点メニューから削除する機能が未実装 → Phase 4-A
-- [ ] **投稿元表示（via）**: 設定に基づきレコードにクライアント名を付与する機能が未実装 → Phase 4-D
+- [x] **投稿削除**: 自分の投稿の三点メニューから削除する機能が未実装 → Phase 4-A（実装済み）
+- [x] **投稿元表示（via）**: 設定に基づきレコードにクライアント名を付与する機能が未実装 → Phase 4-D（実装済み）
 - [ ] **DM（ダイレクトメッセージ）**: `chat.bsky.convo.*` API 全体が未実装 → Phase 4-F
 - [ ] **プロフィール追加タブ**: 返信/いいね/メディア一覧が未実装 → Phase 4-E
 

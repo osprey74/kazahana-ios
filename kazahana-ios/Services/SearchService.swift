@@ -22,6 +22,12 @@ struct SearchService {
         self.client = client
     }
 
+    /// メンション入力補助用タイプアヘッド検索（最大8件）
+    func searchActorsTypeahead(query: String, limit: Int = 8) async throws -> ActorSearchResponse {
+        let params: [String: String] = ["q": query, "limit": "\(limit)"]
+        return try await client.get(nsid: "app.bsky.actor.searchActorsTypeahead", params: params)
+    }
+
     /// アクター（ユーザー）を検索する
     func searchActors(query: String, limit: Int = 25, cursor: String? = nil) async throws -> ActorSearchResponse {
         var params: [String: String] = ["q": query, "limit": "\(limit)"]
