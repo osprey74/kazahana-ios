@@ -82,7 +82,8 @@ final class ChatThreadViewModel {
                 text: response.text,
                 sender: response.sender,
                 sentAt: response.sentAt,
-                facets: response.facets
+                facets: response.facets,
+                reactions: response.reactions
             )
             messages.append(.message(newMessage))
         } catch {
@@ -115,6 +116,44 @@ final class ChatThreadViewModel {
         } catch {
             errorMessage = error.localizedDescription
         }
+    }
+
+    // MARK: - リアクション
+
+    @MainActor
+    func toggleReaction(messageId: String, emoji: String, myDID: String) async {
+        // 既に自分がそのリアクションを付けているか確認
+        let hasReaction = currentReactions(messageId: messageId)
+            .contains { $0.value == emoji && $0.sender.did == myDID }
+        do {
+            let response: ChatMessageView
+            if hasReaction {
+                let r = try await chatService.removeReaction(convoId: convoId, messageId: messageId, value: emoji)
+                response = ChatMessageView(id: r.id, rev: r.rev, text: r.text, sender: r.sender, sentAt: r.sentAt, facets: r.facets, reactions: r.reactions)
+            } else {
+                let r = try await chatService.addReaction(convoId: convoId, messageId: messageId, value: emoji)
+                response = ChatMessageView(id: r.id, rev: r.rev, text: r.text, sender: r.sender, sentAt: r.sentAt, facets: r.facets, reactions: r.reactions)
+            }
+            // メッセージリストを更新
+            if let idx = messages.firstIndex(where: {
+                if case .message(let m) = $0 { return m.id == messageId }
+                return false
+            }) {
+                messages[idx] = .message(response)
+            }
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    /// 指定メッセージの現在のリアクション一覧を返す
+    func currentReactions(messageId: String) -> [ChatReaction] {
+        for msg in messages {
+            if case .message(let m) = msg, m.id == messageId {
+                return m.reactions ?? []
+            }
+        }
+        return []
     }
 
     // MARK: - 既読
@@ -164,6 +203,22 @@ final class ChatThreadViewModel {
                 switch msg {
                 case .message(let m): return !existingIDs.contains(m.id)
                 case .deleted(let d): return !existingIDs.contains(d.id)
+                }
+            }
+            // リアクション変化を反映（既存メッセージを更新）
+            for newMsg in newMessages {
+                if case .message(let newM) = newMsg,
+                   let idx = messages.firstIndex(where: {
+                       if case .message(let m) = $0 { return m.id == newM.id }
+                       return false
+                   }) {
+                    if case .message(let existing) = messages[idx] {
+                        let existingReactionCount = existing.reactions?.count ?? 0
+                        let newReactionCount = newM.reactions?.count ?? 0
+                        if existingReactionCount != newReactionCount {
+                            messages[idx] = .message(newM)
+                        }
+                    }
                 }
             }
             if !toAdd.isEmpty {

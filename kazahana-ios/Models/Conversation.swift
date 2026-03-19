@@ -52,6 +52,7 @@ struct ChatMessageView: Codable, Identifiable {
     let sender: ChatMessageSender
     let sentAt: String
     let facets: [Facet]?
+    let reactions: [ChatReaction]?
 
     var sentDate: Date? {
         ISO8601DateFormatter().date(from: sentAt)
@@ -60,6 +61,13 @@ struct ChatMessageView: Codable, Identifiable {
 
 struct ChatMessageSender: Codable {
     let did: String
+}
+
+// MARK: - ChatReaction
+
+struct ChatReaction: Codable {
+    let value: String
+    let sender: ChatMessageSender
 }
 
 // MARK: - DeletedMessageView
@@ -135,6 +143,27 @@ struct SendMessageResponse: Decodable {
     let sender: ChatMessageSender
     let sentAt: String
     let facets: [Facet]?
+    let reactions: [ChatReaction]?
+}
+
+struct AddReactionResponse: Decodable {
+    let id: String
+    let rev: String
+    let text: String
+    let sender: ChatMessageSender
+    let sentAt: String
+    let facets: [Facet]?
+    let reactions: [ChatReaction]?
+}
+
+struct RemoveReactionResponse: Decodable {
+    let id: String
+    let rev: String
+    let text: String
+    let sender: ChatMessageSender
+    let sentAt: String
+    let facets: [Facet]?
+    let reactions: [ChatReaction]?
 }
 
 struct GetConvoForMembersResponse: Decodable {
@@ -180,6 +209,18 @@ struct LeaveConvoBody: Encodable {
 
 struct AcceptConvoBody: Encodable {
     let convoId: String
+}
+
+struct AddReactionBody: Encodable {
+    let convoId: String
+    let messageId: String
+    let value: String
+}
+
+struct RemoveReactionBody: Encodable {
+    let convoId: String
+    let messageId: String
+    let value: String
 }
 
 // MARK: - 削除レスポンス

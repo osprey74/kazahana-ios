@@ -2042,6 +2042,21 @@
         }
       }
     },
+    "dm.addReaction" : {
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Reaktion hinzufügen" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Add Reaction" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Agregar reacción" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Ajouter une réaction" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Tambahkan reaksi" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "リアクションを追加" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "반응 추가" } },
+        "pt" : { "stringUnit" : { "state" : "translated", "value" : "Adicionar reação" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Добавить реакцию" } },
+        "zh-CN" : { "stringUnit" : { "state" : "translated", "value" : "添加表情回应" } },
+        "zh-TW" : { "stringUnit" : { "state" : "translated", "value" : "新增表情回應" } }
+      }
+    },
     "dm.deleteMessage" : {
       "localizations" : {
         "de" : { "stringUnit" : { "state" : "translated", "value" : "Nachricht löschen" } },

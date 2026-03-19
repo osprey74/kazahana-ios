@@ -135,6 +135,34 @@ final class ChatService {
         )
     }
 
+    // MARK: - リアクション
+
+    /// メッセージにリアクション（絵文字）を追加する
+    /// - Parameters:
+    ///   - convoId: 会話 ID
+    ///   - messageId: メッセージ ID
+    ///   - value: 絵文字文字列（例: "❤️"）
+    func addReaction(convoId: String, messageId: String, value: String) async throws -> AddReactionResponse {
+        let body = AddReactionBody(convoId: convoId, messageId: messageId, value: value)
+        return try await client.postWithProxy(
+            nsid: "chat.bsky.convo.addReaction",
+            body: body
+        )
+    }
+
+    /// メッセージのリアクションを削除する
+    /// - Parameters:
+    ///   - convoId: 会話 ID
+    ///   - messageId: メッセージ ID
+    ///   - value: 削除する絵文字文字列
+    func removeReaction(convoId: String, messageId: String, value: String) async throws -> RemoveReactionResponse {
+        let body = RemoveReactionBody(convoId: convoId, messageId: messageId, value: value)
+        return try await client.postWithProxy(
+            nsid: "chat.bsky.convo.removeReaction",
+            body: body
+        )
+    }
+
     // MARK: - 未読数
 
     /// 全未読メッセージ数を取得する

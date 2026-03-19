@@ -49,6 +49,9 @@ struct ChatThreadView: View {
                                 myDID: myDID,
                                 onDelete: { msgId in
                                     Task { await viewModel?.deleteMessage(messageId: msgId) }
+                                },
+                                onReaction: { msgId, emoji in
+                                    Task { await viewModel?.toggleReaction(messageId: msgId, emoji: emoji, myDID: myDID) }
                                 }
                             )
                             .id(messageID(msg))
@@ -127,10 +130,16 @@ struct ChatThreadView: View {
 
 // MARK: - MessageBubbleView
 
+/// リアクション絵文字のプリセット（デスクトップ版と同じ6種）
+private let reactionPresets = ["❤️", "👍", "😂", "😮", "😢", "🎉"]
+
 struct MessageBubbleView: View {
     let message: ChatMessageViewOrDeleted
     let myDID: String
     let onDelete: (String) -> Void
+    let onReaction: (String, String) -> Void  // (messageId, emoji)
+
+    @State private var showEmojiPicker = false
 
     private var isMine: Bool {
         switch message {
@@ -140,19 +149,42 @@ struct MessageBubbleView: View {
     }
 
     var body: some View {
-        HStack {
-            if isMine { Spacer(minLength: 60) }
+        HStack(alignment: .bottom, spacing: 0) {
+            if isMine { Spacer(minLength: 40) }
             bubbleContent
                 .contextMenu {
-                    if case .message(let m) = message, isMine {
-                        Button(role: .destructive) {
-                            onDelete(m.id)
+                    if case .message(let m) = message {
+                        // リアクション追加
+                        Button {
+                            showEmojiPicker = true
                         } label: {
-                            Label(String(localized: "dm.deleteMessage"), systemImage: "trash")
+                            Label(String(localized: "dm.addReaction"), systemImage: "face.smiling")
+                        }
+                        Divider()
+                        if isMine {
+                            Button(role: .destructive) {
+                                onDelete(m.id)
+                            } label: {
+                                Label(String(localized: "dm.deleteMessage"), systemImage: "trash")
+                            }
                         }
                     }
                 }
-            if !isMine { Spacer(minLength: 60) }
+                .popover(isPresented: $showEmojiPicker) {
+                    if case .message(let m) = message {
+                        EmojiPickerView(
+                            messageId: m.id,
+                            myDID: myDID,
+                            reactions: m.reactions ?? [],
+                            onSelect: { emoji in
+                                showEmojiPicker = false
+                                onReaction(m.id, emoji)
+                            }
+                        )
+                        .presentationCompactAdaptation(.popover)
+                    }
+                }
+            if !isMine { Spacer(minLength: 40) }
         }
     }
 
@@ -160,13 +192,23 @@ struct MessageBubbleView: View {
     private var bubbleContent: some View {
         switch message {
         case .message(let m):
-            VStack(alignment: isMine ? .trailing : .leading, spacing: 2) {
+            VStack(alignment: isMine ? .trailing : .leading, spacing: 4) {
                 Text(m.text)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 8)
                     .background(isMine ? Color.blue : Color(.systemGray5))
                     .foregroundStyle(isMine ? .white : .primary)
                     .clipShape(RoundedRectangle(cornerRadius: 16))
+
+                // リアクション表示
+                if let reactions = m.reactions, !reactions.isEmpty {
+                    ReactionSummaryView(
+                        reactions: reactions,
+                        myDID: myDID,
+                        isMine: isMine,
+                        onTap: { emoji in onReaction(m.id, emoji) }
+                    )
+                }
 
                 if let date = m.sentDate {
                     Text(date, style: .time)
@@ -186,5 +228,97 @@ struct MessageBubbleView: View {
                 .background(Color(.systemGray6))
                 .clipShape(RoundedRectangle(cornerRadius: 16))
         }
+    }
+}
+
+// MARK: - ReactionSummaryView（リアクション一覧）
+
+struct ReactionSummaryView: View {
+    let reactions: [ChatReaction]
+    let myDID: String
+    let isMine: Bool
+    let onTap: (String) -> Void
+
+    /// 絵文字ごとに集計 → [(emoji, count, isMine)]
+    private var grouped: [(emoji: String, count: Int, mine: Bool)] {
+        var map: [String: (count: Int, mine: Bool)] = [:]
+        for r in reactions {
+            let existing = map[r.value]
+            let isMyReaction = r.sender.did == myDID
+            map[r.value] = (
+                count: (existing?.count ?? 0) + 1,
+                mine: (existing?.mine ?? false) || isMyReaction
+            )
+        }
+        // 出現順を維持するため reactions の順序を使用
+        var seen = Set<String>()
+        var result: [(emoji: String, count: Int, mine: Bool)] = []
+        for r in reactions {
+            if seen.insert(r.value).inserted, let entry = map[r.value] {
+                result.append((emoji: r.value, count: entry.count, mine: entry.mine))
+            }
+        }
+        return result
+    }
+
+    var body: some View {
+        HStack(spacing: 4) {
+            ForEach(grouped, id: \.emoji) { item in
+                Button {
+                    onTap(item.emoji)
+                } label: {
+                    HStack(spacing: 2) {
+                        Text(item.emoji)
+                            .font(.caption)
+                        if item.count > 1 {
+                            Text("\(item.count)")
+                                .font(.caption2)
+                                .fontWeight(.medium)
+                                .foregroundStyle(item.mine ? .white : .primary)
+                        }
+                    }
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(item.mine ? Color.blue.opacity(0.8) : Color(.systemGray5))
+                    .clipShape(Capsule())
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(.horizontal, 4)
+    }
+}
+
+// MARK: - EmojiPickerView（絵文字選択ポップオーバー）
+
+struct EmojiPickerView: View {
+    let messageId: String
+    let myDID: String
+    let reactions: [ChatReaction]
+    let onSelect: (String) -> Void
+
+    /// 自分が既に付けているリアクション
+    private var myReactions: Set<String> {
+        Set(reactions.filter { $0.sender.did == myDID }.map(\.value))
+    }
+
+    var body: some View {
+        HStack(spacing: 4) {
+            ForEach(reactionPresets, id: \.self) { emoji in
+                let isSelected = myReactions.contains(emoji)
+                Button {
+                    onSelect(emoji)
+                } label: {
+                    Text(emoji)
+                        .font(.title2)
+                        .padding(8)
+                        .background(isSelected ? Color.blue.opacity(0.2) : Color.clear)
+                        .clipShape(Circle())
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
     }
 }
