@@ -226,7 +226,20 @@ struct ProfileScreenView: View {
     @ViewBuilder
     private func pinnedPostView(post: PostView, vm: ProfileViewModel) -> some View {
         let feedPost = FeedViewPost(post: post, reply: nil, reason: nil)
-        ZStack(alignment: .topLeading) {
+        VStack(spacing: 0) {
+            // ピン留めラベル（リポスト理由行と同じ構造）
+            HStack(spacing: 4) {
+                Image(systemName: "pin.fill")
+                    .font(.caption2)
+                Text(String(localized: "post.pinned"))
+                    .font(.caption2)
+            }
+            .foregroundStyle(.secondary)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 16)
+            .padding(.top, 8)
+            .padding(.bottom, 4)
+
             PostCardView(
                 feedPost: feedPost,
                 postService: PostService(client: authVM.client),
@@ -236,15 +249,6 @@ struct ProfileScreenView: View {
                 onDelete: { p in vm.removePost(uri: p.uri) },
                 currentUserDID: authVM.client.currentSession?.did
             )
-            HStack(spacing: 4) {
-                Image(systemName: "pin.fill")
-                    .font(.caption2)
-                Text(String(localized: "post.pinned"))
-                    .font(.caption2)
-            }
-            .foregroundStyle(.secondary)
-            .padding(.horizontal, 16)
-            .padding(.top, 6)
         }
     }
 
