@@ -5,6 +5,13 @@
 import Foundation
 import Observation
 
+enum ProfileTab: String, CaseIterable {
+    case posts   = "投稿"
+    case replies = "返信"
+    case media   = "メディア"
+    case likes   = "いいね"
+}
+
 @Observable
 final class ProfileViewModel {
     var profile: ProfileView?
@@ -15,6 +22,14 @@ final class ProfileViewModel {
     var isFollowLoading = false
     var errorMessage: String?
 
+    // タブ管理
+    var selectedTab: ProfileTab = .posts
+    // タブ別フィードキャッシュ
+    var tabFeeds: [ProfileTab: [FeedViewPost]] = [:]
+    var tabCursors: [ProfileTab: String?] = [:]
+    var tabHasMore: [ProfileTab: Bool] = [:]
+    var tabIsLoading: [ProfileTab: Bool] = [:]
+
     private var cursor: String?
     private var hasMore = true
     let actor: String
@@ -24,7 +39,17 @@ final class ProfileViewModel {
     init(actor: String, graphService: GraphService) {
         self.actor = actor
         self.graphService = graphService
+        // 全タブの初期化
+        for tab in ProfileTab.allCases {
+            tabFeeds[tab] = []
+            tabCursors[tab] = nil
+            tabHasMore[tab] = true
+            tabIsLoading[tab] = false
+        }
     }
+
+    var currentFeed: [FeedViewPost] { tabFeeds[selectedTab] ?? [] }
+    var isCurrentTabLoading: Bool { tabIsLoading[selectedTab] ?? false }
 
     // MARK: - プロフィール読み込み
 
@@ -42,40 +67,70 @@ final class ProfileViewModel {
         isLoadingProfile = false
     }
 
-    // MARK: - 投稿一覧読み込み
+    // MARK: - 投稿一覧読み込み（後方互換）
 
     @MainActor
     func loadPosts() async {
-        guard !isLoadingPosts else { return }
-        isLoadingPosts = true
-        cursor = nil
-        hasMore = true
-
-        do {
-            let response = try await graphService.getAuthorFeed(actor: actor, limit: 30)
-            posts = response.feed
-            cursor = response.cursor
-            hasMore = response.cursor != nil
-        } catch {
-            errorMessage = error.localizedDescription
-        }
-        isLoadingPosts = false
+        await loadTab(.posts)
     }
 
     @MainActor
     func loadMorePosts() async {
-        guard !isLoadingPosts, hasMore, let currentCursor = cursor else { return }
-        isLoadingPosts = true
+        await loadMoreTab(.posts)
+    }
+
+    // MARK: - タブ別フィード読み込み
+
+    @MainActor
+    func loadTab(_ tab: ProfileTab) async {
+        guard !(tabIsLoading[tab] ?? false) else { return }
+        tabIsLoading[tab] = true
+        tabCursors[tab] = nil
+        tabHasMore[tab] = true
 
         do {
-            let response = try await graphService.getAuthorFeed(actor: actor, limit: 30, cursor: currentCursor)
-            posts.append(contentsOf: response.feed)
-            cursor = response.cursor
-            hasMore = response.cursor != nil
+            let response = try await fetchFeed(tab: tab, cursor: nil)
+            tabFeeds[tab] = response.feed
+            tabCursors[tab] = response.cursor
+            tabHasMore[tab] = response.cursor != nil
+            // 後方互換
+            if tab == .posts { posts = response.feed; cursor = response.cursor; hasMore = response.cursor != nil }
         } catch {
             errorMessage = error.localizedDescription
         }
-        isLoadingPosts = false
+        tabIsLoading[tab] = false
+    }
+
+    @MainActor
+    func loadMoreTab(_ tab: ProfileTab) async {
+        guard !(tabIsLoading[tab] ?? false),
+              tabHasMore[tab] ?? false,
+              let currentCursor = tabCursors[tab] ?? nil else { return }
+        tabIsLoading[tab] = true
+
+        do {
+            let response = try await fetchFeed(tab: tab, cursor: currentCursor)
+            tabFeeds[tab]?.append(contentsOf: response.feed)
+            tabCursors[tab] = response.cursor
+            tabHasMore[tab] = response.cursor != nil
+            if tab == .posts { posts = tabFeeds[tab] ?? []; cursor = response.cursor; hasMore = response.cursor != nil }
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+        tabIsLoading[tab] = false
+    }
+
+    private func fetchFeed(tab: ProfileTab, cursor: String?) async throws -> TimelineResponse {
+        switch tab {
+        case .posts:
+            return try await graphService.getAuthorFeed(actor: actor, limit: 30, cursor: cursor, filter: "posts_no_replies")
+        case .replies:
+            return try await graphService.getAuthorFeed(actor: actor, limit: 30, cursor: cursor, filter: "posts_with_replies")
+        case .media:
+            return try await graphService.getAuthorFeed(actor: actor, limit: 30, cursor: cursor, filter: "posts_with_media")
+        case .likes:
+            return try await graphService.getActorLikes(actor: actor, limit: 30, cursor: cursor)
+        }
     }
 
     @MainActor
@@ -83,7 +138,7 @@ final class ProfileViewModel {
         guard !isRefreshing else { return }
         isRefreshing = true
         async let profileTask: () = refreshProfile()
-        async let postsTask: () = refreshPosts()
+        async let postsTask: () = refreshCurrentTab()
         _ = await (profileTask, postsTask)
         isRefreshing = false
     }
@@ -94,20 +149,25 @@ final class ProfileViewModel {
         }
     }
 
-    private func refreshPosts() async {
-        if let response = try? await graphService.getAuthorFeed(actor: actor, limit: 30) {
+    private func refreshCurrentTab() async {
+        let tab = selectedTab
+        if let response = try? await fetchFeed(tab: tab, cursor: nil) {
             await MainActor.run {
-                posts = response.feed
-                cursor = response.cursor
-                hasMore = response.cursor != nil
+                tabFeeds[tab] = response.feed
+                tabCursors[tab] = response.cursor
+                tabHasMore[tab] = response.cursor != nil
+                if tab == .posts { posts = response.feed; cursor = response.cursor; hasMore = response.cursor != nil }
             }
         }
     }
 
-    /// 投稿削除後にローカルリストから除去
+    /// 投稿削除後に全タブのローカルリストから除去
     @MainActor
     func removePost(uri: String) {
         posts.removeAll { $0.post.uri == uri }
+        for tab in ProfileTab.allCases {
+            tabFeeds[tab]?.removeAll { $0.post.uri == uri }
+        }
     }
 
     // MARK: - フォロー / フォロー解除

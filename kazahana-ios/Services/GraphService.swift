@@ -62,10 +62,19 @@ struct GraphService {
     }
 
     /// アクターの投稿一覧を取得する
-    func getAuthorFeed(actor: String, limit: Int = 30, cursor: String? = nil) async throws -> TimelineResponse {
+    /// - Parameter filter: "posts_no_replies"（投稿のみ）/ "posts_with_replies"（返信含む）/ "posts_with_media"（メディアのみ）
+    func getAuthorFeed(actor: String, limit: Int = 30, cursor: String? = nil, filter: String? = nil) async throws -> TimelineResponse {
         var params: [String: String] = ["actor": actor, "limit": "\(limit)"]
         if let cursor = cursor { params["cursor"] = cursor }
+        if let filter = filter { params["filter"] = filter }
         return try await client.get(nsid: "app.bsky.feed.getAuthorFeed", params: params)
+    }
+
+    /// アクターのいいね一覧を取得する
+    func getActorLikes(actor: String, limit: Int = 30, cursor: String? = nil) async throws -> TimelineResponse {
+        var params: [String: String] = ["actor": actor, "limit": "\(limit)"]
+        if let cursor = cursor { params["cursor"] = cursor }
+        return try await client.get(nsid: "app.bsky.feed.getActorLikes", params: params)
     }
 
     /// フォロワー一覧を取得する

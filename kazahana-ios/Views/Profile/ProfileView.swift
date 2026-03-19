@@ -29,7 +29,7 @@ struct ProfileScreenView: View {
             setupViewModel()
             await withTaskGroup(of: Void.self) { group in
                 group.addTask { await viewModel?.loadProfile() }
-                group.addTask { await viewModel?.loadPosts() }
+                group.addTask { await viewModel?.loadTab(.posts) }
             }
         }
         .navigationDestination(item: $selectedPost) { post in
@@ -80,45 +80,59 @@ struct ProfileScreenView: View {
     @ViewBuilder
     private func profileContent(vm: ProfileViewModel) -> some View {
         ScrollView {
-            LazyVStack(spacing: 0) {
-                ProfileHeaderView(
-                    vm: vm,
-                    isSelf: authVM.client.currentSession?.did == actor,
-                    onTapFollowers: { userListType = .followers(actor: actor) },
-                    onTapFollowing: { userListType = .following(actor: actor) }
-                )
-                .padding(.bottom, 8)
-
-                Divider()
-
-                if vm.isLoadingPosts && vm.posts.isEmpty {
-                    ProgressView()
-                        .padding(.top, 32)
-                } else {
-                    ForEach(vm.posts) { feedPost in
-                        PostCardView(
-                            feedPost: feedPost,
-                            postService: PostService(client: authVM.client),
-                            onTapPost: { _ in selectedPost = feedPost },
-                            onTapReply: { post in replyToPost = post },
-                            onTapQuote: { post in quotePost = post },
-                            onDelete: { post in vm.removePost(uri: post.uri) },
-                            currentUserDID: authVM.client.currentSession?.did
-                        )
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 8)
-                        Divider()
-                            .padding(.leading, 16)
-                        // Load more trigger
-                        if feedPost.post.uri == vm.posts.last?.post.uri {
-                            Color.clear
-                                .frame(height: 1)
-                                .task { await vm.loadMorePosts() }
+            LazyVStack(spacing: 0, pinnedViews: .sectionHeaders) {
+                Section {
+                    // タブ別フィード
+                    let feed = vm.currentFeed
+                    if vm.isCurrentTabLoading && feed.isEmpty {
+                        ProgressView()
+                            .padding(.top, 32)
+                    } else if feed.isEmpty && !vm.isCurrentTabLoading {
+                        Text("投稿がありません")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .padding(.top, 40)
+                            .frame(maxWidth: .infinity)
+                    } else {
+                        ForEach(feed) { feedPost in
+                            PostCardView(
+                                feedPost: feedPost,
+                                postService: PostService(client: authVM.client),
+                                onTapPost: { _ in selectedPost = feedPost },
+                                onTapReply: { post in replyToPost = post },
+                                onTapQuote: { post in quotePost = post },
+                                onDelete: { post in vm.removePost(uri: post.uri) },
+                                currentUserDID: authVM.client.currentSession?.did
+                            )
+                            Divider().padding(.leading, 16)
+                            if feedPost.post.uri == feed.last?.post.uri {
+                                Color.clear
+                                    .frame(height: 1)
+                                    .task { await vm.loadMoreTab(vm.selectedTab) }
+                            }
+                        }
+                        if vm.isCurrentTabLoading {
+                            ProgressView().padding()
                         }
                     }
-                    if vm.isLoadingPosts {
-                        ProgressView().padding()
+                } header: {
+                    VStack(spacing: 0) {
+                        ProfileHeaderView(
+                            vm: vm,
+                            isSelf: authVM.client.currentSession?.did == actor,
+                            onTapFollowers: { userListType = .followers(actor: actor) },
+                            onTapFollowing: { userListType = .following(actor: actor) }
+                        )
+                        .padding(.bottom, 4)
+
+                        Divider()
+
+                        // タブバー
+                        profileTabBar(vm: vm)
+
+                        Divider()
                     }
+                    .background(Color(.systemBackground))
                 }
             }
         }
@@ -138,6 +152,34 @@ struct ProfileScreenView: View {
             }
             .padding(.trailing, 20)
             .padding(.bottom, 24)
+        }
+    }
+
+    private func profileTabBar(vm: ProfileViewModel) -> some View {
+        HStack(spacing: 0) {
+            ForEach(ProfileTab.allCases, id: \.self) { tab in
+                Button {
+                    if vm.selectedTab != tab {
+                        vm.selectedTab = tab
+                        if vm.tabFeeds[tab]?.isEmpty ?? true {
+                            Task { await vm.loadTab(tab) }
+                        }
+                    }
+                } label: {
+                    VStack(spacing: 4) {
+                        Text(tab.rawValue)
+                            .font(.subheadline)
+                            .fontWeight(vm.selectedTab == tab ? .semibold : .regular)
+                            .foregroundStyle(vm.selectedTab == tab ? Color.primary : Color.secondary)
+                            .padding(.vertical, 10)
+                        Rectangle()
+                            .fill(vm.selectedTab == tab ? Color.accentColor : Color.clear)
+                            .frame(height: 2)
+                    }
+                }
+                .buttonStyle(.plain)
+                .frame(maxWidth: .infinity)
+            }
         }
     }
 }
