@@ -43,8 +43,8 @@ final class AppSettings {
         didSet { UserDefaults.standard.set(showVia, forKey: "showVia") }
     }
 
-    /// via として付与するクライアント名（デスクトップ版と統一）
-    let viaName: String = "kazahana"
+    /// via として付与するクライアント名
+    let viaName: String = "kazahana for iOS"
 
     /// Bluesky プリファレンスから取得した投稿言語設定（空の場合は端末ロケールを使用）
     var postLanguages: [String] = []

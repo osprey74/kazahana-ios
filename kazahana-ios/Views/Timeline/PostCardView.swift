@@ -134,7 +134,9 @@ struct PostCardView: View {
             Button("削除する", role: .destructive) {
                 Task { await deletePost() }
             }
-            Button("キャンセル", role: .cancel) {}
+            Button("キャンセル", role: .cancel) {
+                showDeleteConfirm = false
+            }
         } message: {
             Text("この操作は取り消せません")
         }
