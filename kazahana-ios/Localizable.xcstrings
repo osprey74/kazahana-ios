@@ -1023,6 +1023,36 @@
         }
       }
     },
+    "common.error" : {
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Fehler" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Error" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Error" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Erreur" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Kesalahan" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "エラー" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "오류" } },
+        "pt" : { "stringUnit" : { "state" : "translated", "value" : "Erro" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Ошибка" } },
+        "zh-CN" : { "stringUnit" : { "state" : "translated", "value" : "错误" } },
+        "zh-TW" : { "stringUnit" : { "state" : "translated", "value" : "錯誤" } }
+      }
+    },
+    "common.ok" : {
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "OK" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "OK" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "OK" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "OK" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "OK" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "OK" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "확인" } },
+        "pt" : { "stringUnit" : { "state" : "translated", "value" : "OK" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "OK" } },
+        "zh-CN" : { "stringUnit" : { "state" : "translated", "value" : "好" } },
+        "zh-TW" : { "stringUnit" : { "state" : "translated", "value" : "好" } }
+      }
+    },
     "common.close" : {
       "localizations" : {
         "de" : {
@@ -2010,6 +2040,171 @@
             "value" : "第 4 階段將推出"
           }
         }
+      }
+    },
+    "dm.deleteMessage" : {
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Nachricht löschen" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Delete Message" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Eliminar mensaje" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Supprimer le message" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Hapus pesan" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "メッセージを削除" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "메시지 삭제" } },
+        "pt" : { "stringUnit" : { "state" : "translated", "value" : "Excluir mensagem" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Удалить сообщение" } },
+        "zh-CN" : { "stringUnit" : { "state" : "translated", "value" : "删除消息" } },
+        "zh-TW" : { "stringUnit" : { "state" : "translated", "value" : "刪除訊息" } }
+      }
+    },
+    "dm.deletedMessage" : {
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Nachricht gelöscht" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Message deleted" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Mensaje eliminado" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Message supprimé" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Pesan dihapus" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "削除されたメッセージ" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "삭제된 메시지" } },
+        "pt" : { "stringUnit" : { "state" : "translated", "value" : "Mensagem excluída" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Сообщение удалено" } },
+        "zh-CN" : { "stringUnit" : { "state" : "translated", "value" : "消息已删除" } },
+        "zh-TW" : { "stringUnit" : { "state" : "translated", "value" : "訊息已刪除" } }
+      }
+    },
+    "dm.leave" : {
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Verlassen" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Leave" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Abandonar" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Quitter" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Keluar" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "退出" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "나가기" } },
+        "pt" : { "stringUnit" : { "state" : "translated", "value" : "Sair" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Выйти" } },
+        "zh-CN" : { "stringUnit" : { "state" : "translated", "value" : "离开" } },
+        "zh-TW" : { "stringUnit" : { "state" : "translated", "value" : "離開" } }
+      }
+    },
+    "dm.loadMore" : {
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Mehr laden" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Load more" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Cargar más" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Charger plus" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Muat lebih banyak" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "もっと読む" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "더 보기" } },
+        "pt" : { "stringUnit" : { "state" : "translated", "value" : "Carregar mais" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Загрузить ещё" } },
+        "zh-CN" : { "stringUnit" : { "state" : "translated", "value" : "加载更多" } },
+        "zh-TW" : { "stringUnit" : { "state" : "translated", "value" : "載入更多" } }
+      }
+    },
+    "dm.messageInputPlaceholder" : {
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Nachricht eingeben…" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Type a message…" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Escribe un mensaje…" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Tapez un message…" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Ketik pesan…" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "メッセージを入力…" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "메시지 입력…" } },
+        "pt" : { "stringUnit" : { "state" : "translated", "value" : "Digite uma mensagem…" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Введите сообщение…" } },
+        "zh-CN" : { "stringUnit" : { "state" : "translated", "value" : "输入消息…" } },
+        "zh-TW" : { "stringUnit" : { "state" : "translated", "value" : "輸入訊息…" } }
+      }
+    },
+    "dm.mute" : {
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Stummschalten" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Mute" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Silenciar" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Désactiver" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Bisukan" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "ミュート" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "뮤트" } },
+        "pt" : { "stringUnit" : { "state" : "translated", "value" : "Silenciar" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Отключить звук" } },
+        "zh-CN" : { "stringUnit" : { "state" : "translated", "value" : "静音" } },
+        "zh-TW" : { "stringUnit" : { "state" : "translated", "value" : "靜音" } }
+      }
+    },
+    "dm.newConversation" : {
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Neue Unterhaltung" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "New Conversation" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Nueva conversación" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Nouvelle conversation" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Percakapan baru" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "新規会話" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "새 대화" } },
+        "pt" : { "stringUnit" : { "state" : "translated", "value" : "Nova conversa" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Новый диалог" } },
+        "zh-CN" : { "stringUnit" : { "state" : "translated", "value" : "新建对话" } },
+        "zh-TW" : { "stringUnit" : { "state" : "translated", "value" : "新增對話" } }
+      }
+    },
+    "dm.noConversations" : {
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Keine Nachrichten" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "No Messages" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Sin mensajes" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Aucun message" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Tidak ada pesan" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "メッセージなし" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "메시지 없음" } },
+        "pt" : { "stringUnit" : { "state" : "translated", "value" : "Sem mensagens" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Нет сообщений" } },
+        "zh-CN" : { "stringUnit" : { "state" : "translated", "value" : "没有消息" } },
+        "zh-TW" : { "stringUnit" : { "state" : "translated", "value" : "沒有訊息" } }
+      }
+    },
+    "dm.noConversationsDescription" : {
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Starte eine neue Unterhaltung." } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Start a new conversation." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Inicia una nueva conversación." } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Commencez une nouvelle conversation." } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Mulai percakapan baru." } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "新しい会話を始めましょう。" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "새 대화를 시작하세요." } },
+        "pt" : { "stringUnit" : { "state" : "translated", "value" : "Inicie uma nova conversa." } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Начните новый диалог." } },
+        "zh-CN" : { "stringUnit" : { "state" : "translated", "value" : "开始新的对话。" } },
+        "zh-TW" : { "stringUnit" : { "state" : "translated", "value" : "開始新的對話。" } }
+      }
+    },
+    "dm.searchUser" : {
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Benutzer suchen" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Search user" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Buscar usuario" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Rechercher un utilisateur" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Cari pengguna" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "ユーザーを検索" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "사용자 검색" } },
+        "pt" : { "stringUnit" : { "state" : "translated", "value" : "Pesquisar usuário" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Найти пользователя" } },
+        "zh-CN" : { "stringUnit" : { "state" : "translated", "value" : "搜索用户" } },
+        "zh-TW" : { "stringUnit" : { "state" : "translated", "value" : "搜尋使用者" } }
+      }
+    },
+    "dm.unmute" : {
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Stummschaltung aufheben" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Unmute" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Activar sonido" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Réactiver" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Aktifkan suara" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "ミュート解除" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "뮤트 해제" } },
+        "pt" : { "stringUnit" : { "state" : "translated", "value" : "Reativar" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Включить звук" } },
+        "zh-CN" : { "stringUnit" : { "state" : "translated", "value" : "取消静音" } },
+        "zh-TW" : { "stringUnit" : { "state" : "translated", "value" : "取消靜音" } }
       }
     },
     "feed.close" : {
@@ -12267,6 +12462,51 @@
             "value" : "系統"
           }
         }
+      }
+    },
+    "time.hoursAgo %lld" : {
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "vor %lld Std." } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "%lld h ago" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "hace %lld h" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "il y a %lld h" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "%lld jam lalu" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "%lld時間前" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "%lld시간 전" } },
+        "pt" : { "stringUnit" : { "state" : "translated", "value" : "há %lld h" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "%lld ч назад" } },
+        "zh-CN" : { "stringUnit" : { "state" : "translated", "value" : "%lld 小时前" } },
+        "zh-TW" : { "stringUnit" : { "state" : "translated", "value" : "%lld 小時前" } }
+      }
+    },
+    "time.justNow" : {
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Gerade eben" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Just now" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Ahora mismo" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "À l'instant" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Baru saja" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "たった今" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "방금" } },
+        "pt" : { "stringUnit" : { "state" : "translated", "value" : "Agora mesmo" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Только что" } },
+        "zh-CN" : { "stringUnit" : { "state" : "translated", "value" : "刚刚" } },
+        "zh-TW" : { "stringUnit" : { "state" : "translated", "value" : "剛才" } }
+      }
+    },
+    "time.minutesAgo %lld" : {
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "vor %lld Min." } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "%lld min ago" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "hace %lld min" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "il y a %lld min" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "%lld menit lalu" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "%lld分前" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "%lld분 전" } },
+        "pt" : { "stringUnit" : { "state" : "translated", "value" : "há %lld min" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "%lld мин назад" } },
+        "zh-CN" : { "stringUnit" : { "state" : "translated", "value" : "%lld 分钟前" } },
+        "zh-TW" : { "stringUnit" : { "state" : "translated", "value" : "%lld 分鐘前" } }
       }
     },
     "thread.title" : {

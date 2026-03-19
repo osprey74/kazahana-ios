@@ -181,6 +181,54 @@ final class ATProtoClient {
         return try decoder.decode(VideoUploadJobStatus.self, from: responseData)
     }
 
+    /// GET リクエスト（atproto-proxy ヘッダー付き）
+    func getWithProxy<T: Decodable>(
+        nsid: String,
+        params: [String: String] = [:],
+        proxyHeader: String = "did:web:api.bsky.chat#bsky_chat"
+    ) async throws -> T {
+        let host = currentSession?.pdsHost ?? "https://bsky.social"
+        var components = URLComponents(string: "\(host)/xrpc/\(nsid)")!
+        if !params.isEmpty {
+            components.queryItems = params.map { URLQueryItem(name: $0.key, value: $0.value) }
+        }
+        var request = try buildRequest(url: components.url!, method: "GET", authenticated: true)
+        request.setValue(proxyHeader, forHTTPHeaderField: "atproto-proxy")
+        return try await perform(request: request)
+    }
+
+    /// POST リクエスト（atproto-proxy ヘッダー付き）
+    func postWithProxy<Body: Encodable, Response: Decodable>(
+        nsid: String,
+        body: Body,
+        proxyHeader: String = "did:web:api.bsky.chat#bsky_chat"
+    ) async throws -> Response {
+        let host = currentSession?.pdsHost ?? "https://bsky.social"
+        let url = URL(string: "\(host)/xrpc/\(nsid)")!
+        let bodyData = try encoder.encode(body)
+        var request = try buildRequest(url: url, method: "POST", authenticated: true)
+        request.httpBody = bodyData
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue(proxyHeader, forHTTPHeaderField: "atproto-proxy")
+        return try await perform(request: request)
+    }
+
+    /// GET リクエスト（配列パラメータ + atproto-proxy ヘッダー付き）
+    func getWithProxyArrayParams<T: Decodable>(
+        nsid: String,
+        queryItems: [URLQueryItem],
+        proxyHeader: String = "did:web:api.bsky.chat#bsky_chat"
+    ) async throws -> T {
+        let host = currentSession?.pdsHost ?? "https://bsky.social"
+        var components = URLComponents(string: "\(host)/xrpc/\(nsid)")!
+        if !queryItems.isEmpty {
+            components.queryItems = queryItems
+        }
+        var request = try buildRequest(url: components.url!, method: "GET", authenticated: true)
+        request.setValue(proxyHeader, forHTTPHeaderField: "atproto-proxy")
+        return try await perform(request: request)
+    }
+
     /// ボディなし POST
     func postEmpty<Response: Decodable>(
         nsid: String,

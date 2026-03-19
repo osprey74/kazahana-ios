@@ -24,6 +24,7 @@ struct MainTabView: View {
     @Environment(AuthViewModel.self) private var authVM
     let client: ATProtoClient
     @State private var selectedTab: Tab = .home
+    @State private var dmUnreadCount = 0
 
     enum Tab {
         case home, search, notifications, messages, profile
@@ -49,11 +50,13 @@ struct MainTabView: View {
                 }
                 .tag(Tab.notifications)
 
-            // Phase 4 で DM 実装
-            PlaceholderView(title: String(localized: "tab.messages"), icon: "envelope")
+            ConversationListView(onUnreadCountChanged: { count in
+                dmUnreadCount = count
+            })
                 .tabItem {
                     Label(String(localized: "tab.messages"), systemImage: "envelope")
                 }
+                .badge(dmUnreadCount > 0 ? dmUnreadCount : 0)
                 .tag(Tab.messages)
 
             // 自分のプロフィール

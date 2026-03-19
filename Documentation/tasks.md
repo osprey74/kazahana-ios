@@ -1,6 +1,6 @@
 # kazahana-ios 開発タスク・進捗記録
 
-最終更新: 2026-03-19 (動画アップロード改善・$via キー修正)
+最終更新: 2026-03-19 (DM 実装完了)
 
 ---
 
@@ -10,7 +10,7 @@
 - Phase 2 (コア機能): 8/8 ✅ 完了
 - Phase 3 (通知・プロフィール・検索): 6/6 ✅ 完了
 - Phase 3.5 (UX改善・バグ修正): 12/12 ✅ 完了
-- Phase 4 (DM・モデレーション・設定): 19/20
+- Phase 4 (DM・モデレーション・設定): 27/28
 - Phase 5 (BSAF・高度な機能): 0/4
 
 ---
@@ -205,15 +205,26 @@
   - `ProfileViewModel`: `searchInProfile(query:)` / `loadMoreSearchResults()`（Task キャンセル対応）
   - `ProfileView`: 検索バー（×クリアボタン付き）→ クエリあり時は検索結果リスト（無限スクロール）
 
-### 4-F: ダイレクトメッセージ（優先度：中）
-- [ ] **会話一覧** — `chat.bsky.convo.listConvos`、未読バッジ
-- [ ] **メッセージ送受信** — `chat.bsky.convo.getMessages` / `sendMessage`
-- [ ] **メッセージ削除** — `chat.bsky.convo.deleteMessageForSelf`
-- [ ] **新規会話作成** — `chat.bsky.convo.getConvoForMembers`（ユーザー検索から開始）
-- [ ] **既読処理** — `chat.bsky.convo.updateRead`
-- [ ] **会話ミュート/退出** — `muteConvo` / `leaveConvo`
-- [ ] **メッセージリクエスト承認** — `acceptConvo`
-- [ ] **自動更新** — 15秒ポーリング（メッセージ）、30秒ポーリング（未読数）
+### 4-F: ダイレクトメッセージ（優先度：中）— 完了 ✅
+- [x] **会話一覧** — `chat.bsky.convo.listConvos`、未読バッジ（タブアイコンに表示）
+  - `ConversationListView.swift` / `ConversationRowView`（アバター・名前・プレビュー・未読バッジ・ミュート表示）
+  - スワイプアクション: ミュート/ミュート解除・退出
+- [x] **メッセージ送受信** — `chat.bsky.convo.getMessages` / `sendMessage`
+  - `ChatThreadView.swift` / `MessageBubbleView`（自分=右青/相手=左グレー）
+  - 送信ボックス（テキスト・送信ボタン）
+- [x] **メッセージ削除** — `chat.bsky.convo.deleteMessageForSelf`（コンテキストメニューから削除）
+- [x] **新規会話作成** — `chat.bsky.convo.getConvoForMembers`（ユーザー検索から開始）
+  - `NewConversationView.swift`: `searchActorsTypeahead` → `getConvoForMembers` → スレッドへ遷移
+- [x] **既読処理** — `chat.bsky.convo.updateRead`（メッセージ一覧表示時に自動既読）
+- [x] **会話ミュート/退出** — `muteConvo` / `unmuteConvo` / `leaveConvo`
+- [x] **メッセージリクエスト承認** — `acceptConvo`（ChatService に実装）
+- [x] **自動更新** — 15秒ポーリング（メッセージ）、30秒ポーリング（未読数・会話一覧）
+- 実装ファイル:
+  - `ATProtoClient.swift`: `getWithProxy` / `postWithProxy` / `getWithProxyArrayParams` 追加
+  - `Models/Conversation.swift`: ConvoView / ChatMember / ChatMessageView / ChatMessageViewOrDeleted など
+  - `Services/ChatService.swift`: chat.bsky.convo.* 全API ラッパー
+  - `ViewModels/ConversationListViewModel.swift` / `ViewModels/ChatThreadViewModel.swift`
+  - `Views/Messages/ConversationListView.swift` / `ChatThreadView.swift` / `NewConversationView.swift`
 
 ### 4-G: 多言語対応（優先度：低）
 - [x] **投稿言語設定** — 設定画面から投稿に付与する言語（`langs` フィールド）を選択
