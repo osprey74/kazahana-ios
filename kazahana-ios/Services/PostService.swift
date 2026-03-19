@@ -67,9 +67,58 @@ final class PostService {
 
     // MARK: - 動画アップロード
 
+    /// 動画を app.bsky.video.uploadVideo 経由でアップロード
+    /// 1. getServiceAuth でサービストークンを取得
+    /// 2. video.bsky.app にアップロード
+    /// 3. ジョブステータスをポーリングして完了まで待つ
+    /// 4. 完了後の BlobRef を返す
     func uploadVideo(data: Data, mimeType: String) async throws -> BlobRef {
-        let response = try await client.uploadBlob(data: data, mimeType: mimeType)
-        return response.blob
+        guard let session = client.currentSession else { throw ATProtoError.unauthorized }
+
+        // PDS の did:web を導出（例: https://bsky.social → did:web:bsky.social）
+        let pdsHost = session.pdsHost
+        let pdsDomain: String
+        if let url = URL(string: pdsHost), let host = url.host {
+            pdsDomain = host
+        } else {
+            pdsDomain = "bsky.social"
+        }
+        let pdsAud = "did:web:\(pdsDomain)"
+
+        // サービス認証トークンを取得（lxm は com.atproto.repo.uploadBlob）
+        let serviceToken = try await client.getServiceAuth(
+            aud: pdsAud,
+            lxm: "com.atproto.repo.uploadBlob",
+            expSecs: 1800
+        )
+
+        // video.bsky.app にアップロード
+        let ext = mimeType == "video/quicktime" ? "mov" : "mp4"
+        let fileName = "\(UUID().uuidString).\(ext)"
+        var jobStatus = try await client.uploadVideoToService(
+            data: data,
+            mimeType: mimeType,
+            fileName: fileName,
+            serviceToken: serviceToken
+        )
+
+        // ジョブ完了までポーリング（最大120秒、2秒間隔）
+        let maxAttempts = 60
+        var attempts = 0
+        while jobStatus.state != "JOB_STATE_COMPLETED" && attempts < maxAttempts {
+            if let error = jobStatus.error {
+                throw ATProtoError.apiError(code: error, message: jobStatus.message)
+            }
+            try await Task.sleep(nanoseconds: 2_000_000_000) // 2秒待機
+            jobStatus = try await client.getVideoJobStatus(jobId: jobStatus.jobId, serviceToken: serviceToken)
+            attempts += 1
+        }
+
+        guard jobStatus.state == "JOB_STATE_COMPLETED", let blob = jobStatus.blob else {
+            throw ATProtoError.apiError(code: "VideoProcessingFailed", message: "動画の処理がタイムアウトしました")
+        }
+
+        return blob
     }
 
     // MARK: - 投稿削除

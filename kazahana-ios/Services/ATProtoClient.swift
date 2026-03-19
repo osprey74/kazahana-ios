@@ -112,6 +112,75 @@ final class ATProtoClient {
         return try await perform(request: request)
     }
 
+    /// サービス認証トークンを取得（動画アップロード用）
+    /// - Parameters:
+    ///   - aud: 対象サービスの DID（PDS の did:web:<domain>）
+    ///   - lxm: 許可する Lexicon メソッド
+    ///   - expSecs: トークン有効期限（秒）
+    func getServiceAuth(aud: String, lxm: String, expSecs: Int = 1800) async throws -> String {
+        let host = currentSession?.pdsHost ?? "https://bsky.social"
+        let exp = Int(Date().timeIntervalSince1970) + expSecs
+        let params = ["aud": aud, "lxm": lxm, "exp": "\(exp)"]
+        struct ServiceAuthResponse: Decodable { let token: String }
+        var components = URLComponents(string: "\(host)/xrpc/com.atproto.server.getServiceAuth")!
+        components.queryItems = params.map { URLQueryItem(name: $0.key, value: $0.value) }
+        let request = try buildRequest(url: components.url!, method: "GET", authenticated: true)
+        let response: ServiceAuthResponse = try await perform(request: request)
+        return response.token
+    }
+
+    /// 動画を video.bsky.app 経由でアップロードし、ジョブIDを返す
+    /// - Parameters:
+    ///   - data: 動画バイナリ
+    ///   - mimeType: 動画の MIME タイプ（video/mp4 または video/quicktime）
+    ///   - fileName: ファイル名（拡張子付き）
+    ///   - serviceToken: getServiceAuth で取得したトークン
+    func uploadVideoToService(data: Data, mimeType: String, fileName: String, serviceToken: String) async throws -> VideoUploadJobStatus {
+        guard let did = currentSession?.did else { throw ATProtoError.unauthorized }
+        var components = URLComponents(string: "https://video.bsky.app/xrpc/app.bsky.video.uploadVideo")!
+        components.queryItems = [
+            URLQueryItem(name: "did", value: did),
+            URLQueryItem(name: "name", value: fileName)
+        ]
+        var request = URLRequest(url: components.url!)
+        request.httpMethod = "POST"
+        request.setValue("Bearer \(serviceToken)", forHTTPHeaderField: "Authorization")
+        request.setValue(mimeType, forHTTPHeaderField: "Content-Type")
+        request.httpBody = data
+        let (responseData, response) = try await URLSession.shared.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse,
+              (200...299).contains(httpResponse.statusCode) else {
+            if let errorResponse = try? decoder.decode(ATProtoErrorResponse.self, from: responseData) {
+                throw ATProtoError.apiError(code: errorResponse.error, message: errorResponse.message)
+            }
+            throw ATProtoError.httpError(statusCode: (response as? HTTPURLResponse)?.statusCode ?? 0)
+        }
+        // レスポンスは { jobStatus: { ... } } でラップされている場合がある
+        if let wrapped = try? decoder.decode(VideoJobStatusWrapper.self, from: responseData) {
+            return wrapped.jobStatus
+        }
+        return try decoder.decode(VideoUploadJobStatus.self, from: responseData)
+    }
+
+    /// 動画処理ジョブのステータスをポーリング
+    func getVideoJobStatus(jobId: String, serviceToken: String) async throws -> VideoUploadJobStatus {
+        var components = URLComponents(string: "https://video.bsky.app/xrpc/app.bsky.video.getJobStatus")!
+        components.queryItems = [URLQueryItem(name: "jobId", value: jobId)]
+        var request = URLRequest(url: components.url!)
+        request.httpMethod = "GET"
+        request.setValue("Bearer \(serviceToken)", forHTTPHeaderField: "Authorization")
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        let (responseData, response) = try await URLSession.shared.data(for: request)
+        let statusCode = (response as? HTTPURLResponse)?.statusCode ?? 0
+        guard (200...299).contains(statusCode) else {
+            throw ATProtoError.httpError(statusCode: statusCode)
+        }
+        if let wrapped = try? decoder.decode(VideoJobStatusWrapper.self, from: responseData) {
+            return wrapped.jobStatus
+        }
+        return try decoder.decode(VideoUploadJobStatus.self, from: responseData)
+    }
+
     /// ボディなし POST
     func postEmpty<Response: Decodable>(
         nsid: String,

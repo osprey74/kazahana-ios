@@ -429,6 +429,22 @@ struct BlobLink: Codable {
     }
 }
 
+// MARK: - 動画アップロードジョブステータス（app.bsky.video.uploadVideo レスポンス）
+
+struct VideoUploadJobStatus: Codable {
+    let jobId: String
+    let did: String
+    let state: String
+    let blob: BlobRef?
+    let error: String?
+    let message: String?
+}
+
+/// getJobStatus / uploadVideo レスポンスが { jobStatus: {...} } でラップされている場合
+struct VideoJobStatusWrapper: Codable {
+    let jobStatus: VideoUploadJobStatus
+}
+
 // MARK: - getPosts レスポンス
 
 struct GetPostsResponse: Codable {

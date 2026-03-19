@@ -1,6 +1,6 @@
 # kazahana-ios 開発タスク・進捗記録
 
-最終更新: 2026-03-19 (Phase 4-G 多言語対応・画像クロップ機能実装完了)
+最終更新: 2026-03-19 (動画アップロード改善・$via キー修正)
 
 ---
 
@@ -147,12 +147,18 @@
   - 4隅 L 字ハンドル + 矩形内ドラッグで移動、三分割グリッド表示
   - `CGImage.cropping(to:)` で即時適用、ALT テキストは保持
   - `SelectedImage.image` を `var` に変更（クロップ後の置き換えを可能に）
-- [x] **動画添付** — ComposeView: フォトライブラリ選択 + `uploadBlob`（MP4/MOV/WebM等）
+- [x] **動画添付** — ComposeView: フォトライブラリ選択 + `app.bsky.video.uploadVideo`（MP4/MOV）
   - `Post.swift`: `VideoEmbedCreate` struct 追加（`app.bsky.embed.video` 書き込み用）
   - `PostEmbedCreate` enum に `.video(VideoEmbedCreate)` ケース追加
   - `PostService`: `uploadVideo(data:mimeType:)` + `createPost` に `video:` パラメータ追加
   - `ComposeView`: `SelectedVideo` struct / `PhotosPicker(.videos)` ボタン / サムネイルプレビュー / AVAssetImageGenerator でサムネイル生成 / アスペクト比自動取得
   - 画像と動画は排他（画像選択中は動画ボタン無効、動画選択中は画像ボタン無効）
+  - `AVAssetExportSession` を廃止 → `loadTransferable(Data)` の生データを直接アップロード（バックグラウンド遷移による中断問題を解消）
+  - `ATProtoClient`: `getServiceAuth` / `uploadVideoToService` / `getVideoJobStatus` 追加
+  - `PostService.uploadVideo`: `video.bsky.app` 経由アップロード → ジョブポーリング → `BlobRef` 返却（サーバー側トランスコード）
+  - `Post.swift`: `VideoUploadJobStatus` / `VideoJobStatusWrapper` struct 追加
+  - MIME タイプ自動判定（`com.apple.quicktime-movie` → `video/quicktime`、それ以外 → `video/mp4`）
+  - `PostRecord` / `PostRecordCreate` の `$via` CodingKey 修正（`via` → `"$via"`）
 
 ### 4-C: コンテンツモデレーション（優先度：高）— 完了 ✅
 - [x] **ラベル判定** — `ModerationService.moderatePost` 実装（none/inform/mediaBlur/blur/filter の5段階判定）

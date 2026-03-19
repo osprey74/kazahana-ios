@@ -323,26 +323,29 @@ struct ComposeView: View {
     }
 
     private func loadPickedVideo(item: PhotosPickerItem) async {
-        // 動画データを URL として取得してからバイナリ読み込み
-        guard let videoURL = try? await item.loadTransferable(type: URL.self) else {
-            return
-        }
-        guard let data = try? Data(contentsOf: videoURL) else {
-            return
-        }
+        // loadTransferable(type: Data.self) で動画バイナリを直接取得する
+        // URL.self は実機の Photos サンドボックスで動作しないため Data.self を使用
+        // AVAssetExportSession は写真ピッカー閉時のバックグラウンド遷移で中断されるため使用しない
+        // サーバー側トランスコード（video.bsky.app）に任せるため raw data をそのまま使う
+        guard let rawData = try? await item.loadTransferable(type: Data.self) else { return }
 
-        // MIME タイプを拡張子から推定
-        let ext = videoURL.pathExtension.lowercased()
+        // supportedContentTypes から MIME タイプを判定
         let mimeType: String
-        switch ext {
-        case "mp4", "m4v": mimeType = "video/mp4"
-        case "mov":        mimeType = "video/quicktime"
-        case "webm":       mimeType = "video/webm"
-        default:           mimeType = "video/mp4"
+        if item.supportedContentTypes.contains(where: { $0.identifier.contains("quicktime") || $0.identifier.hasSuffix(".mov") }) {
+            mimeType = "video/quicktime"
+        } else {
+            mimeType = "video/mp4"
         }
 
-        // サムネイル生成
-        let asset = AVURLAsset(url: videoURL)
+        // 一時ファイルに書き出してサムネイル生成用 AVURLAsset として使用
+        let ext = mimeType == "video/quicktime" ? "mov" : "mp4"
+        let tempURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString)
+            .appendingPathExtension(ext)
+        try? rawData.write(to: tempURL)
+
+        // サムネイル生成（ベストエフォート）
+        let asset = AVURLAsset(url: tempURL)
         let generator = AVAssetImageGenerator(asset: asset)
         generator.appliesPreferredTrackTransform = true
         let thumbnail = try? await {
@@ -351,7 +354,7 @@ struct ComposeView: View {
         }()
 
         await MainActor.run {
-            selectedVideo = SelectedVideo(url: videoURL, data: data, mimeType: mimeType, thumbnail: thumbnail)
+            selectedVideo = SelectedVideo(url: tempURL, data: rawData, mimeType: mimeType, thumbnail: thumbnail)
         }
     }
 
