@@ -32,6 +32,28 @@ struct SettingsView: View {
                     Text("オンにすると投稿レコードに $via: \"\(settings.viaName)\" が付与されます。")
                 }
 
+                // MARK: - コンテンツモデレーション
+                Section {
+                    Toggle("成人向けコンテンツを表示", isOn: $settings.adultContentEnabled)
+                } header: {
+                    Text("コンテンツモデレーション")
+                } footer: {
+                    Text("オフの場合、成人向けコンテンツは常に非表示になります。")
+                }
+
+                if settings.adultContentEnabled {
+                    Section("成人向けコンテンツ") {
+                        moderationPicker("ポルノ", key: "porn", settings: $settings)
+                        moderationPicker("性的コンテンツ", key: "sexual", settings: $settings)
+                        moderationPicker("ヌード", key: "nudity", settings: $settings)
+                    }
+                }
+
+                Section("過激コンテンツ") {
+                    moderationPicker("グロテスク画像", key: "graphic-media", settings: $settings)
+                    moderationPicker("暴力的画像", key: "gore", settings: $settings)
+                }
+
                 // MARK: - アカウント
                 Section("アカウント") {
                     if let session = authVM.client.currentSession {
@@ -55,6 +77,19 @@ struct SettingsView: View {
             }
             .navigationTitle("設定")
             .navigationBarTitleDisplayMode(.inline)
+        }
+    }
+
+    @ViewBuilder
+    private func moderationPicker(_ label: String, key: String, settings: Bindable<AppSettings>) -> some View {
+        let binding = Binding<AppSettings.ModerationBehavior>(
+            get: { settings.wrappedValue.labelPreferences[key] ?? .warn },
+            set: { settings.wrappedValue.labelPreferences[key] = $0 }
+        )
+        Picker(label, selection: binding) {
+            ForEach(AppSettings.ModerationBehavior.allCases, id: \.self) { behavior in
+                Text(behavior.displayName).tag(behavior)
+            }
         }
     }
 

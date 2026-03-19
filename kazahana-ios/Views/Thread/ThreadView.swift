@@ -21,6 +21,7 @@ struct ThreadView: View {
     @State private var likeUri: String? = nil
     @State private var repostUri: String? = nil
     @State private var showFocusedDeleteConfirm = false
+    @State private var reportTarget: ReportTarget? = nil
 
     let postService: PostService
 
@@ -57,6 +58,9 @@ struct ThreadView: View {
         .navigationDestination(item: $postActorListType) { listType in
             PostActorListView(listType: listType)
                 .environment(authVM)
+        }
+        .sheet(item: $reportTarget) { target in
+            ReportView(target: target, postService: postService)
         }
         .task {
             await viewModel.load()
@@ -137,7 +141,9 @@ struct ThreadView: View {
     // MARK: - フォーカス投稿
 
     private func focusedPostView(post: PostView) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
+        let moderation = ModerationService().moderatePost(post)
+
+        return VStack(alignment: .leading, spacing: 10) {
             // 著者
             HStack(spacing: 10) {
                 AvatarView(url: post.author.avatar, size: 48)
@@ -159,9 +165,16 @@ struct ThreadView: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
 
-            // 埋め込み
+            // 埋め込み（メディアブラー対応）
             if let embed = post.embed {
-                embedView(embed)
+                if moderation.decision == .mediaBlur {
+                    ZStack {
+                        embedView(embed)
+                        MediaBlurOverlay(message: moderation.message)
+                    }
+                } else {
+                    embedView(embed)
+                }
             }
 
             // langs / via
@@ -294,6 +307,19 @@ struct ThreadView: View {
                 }
             } label: {
                 Label("翻訳", systemImage: "character.bubble")
+            }
+
+            // 通報
+            Divider()
+            Button {
+                reportTarget = .post(uri: post.uri, cid: post.cid)
+            } label: {
+                Label("投稿を通報", systemImage: "flag")
+            }
+            Button {
+                reportTarget = .account(did: post.author.did)
+            } label: {
+                Label("アカウントを通報", systemImage: "person.badge.minus")
             }
 
             // 自分の投稿のみ削除

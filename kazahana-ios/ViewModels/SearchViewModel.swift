@@ -124,9 +124,9 @@ final class SearchViewModel {
                 cursor: postCursor
             )
             if reset {
-                posts = response.posts
+                posts = filterModeratedPosts(response.posts)
             } else {
-                posts.append(contentsOf: response.posts)
+                posts.append(contentsOf: filterModeratedPosts(response.posts))
             }
             postCursor = response.cursor
             hasMorePosts = response.cursor != nil
@@ -141,5 +141,12 @@ final class SearchViewModel {
     @MainActor
     func loadMorePosts() async {
         await searchPosts(reset: false)
+    }
+
+    // MARK: - Private
+
+    private func filterModeratedPosts(_ posts: [PostView]) -> [PostView] {
+        let service = ModerationService()
+        return posts.filter { service.moderatePost($0).decision != .filter }
     }
 }

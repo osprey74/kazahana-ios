@@ -33,9 +33,14 @@ struct PostCardView: View {
     @State private var likeUri: String?
     @State private var repostUri: String?
     @State private var showDeleteConfirm = false
+    @State private var reportTarget: ReportTarget? = nil
 
     private var post: PostView { feedPost.post }
     private var author: ProfileViewBasic { post.author }
+
+    private var moderationResult: ModerationResult {
+        ModerationService().moderatePost(post)
+    }
 
     init(
         feedPost: FeedViewPost,
@@ -68,78 +73,98 @@ struct PostCardView: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            // リポストヘッダー
-            if let reason = feedPost.reason, reason.type == "app.bsky.feed.defs#reasonRepost" {
-                repostHeader(by: reason.by)
-            }
+        let moderation = moderationResult
 
-            HStack(alignment: .top, spacing: 12) {
-                // アバター（タップでプロフィール遷移）
-                Button {
-                    onTapAuthor?(author.did)
-                } label: {
-                    AvatarView(url: author.avatar, size: 44)
+        // filter 判定は ViewModel 側で除外するが安全策として非表示
+        if moderation.decision == .filter {
+            EmptyView()
+        } else {
+            VStack(alignment: .leading, spacing: 0) {
+                // リポストヘッダー
+                if let reason = feedPost.reason, reason.type == "app.bsky.feed.defs#reasonRepost" {
+                    repostHeader(by: reason.by)
                 }
-                .buttonStyle(.plain)
 
-                VStack(alignment: .leading, spacing: 6) {
-                    authorRow
+                ZStack(alignment: .center) {
+                    HStack(alignment: .top, spacing: 12) {
+                        // アバター（タップでプロフィール遷移）
+                        Button {
+                            onTapAuthor?(author.did)
+                        } label: {
+                            AvatarView(url: author.avatar, size: 44)
+                        }
+                        .buttonStyle(.plain)
 
-                    // 返信先表示
-                    if let reply = feedPost.reply, let parentUri = reply.parent?.uri {
-                        replyIndicator(parentUri: parentUri)
+                        VStack(alignment: .leading, spacing: 6) {
+                            authorRow
+
+                            // 返信先表示
+                            if let reply = feedPost.reply, let parentUri = reply.parent?.uri {
+                                replyIndicator(parentUri: parentUri)
+                            }
+
+                            // langs / via ラベル
+                            if post.record.via != nil || !(post.record.langs ?? []).isEmpty {
+                                langsViaRow
+                            }
+
+                            // 本文（リッチテキスト）
+                            if !post.record.text.isEmpty {
+                                Text(RichTextParser.attributedString(
+                                    text: post.record.text,
+                                    facets: post.record.facets
+                                ))
+                                .font(.body)
+                                .lineLimit(20)
+                                .fixedSize(horizontal: false, vertical: true)
+                                .environment(\.openURL, OpenURLAction { url in
+                                    // kazahana:// スキームは内部遷移（将来対応）
+                                    return .systemAction
+                                })
+                            }
+
+                            // 埋め込みコンテンツ（メディアブラー対応）
+                            if let embed = post.embed {
+                                moderatedEmbedView(embed, moderation: moderation)
+                            }
+
+                            // アクションバー
+                            actionBar
+                        }
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
+                    // カード全体タップでポスト詳細へ（アバター・アクションバーを除くエリア）
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        onTapPost?(feedPost)
                     }
 
-                    // langs / via ラベル
-                    if post.record.via != nil || !(post.record.langs ?? []).isEmpty {
-                        langsViaRow
+                    // 投稿全体ブラー（blur 判定時）
+                    if moderation.decision == .blur {
+                        PostBlurOverlay(message: moderation.message)
+                            .padding(.horizontal, 16)
                     }
+                }
 
-                    // 本文（リッチテキスト）
-                    if !post.record.text.isEmpty {
-                        Text(RichTextParser.attributedString(
-                            text: post.record.text,
-                            facets: post.record.facets
-                        ))
-                        .font(.body)
-                        .lineLimit(20)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .environment(\.openURL, OpenURLAction { url in
-                            // kazahana:// スキームは内部遷移（将来対応）
-                            return .systemAction
-                        })
-                    }
-
-                    // 埋め込みコンテンツ
-                    if let embed = post.embed {
-                        embedView(embed)
-                    }
-
-                    // アクションバー
-                    actionBar
+                Divider()
+            }
+            .alert("投稿を削除します", isPresented: $showDeleteConfirm) {
+                Button("削除する", role: .destructive) {
+                    Task { await deletePost() }
+                }
+                Button("キャンセル", role: .cancel) {
+                    showDeleteConfirm = false
+                }
+            } message: {
+                Text("この操作は取り消せません")
+            }
+            .sheet(item: $reportTarget) { target in
+                if let postService {
+                    ReportView(target: target, postService: postService)
                 }
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
-            // カード全体タップでポスト詳細へ（アバター・アクションバーを除くエリア）
-            .contentShape(Rectangle())
-            .onTapGesture {
-                onTapPost?(feedPost)
-            }
-
-            Divider()
-        }
-        .alert("投稿を削除します", isPresented: $showDeleteConfirm) {
-            Button("削除する", role: .destructive) {
-                Task { await deletePost() }
-            }
-            Button("キャンセル", role: .cancel) {
-                showDeleteConfirm = false
-            }
-        } message: {
-            Text("この操作は取り消せません")
-        }
+        } // else
     }
 
     // MARK: - Subviews
@@ -216,6 +241,19 @@ struct PostCardView: View {
                 Label("翻訳", systemImage: "character.bubble")
             }
 
+            // 通報
+            Divider()
+            Button {
+                reportTarget = .post(uri: post.uri, cid: post.cid)
+            } label: {
+                Label("投稿を通報", systemImage: "flag")
+            }
+            Button {
+                reportTarget = .account(did: author.did)
+            } label: {
+                Label("アカウントを通報", systemImage: "person.badge.minus")
+            }
+
             // 自分の投稿の場合のみ削除ボタンを表示
             if let currentUserDID, currentUserDID == author.did {
                 Divider()
@@ -243,6 +281,19 @@ struct PostCardView: View {
                 .font(.caption)
         }
         .foregroundStyle(.secondary)
+    }
+
+    /// メディアブラー対応の埋め込みコンテンツ表示
+    @ViewBuilder
+    private func moderatedEmbedView(_ embed: PostEmbed, moderation: ModerationResult) -> some View {
+        if moderation.decision == .mediaBlur {
+            ZStack {
+                embedView(embed)
+                MediaBlurOverlay(message: moderation.message)
+            }
+        } else {
+            embedView(embed)
+        }
     }
 
     private func embedView(_ embed: PostEmbed) -> some View {

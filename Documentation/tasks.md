@@ -1,6 +1,6 @@
 # kazahana-ios 開発タスク・進捗記録
 
-最終更新: 2026-03-19 (プロフィール画面 UX 改善・コンパクトヘッダー修正)
+最終更新: 2026-03-19 (Phase 4-C コンテンツモデレーション実装完了)
 
 ---
 
@@ -10,7 +10,7 @@
 - Phase 2 (コア機能): 8/8 ✅ 完了
 - Phase 3 (通知・プロフィール・検索): 6/6 ✅ 完了
 - Phase 3.5 (UX改善・バグ修正): 12/12 ✅ 完了
-- Phase 4 (DM・モデレーション・設定): 6/7
+- Phase 4 (DM・モデレーション・設定): 13/14
 - Phase 5 (BSAF・高度な機能): 0/4
 
 ---
@@ -143,13 +143,13 @@
 - [x] **画像 Alt テキスト入力** — 各画像サムネイルタップで Alert ダイアログ入力
 - [ ] **動画添付** — ComposeView: フォトライブラリ選択 + `uploadBlob`（最大100MB, MP4/MOV等）
 
-### 4-C: コンテンツモデレーション（優先度：高）
-- [ ] **ラベル判定** — `moderatePost` / `moderateProfile` 相当のロジック実装
-- [ ] **投稿フィルタ** — `filter` 判定で投稿をタイムライン・検索から除外
-- [ ] **投稿ブラー** — `blur` 判定でオーバーレイ表示、「表示する」ボタンで解除
-- [ ] **メディアブラー** — 画像のみブラー（本文は表示）
-- [ ] **ContentWarningView** — モデレーション警告UI共通コンポーネント
-- [ ] **通報機能** — 投稿/ユーザーの通報（`com.atproto.moderation.createReport`、理由選択付き）
+### 4-C: コンテンツモデレーション（優先度：高）— 完了 ✅
+- [x] **ラベル判定** — `ModerationService.moderatePost` 実装（none/inform/mediaBlur/blur/filter の5段階判定）
+- [x] **投稿フィルタ** — `filter` 判定で投稿をタイムライン・検索から除外（TimelineViewModel / SearchViewModel）
+- [x] **投稿ブラー** — `blur` 判定で `PostBlurOverlay` 表示、「表示する」ボタンで一時解除
+- [x] **メディアブラー** — 画像のみ `MediaBlurOverlay`（本文は表示）、「表示する」で一時解除
+- [x] **ContentWarningView** — `PostBlurOverlay` / `MediaBlurOverlay`（`.ultraThinMaterial` 使用）
+- [x] **通報機能** — `PostService.reportPost` / `reportAccount`（`com.atproto.moderation.createReport`）、`ReportView`（理由選択 + コメント + 送信）、PostCardView / ThreadView 三点メニューに統合
 
 ### 4-D: 設定画面（優先度：中）
 - [x] **設定画面** — SettingsView + AppSettings（@Observable singleton、UserDefaults永続化）
@@ -160,7 +160,7 @@
 - [x] **テーマ切り替え** — ライト / ダーク / システム連動
 - [x] **投稿元表示（via）** — `PostRecordCreate` に `via: String?` フィールド追加
   - ComposeView で AppSettings.showVia に基づき "Kazahana for iOS" を渡す
-- [ ] **モデレーション設定** — 成人向けコンテンツ表示 ON/OFF、ラベル別設定（hide/warn/ignore）
+- [x] **モデレーション設定** — 成人向けコンテンツ表示 ON/OFF、ラベル別設定（hide/warn/ignore）
 - [ ] **ポーリング間隔設定** — タイムライン自動更新の間隔（30〜120秒）
 
 ### 4-E: プロフィール機能補完（優先度：中）
@@ -267,7 +267,7 @@
 - [ ] **Bundle ID**: 現在 Xcode デフォルト。`com.kazahana.app` への変更が必要（App Store 配布前）
 - [ ] **検索デバウンス**: SearchViewModel は Task キャンセルで対応しているが、厳密なデバウンス実装は未対応
 - [ ] **引用数タップ**: ThreadView の引用数は PostActorListView 非対応（`app.bsky.feed.getQuotes` API は未実装）
-- [ ] **コンテンツモデレーション**: タイムライン・検索・プロフィールでのラベル判定・ブラー・フィルタが未実装 → Phase 4-C
+- [x] **コンテンツモデレーション**: タイムライン・検索・プロフィールでのラベル判定・ブラー・フィルタが未実装 → Phase 4-C（実装済み）
 - [x] **投稿削除**: 自分の投稿の三点メニューから削除する機能が未実装 → Phase 4-A（実装済み）
 - [x] **投稿元表示（via）**: 設定に基づきレコードにクライアント名を付与する機能が未実装 → Phase 4-D（実装済み）
 - [ ] **DM（ダイレクトメッセージ）**: `chat.bsky.convo.*` API 全体が未実装 → Phase 4-F
@@ -275,7 +275,7 @@
 
 ---
 
-## ファイル構成（2026-03-19 Phase 4-E + プロフィール UX 改善時点）
+## ファイル構成（2026-03-19 Phase 4-C コンテンツモデレーション完了時点）
 
 ```
 kazahana-ios/
@@ -290,9 +290,10 @@ kazahana-ios/
 │   ├── ATProtoClient.swift        # XRPC クライアント + getRecord + uploadBlob
 │   ├── AuthService.swift
 │   ├── SessionStore.swift
-│   ├── AppSettings.swift          # テーマ/via 設定（@Observable singleton）
+│   ├── AppSettings.swift          # テーマ/via/モデレーション設定（@Observable singleton）
+│   ├── ModerationService.swift    # ラベル判定（none/inform/mediaBlur/blur/filter）[NEW]
 │   ├── TimelineService.swift
-│   ├── PostService.swift          # createPost(images対応) / uploadImage / getLikes / getRepostedBy
+│   ├── PostService.swift          # createPost / uploadImage / getLikes / getRepostedBy / reportPost / reportAccount
 │   ├── RichTextParser.swift       # Facet 解析・AttributedString 変換・自動検出
 │   ├── NotificationService.swift  # listNotifications / getUnreadCount / updateSeen
 │   ├── GraphService.swift         # follow / unfollow / getFollowers / getFollows / getAuthorFeed(filter) / getActorLikes
@@ -300,22 +301,22 @@ kazahana-ios/
 │   └── FeedService.swift          # getSavedFeeds / getFeed / getTimeline + FeedSource enum
 ├── ViewModels/
 │   ├── AuthViewModel.swift
-│   ├── TimelineViewModel.swift    # FeedSource対応 + removePost(uri:)
+│   ├── TimelineViewModel.swift    # FeedSource対応 + removePost(uri:) + filterModeratedPosts
 │   ├── ComposeViewModel.swift
 │   ├── ThreadViewModel.swift
 │   ├── NotificationViewModel.swift # resolvedRepostURIs キャッシュ
 │   ├── ProfileViewModel.swift     # フォロー楽観的 UI + ProfileTab enum + タブ別フィード管理
-│   └── SearchViewModel.swift      # タブ切り替え・Task キャンセルデバウンス
+│   └── SearchViewModel.swift      # タブ切り替え・Task キャンセルデバウンス + filterModeratedPosts
 ├── Views/
 │   ├── Auth/
 │   │   └── LoginView.swift
 │   ├── Timeline/
 │   │   ├── TimelineView.swift     # FAB・返信・引用・いいね/リポストユーザー一覧遷移
-│   │   └── PostCardView.swift     # 三点メニュー(削除/翻訳/リンクコピー) + currentUserDID
+│   │   └── PostCardView.swift     # モデレーション(blur/mediaBlur/filter) + 通報メニュー
 │   ├── Compose/
 │   │   └── ComposeView.swift      # 返信・引用投稿・画像添付（PhotosPicker+Alt入力）対応
 │   ├── Thread/
-│   │   └── ThreadView.swift       # 統計行タップ→ユーザーリスト・引用投稿ボタン
+│   │   └── ThreadView.swift       # モデレーション(mediaBlur) + 通報メニュー
 │   ├── Notification/
 │   │   ├── NotificationListView.swift
 │   │   └── NotificationItemView.swift
@@ -325,7 +326,7 @@ kazahana-ios/
 │   ├── Search/
 │   │   └── SearchView.swift       # SearchView + ActorRowView + SearchPostRowView（スレッド遷移）
 │   ├── Settings/
-│   │   └── SettingsView.swift     # テーマ切り替え・via表示・アカウント情報・ログアウト
+│   │   └── SettingsView.swift     # テーマ切り替え・via表示・モデレーション設定・アカウント情報
 │   └── Common/
 │       ├── AvatarView.swift
 │       ├── ImageGridView.swift    # Color.clear overlay パターン（画像はみ出し修正済み）
@@ -334,7 +335,9 @@ kazahana-ios/
 │       ├── LinkCardView.swift
 │       ├── QuoteEmbedView.swift
 │       ├── FeedSelectorView.swift  # フィード選択シート
-│       └── PostActorListView.swift # いいね/リポストユーザー一覧
+│       ├── PostActorListView.swift # いいね/リポストユーザー一覧
+│       ├── ContentWarningView.swift # PostBlurOverlay / MediaBlurOverlay [NEW]
+│       └── ReportView.swift        # 投稿/アカウント通報UI [NEW]
 ├── Extensions/
 │   ├── IdentifiableString.swift
 │   └── String+DateFormatting.swift # relativeFormatted（相対時刻表示）

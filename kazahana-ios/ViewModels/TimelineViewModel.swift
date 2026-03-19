@@ -72,7 +72,7 @@ final class TimelineViewModel {
 
         do {
             let response = try await fetchFeed(cursor: nil)
-            posts = response.feed
+            posts = filterModeratedPosts(response.feed)
             cursor = response.cursor
             hasMore = response.cursor != nil
         } catch {
@@ -93,7 +93,7 @@ final class TimelineViewModel {
 
         do {
             let response = try await fetchFeed(cursor: nil)
-            posts = response.feed
+            posts = filterModeratedPosts(response.feed)
             cursor = response.cursor
             hasMore = response.cursor != nil
         } catch {
@@ -111,7 +111,7 @@ final class TimelineViewModel {
 
         do {
             let response = try await fetchFeed(cursor: cursor)
-            posts.append(contentsOf: response.feed)
+            posts.append(contentsOf: filterModeratedPosts(response.feed))
             self.cursor = response.cursor
             hasMore = response.cursor != nil
         } catch {
@@ -128,6 +128,12 @@ final class TimelineViewModel {
     }
 
     // MARK: - Private
+
+    /// filter 判定の投稿をタイムラインから除外する
+    private func filterModeratedPosts(_ posts: [FeedViewPost]) -> [FeedViewPost] {
+        let service = ModerationService()
+        return posts.filter { service.moderatePost($0.post).decision != .filter }
+    }
 
     private func fetchFeed(cursor: String?) async throws -> TimelineResponse {
         switch currentFeed {

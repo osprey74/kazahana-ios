@@ -143,6 +143,20 @@ final class PostService {
         )
         return response.posts
     }
+
+    // MARK: - 通報
+
+    func reportPost(uri: String, cid: String, reasonType: ReportReasonType, reason: String?) async throws {
+        let subject = ReportSubject(type: "com.atproto.repo.strongRef", uri: uri, cid: cid)
+        let body = CreateReportRequest(reasonType: reasonType.rawValue, reason: reason, subject: subject)
+        let _: CreateReportResponse = try await client.post(nsid: "com.atproto.moderation.createReport", body: body)
+    }
+
+    func reportAccount(did: String, reasonType: ReportReasonType, reason: String?) async throws {
+        let subject = ReportSubject(type: "com.atproto.admin.defs#repoRef", did: did)
+        let body = CreateReportRequest(reasonType: reasonType.rawValue, reason: reason, subject: subject)
+        let _: CreateReportResponse = try await client.post(nsid: "com.atproto.moderation.createReport", body: body)
+    }
 }
 
 // MARK: - リクエスト/レスポンス型
@@ -245,4 +259,65 @@ final class ThreadViewPost: Codable {
         case type = "$type"
         case post, parent, replies
     }
+}
+
+// MARK: - 通報関連型
+
+enum ReportReasonType: String, CaseIterable, Identifiable {
+    case spam       = "com.atproto.moderation.defs#reasonSpam"
+    case violation  = "com.atproto.moderation.defs#reasonViolation"
+    case misleading = "com.atproto.moderation.defs#reasonMisleading"
+    case sexual     = "com.atproto.moderation.defs#reasonSexual"
+    case rude       = "com.atproto.moderation.defs#reasonRude"
+    case other      = "com.atproto.moderation.defs#reasonOther"
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .spam:       return "スパム"
+        case .violation:  return "利用規約違反"
+        case .misleading: return "誤解を招く情報"
+        case .sexual:     return "性的なコンテンツ"
+        case .rude:       return "ハラスメント"
+        case .other:      return "その他"
+        }
+    }
+}
+
+struct ReportSubject: Encodable {
+    let type: String
+    let uri: String?
+    let cid: String?
+    let did: String?
+
+    init(type: String, uri: String, cid: String) {
+        self.type = type
+        self.uri = uri
+        self.cid = cid
+        self.did = nil
+    }
+
+    init(type: String, did: String) {
+        self.type = type
+        self.did = did
+        self.uri = nil
+        self.cid = nil
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case type = "$type"
+        case uri, cid, did
+    }
+}
+
+struct CreateReportRequest: Encodable {
+    let reasonType: String
+    let reason: String?
+    let subject: ReportSubject
+}
+
+struct CreateReportResponse: Codable {
+    let id: Int
+    let reasonType: String
 }
