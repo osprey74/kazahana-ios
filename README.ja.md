@@ -63,3 +63,14 @@ open kazahana-ios.xcodeproj
 ## ライセンス
 
 [MIT License](LICENSE)
+
+## ライセンス
+
+[MIT License](LICENSE)
+
+## Support / 開発を応援する
+
+kazahana を気に入っていただけたら、開発の継続を応援してください ☕
+
+[![GitHub Sponsors](https://img.shields.io/badge/Sponsor-GitHub-ea4aaa?logo=github)](https://github.com/sponsors/osprey74)
+[![Ko-fi](https://img.shields.io/badge/Ko--fi-Support-ff5e5b?logo=ko-fi)](https://ko-fi.com/osprey74)
