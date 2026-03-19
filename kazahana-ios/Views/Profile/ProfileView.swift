@@ -15,8 +15,11 @@ struct ProfileScreenView: View {
     @State private var showCompose = false
     @State private var quotePost: PostView? = nil
     @State private var replyToPost: PostView? = nil
-    /// プロフィール情報部分がスクロールアウトしたか（コンパクトヘッダー表示フラグ）
-    @State private var isProfileScrolledOut = false
+    /// スクロール量（0 = 最上部）
+    @State private var scrollOffset: CGFloat = 0
+
+    /// コンパクトヘッダー表示フラグ（少しでもスクロールしたら表示）
+    private var showCompact: Bool { scrollOffset > 8 }
 
     var body: some View {
         Group {
@@ -72,19 +75,34 @@ struct ProfileScreenView: View {
     private func profileContent(vm: ProfileViewModel) -> some View {
         let isSelf = authVM.client.currentSession?.did == actor
 
-        ScrollView {
-            // スクロール offset 検知用アンカー
-            GeometryReader { geo in
-                Color.clear.preference(
-                    key: ScrollOffsetPreferenceKey.self,
-                    value: -geo.frame(in: .named("profileScroll")).minY
-                )
+        VStack(spacing: 0) {
+            // ── 固定エリア（ScrollViewの外側）──────────────────
+            VStack(spacing: 0) {
+                // コンパクトヘッダー：スクロール開始後に表示
+                if showCompact {
+                    compactHeader(vm: vm, isSelf: isSelf)
+                        .transition(.opacity)
+                }
+                Divider()
+                profileTabBar(vm: vm)
+                Divider()
             }
-            .frame(height: 0)
+            .background(Color(.systemBackground))
+            .animation(.easeInOut(duration: 0.15), value: showCompact)
 
-            LazyVStack(spacing: 0, pinnedViews: .sectionHeaders) {
-                Section {
-                    // バナー＋フルプロフィール情報（スクロールで流れる部分）
+            // ── スクロールエリア ────────────────────────────
+            ScrollView {
+                // offset 検知アンカー
+                GeometryReader { geo in
+                    Color.clear.preference(
+                        key: ScrollOffsetPreferenceKey.self,
+                        value: -geo.frame(in: .named("profileScroll")).minY
+                    )
+                }
+                .frame(height: 0)
+
+                LazyVStack(spacing: 0) {
+                    // バナー＋フルプロフィール情報（スクロールで流れる）
                     ProfileHeaderView(
                         vm: vm,
                         isSelf: isSelf,
@@ -128,30 +146,15 @@ struct ProfileScreenView: View {
                             ProgressView().padding()
                         }
                     }
-                } header: {
-                    VStack(spacing: 0) {
-                        // コンパクトヘッダー（スクロール開始で表示）
-                        if isProfileScrolledOut {
-                            compactHeader(vm: vm, isSelf: isSelf)
-                                .transition(.opacity)
-                        }
-                        Divider()
-                        profileTabBar(vm: vm)
-                        Divider()
-                    }
-                    // 不透明背景で投稿が透けないようにする
-                    .background(Color(.systemBackground))
                 }
             }
-        }
-        .coordinateSpace(name: "profileScroll")
-        .onPreferenceChange(ScrollOffsetPreferenceKey.self) { offset in
-            withAnimation(.easeInOut(duration: 0.15)) {
-                isProfileScrolledOut = offset > 8
+            .coordinateSpace(name: "profileScroll")
+            .onPreferenceChange(ScrollOffsetPreferenceKey.self) { offset in
+                scrollOffset = offset
             }
-        }
-        .refreshable {
-            await vm.refresh()
+            .refreshable {
+                await vm.refresh()
+            }
         }
         .overlay(alignment: .bottomTrailing) {
             Button {
