@@ -33,33 +33,33 @@ struct MainTabView: View {
         TabView(selection: $selectedTab) {
             TimelineView(client: client)
                 .tabItem {
-                    Label("ホーム", systemImage: "house")
+                    Label(String(localized: "tab.home"), systemImage: "house")
                 }
                 .tag(Tab.home)
 
             SearchView()
                 .tabItem {
-                    Label("検索", systemImage: "magnifyingglass")
+                    Label(String(localized: "tab.search"), systemImage: "magnifyingglass")
                 }
                 .tag(Tab.search)
 
             NotificationListView()
                 .tabItem {
-                    Label("通知", systemImage: "bell")
+                    Label(String(localized: "tab.notifications"), systemImage: "bell")
                 }
                 .tag(Tab.notifications)
 
             // Phase 4 で DM 実装
-            PlaceholderView(title: "メッセージ", icon: "envelope")
+            PlaceholderView(title: String(localized: "tab.messages"), icon: "envelope")
                 .tabItem {
-                    Label("メッセージ", systemImage: "envelope")
+                    Label(String(localized: "tab.messages"), systemImage: "envelope")
                 }
                 .tag(Tab.messages)
 
             // 自分のプロフィール
             selfProfileView
                 .tabItem {
-                    Label("プロフィール", systemImage: "person.circle")
+                    Label(String(localized: "tab.profile"), systemImage: "person.circle")
                 }
                 .tag(Tab.profile)
         }
@@ -70,10 +70,10 @@ struct MainTabView: View {
         if let did = client.currentSession?.did {
             NavigationStack {
                 ProfileScreenView(actor: did)
-                    .navigationTitle("プロフィール")
+                    .navigationTitle(String(localized: "tab.profile"))
             }
         } else {
-            PlaceholderView(title: "プロフィール", icon: "person.circle")
+            PlaceholderView(title: String(localized: "tab.profile"), icon: "person.circle")
         }
     }
 }
@@ -92,7 +92,7 @@ struct PlaceholderView: View {
             Text(title)
                 .font(.title3)
                 .foregroundStyle(.secondary)
-            Text("Phase 4 以降で実装予定")
+            Text(String(localized: "dm.comingSoon"))
                 .font(.caption)
                 .foregroundStyle(.tertiary)
         }

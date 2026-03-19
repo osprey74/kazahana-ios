@@ -24,7 +24,7 @@ struct LoginView: View {
                         Text("kazahana")
                             .font(.largeTitle.bold())
 
-                        Text("Bluesky クライアント")
+                        Text(String(localized: "auth.tagline"))
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                     }
@@ -33,7 +33,7 @@ struct LoginView: View {
                     // 入力フォーム
                     VStack(spacing: 16) {
                         VStack(alignment: .leading, spacing: 6) {
-                            Text("ハンドル")
+                            Text(String(localized: "auth.handle"))
                                 .font(.footnote.weight(.medium))
                                 .foregroundStyle(.secondary)
                             TextField("alice.bsky.social", text: $identifier)
@@ -45,7 +45,7 @@ struct LoginView: View {
                         }
 
                         VStack(alignment: .leading, spacing: 6) {
-                            Text("アプリパスワード")
+                            Text(String(localized: "auth.appPassword"))
                                 .font(.footnote.weight(.medium))
                                 .foregroundStyle(.secondary)
                             SecureField("xxxx-xxxx-xxxx-xxxx", text: $password)
@@ -73,7 +73,7 @@ struct LoginView: View {
                                         .tint(.white)
                                         .scaleEffect(0.8)
                                 }
-                                Text("ログイン")
+                                Text(String(localized: "auth.login"))
                                     .fontWeight(.semibold)
                             }
                             .frame(maxWidth: .infinity)
@@ -87,10 +87,10 @@ struct LoginView: View {
 
                     // アプリパスワード注意
                     VStack(spacing: 8) {
-                        Text("アプリパスワードを使用してください")
+                        Text(String(localized: "auth.appPassword"))
                             .font(.caption.weight(.medium))
                             .foregroundStyle(.secondary)
-                        Text("Bluesky の設定 › アプリパスワード から発行できます")
+                        Text(String(localized: "auth.helpText"))
                             .font(.caption)
                             .foregroundStyle(.tertiary)
                             .multilineTextAlignment(.center)

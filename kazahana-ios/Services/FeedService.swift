@@ -160,7 +160,7 @@ enum FeedSource: Equatable, Hashable {
 
     var displayName: String {
         switch self {
-        case .following:         return "フォロー中"
+        case .following:         return String(localized: "feed.following")
         case .custom(let gen):   return gen.displayName
         }
     }

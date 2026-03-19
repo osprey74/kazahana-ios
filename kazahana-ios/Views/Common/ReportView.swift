@@ -17,8 +17,8 @@ enum ReportTarget: Identifiable {
 
     var title: String {
         switch self {
-        case .post: return "投稿を通報"
-        case .account: return "アカウントを通報"
+        case .post: return String(localized: "report.post")
+        case .account: return String(localized: "report.account")
         }
     }
 }
@@ -39,14 +39,14 @@ struct ReportView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("通報理由") {
+                Section(String(localized: "report.reason")) {
                     ForEach(ReportReasonType.allCases) { reason in
                         reasonRow(reason)
                     }
                 }
 
-                Section("補足コメント（任意）") {
-                    TextField("詳細を入力...", text: $additionalComment, axis: .vertical)
+                Section(String(localized: "report.comment")) {
+                    TextField(String(localized: "report.placeholder"), text: $additionalComment, axis: .vertical)
                         .lineLimit(3...6)
                 }
 
@@ -62,10 +62,10 @@ struct ReportView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("キャンセル") { dismiss() }
+                    Button(String(localized: "report.cancel")) { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("送信") {
+                    Button(String(localized: "report.submit")) {
                         Task { await sendReport() }
                     }
                     .disabled(isSending)
@@ -78,10 +78,10 @@ struct ReportView: View {
                         .background(.ultraThinMaterial)
                 }
             }
-            .alert("通報を送信しました", isPresented: $didSend) {
-                Button("閉じる") { dismiss() }
+            .alert(String(localized: "report.success"), isPresented: $didSend) {
+                Button(String(localized: "report.close")) { dismiss() }
             } message: {
-                Text("ご報告ありがとうございます。")
+                Text(String(localized: "report.thanks"))
             }
         }
     }

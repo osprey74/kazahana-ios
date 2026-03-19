@@ -316,10 +316,8 @@ struct PostRecordCreate: Encodable {
         self.type = "app.bsky.feed.post"
         self.text = text
         self.createdAt = ISO8601DateFormatter().string(from: Date())
-        // langs: 引数指定 → Bluesky プリファレンス → 端末ロケールの優先順
-        let preferenceLangs = AppSettings.shared.postLanguages
-        let localeLang = Locale.current.language.languageCode?.identifier ?? "ja"
-        self.langs = langs ?? (preferenceLangs.isEmpty ? [localeLang] : preferenceLangs)
+        // langs: 引数指定 → ユーザー設定 → Bluesky プリファレンス → 端末ロケールの優先順
+        self.langs = langs ?? AppSettings.shared.resolvedPostLangs
         self.facets = facets
         self.reply = replyRef
         self.embed = embed
@@ -343,15 +341,17 @@ struct QuoteEmbedRecord: Codable {
     }
 }
 
-/// 投稿作成時の embed（画像/引用）を統一する enum（Encodable）
+/// 投稿作成時の embed（画像/動画/引用）を統一する enum（Encodable）
 enum PostEmbedCreate: Encodable {
     case images(ImageEmbedCreate)
+    case video(VideoEmbedCreate)
     case record(QuoteEmbedRecord)
     case recordWithMedia(ImageEmbedCreate, QuoteEmbedRecord)
 
     func encode(to encoder: Encoder) throws {
         switch self {
         case .images(let v): try v.encode(to: encoder)
+        case .video(let v): try v.encode(to: encoder)
         case .record(let v): try v.encode(to: encoder)
         case .recordWithMedia(let media, let rec):
             var container = encoder.container(keyedBy: RecordWithMediaCodingKeys.self)
@@ -364,6 +364,19 @@ enum PostEmbedCreate: Encodable {
     enum RecordWithMediaCodingKeys: String, CodingKey {
         case type = "$type"
         case media, record
+    }
+}
+
+/// 動画 embed（app.bsky.embed.video）書き込み用
+struct VideoEmbedCreate: Encodable {
+    let type: String = "app.bsky.embed.video"
+    let video: BlobRef
+    let alt: String?
+    let aspectRatio: AspectRatioCreate?
+
+    enum CodingKeys: String, CodingKey {
+        case type = "$type"
+        case video, alt, aspectRatio
     }
 }
 

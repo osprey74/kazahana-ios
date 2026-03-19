@@ -41,4 +41,11 @@ struct SearchService {
         if let cursor = cursor { params["cursor"] = cursor }
         return try await client.get(nsid: "app.bsky.feed.searchPosts", params: params)
     }
+
+    /// 特定ユーザーの投稿内を検索する
+    func searchPostsByAuthor(query: String, author: String, limit: Int = 25, cursor: String? = nil) async throws -> PostSearchResponse {
+        var params: [String: String] = ["q": query, "author": author, "limit": "\(limit)"]
+        if let cursor = cursor { params["cursor"] = cursor }
+        return try await client.get(nsid: "app.bsky.feed.searchPosts", params: params)
+    }
 }

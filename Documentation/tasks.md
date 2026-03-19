@@ -1,6 +1,6 @@
 # kazahana-ios 開発タスク・進捗記録
 
-最終更新: 2026-03-19 (Phase 4-C コンテンツモデレーション実装完了)
+最終更新: 2026-03-19 (Phase 4-G 多言語対応・画像クロップ機能実装完了)
 
 ---
 
@@ -10,7 +10,7 @@
 - Phase 2 (コア機能): 8/8 ✅ 完了
 - Phase 3 (通知・プロフィール・検索): 6/6 ✅ 完了
 - Phase 3.5 (UX改善・バグ修正): 12/12 ✅ 完了
-- Phase 4 (DM・モデレーション・設定): 13/14
+- Phase 4 (DM・モデレーション・設定): 19/20
 - Phase 5 (BSAF・高度な機能): 0/4
 
 ---
@@ -141,7 +141,18 @@
   - `ImageEmbedCreate`, `ImageEmbedItem`, `BlobRef`, `UploadBlobResponse` モデル追加
   - ComposeView: `PhotosPicker` ボタン、画像プレビュー行（削除・Alt入力対応）
 - [x] **画像 Alt テキスト入力** — 各画像サムネイルタップで Alert ダイアログ入力
-- [ ] **動画添付** — ComposeView: フォトライブラリ選択 + `uploadBlob`（最大100MB, MP4/MOV等）
+- [x] **画像クロップ** — ComposeView: サムネイル右下の crop ボタンから `ImageCropView`（フルスクリーン）を開いてクロップ
+  - `ImageCropView.swift` 新規作成（`Views/Compose/`）
+  - 3モード: オリジナル比率維持 / 正方形 / 自由変形
+  - 4隅 L 字ハンドル + 矩形内ドラッグで移動、三分割グリッド表示
+  - `CGImage.cropping(to:)` で即時適用、ALT テキストは保持
+  - `SelectedImage.image` を `var` に変更（クロップ後の置き換えを可能に）
+- [x] **動画添付** — ComposeView: フォトライブラリ選択 + `uploadBlob`（MP4/MOV/WebM等）
+  - `Post.swift`: `VideoEmbedCreate` struct 追加（`app.bsky.embed.video` 書き込み用）
+  - `PostEmbedCreate` enum に `.video(VideoEmbedCreate)` ケース追加
+  - `PostService`: `uploadVideo(data:mimeType:)` + `createPost` に `video:` パラメータ追加
+  - `ComposeView`: `SelectedVideo` struct / `PhotosPicker(.videos)` ボタン / サムネイルプレビュー / AVAssetImageGenerator でサムネイル生成 / アスペクト比自動取得
+  - 画像と動画は排他（画像選択中は動画ボタン無効、動画選択中は画像ボタン無効）
 
 ### 4-C: コンテンツモデレーション（優先度：高）— 完了 ✅
 - [x] **ラベル判定** — `ModerationService.moderatePost` 実装（none/inform/mediaBlur/blur/filter の5段階判定）
@@ -161,6 +172,10 @@
 - [x] **投稿元表示（via）** — `PostRecordCreate` に `via: String?` フィールド追加
   - ComposeView で AppSettings.showVia に基づき "Kazahana for iOS" を渡す
 - [x] **モデレーション設定** — 成人向けコンテンツ表示 ON/OFF、ラベル別設定（hide/warn/ignore）
+- [x] **Claude API キー登録解除** — 登録済みキーがある場合のみ「APIキーを削除」ボタン表示、確認アラート付き
+- [x] **検索履歴** — 検索履歴の永続化（UserDefaults・最大20件）、個別削除・一括削除
+  - `SearchViewModel`: `searchHistory` / `addToHistory` / `deleteHistory(at:)` / `clearAllHistory()`
+  - `SearchView`: クエリ空時に履歴一覧表示（タップで再検索・スワイプ削除・一括削除ボタン）
 - [ ] **ポーリング間隔設定** — タイムライン自動更新の間隔（30〜120秒）
 
 ### 4-E: プロフィール機能補完（優先度：中）
@@ -175,8 +190,14 @@
   - `onScrollGeometryChange(for:of:action:)` (iOS 17+) で `contentOffset.y` を直接監視
     - `GeometryReader` + `DispatchQueue.main.async` 方式を廃止（タブ切替・画面遷移での誤検知を解消）
     - タブ切替後も ScrollView の実際の offset を正確に反映、`ignoreNextGeometryUpdate` フラグ不要
-- [ ] **ピン留め投稿表示** — プロフィール先頭にピン留め投稿を表示
-- [ ] **プロフィール内検索** — `searchPosts(author: actor, q: query)` でタブ内絞り込み
+- [x] **ピン留め投稿表示** — プロフィール先頭にピン留め投稿を表示
+  - `Profile.swift`: `ProfileView` に `pinnedPost: PinnedPost?` フィールド追加
+  - `ProfileViewModel`: `loadPinnedPost(postService:)` で `getPosts(uris:)` を呼び出して取得
+  - `ProfileView`: フィード先頭に📌バッジ付き PostCardView を表示
+- [x] **プロフィール内検索** — `searchPosts(author: actor, q: query)` でタブ内絞り込み
+  - `SearchService`: `searchPostsByAuthor(query:author:limit:cursor:)` 追加（`author` パラメータ）
+  - `ProfileViewModel`: `searchInProfile(query:)` / `loadMoreSearchResults()`（Task キャンセル対応）
+  - `ProfileView`: 検索バー（×クリアボタン付き）→ クエリあり時は検索結果リスト（無限スクロール）
 
 ### 4-F: ダイレクトメッセージ（優先度：中）
 - [ ] **会話一覧** — `chat.bsky.convo.listConvos`、未読バッジ
@@ -189,8 +210,13 @@
 - [ ] **自動更新** — 15秒ポーリング（メッセージ）、30秒ポーリング（未読数）
 
 ### 4-G: 多言語対応（優先度：低）
-- [ ] **多言語対応** — Localizable.xcstrings（11言語: ja, en, pt, de, zh-TW, zh-CN, fr, ko, es, ru, id）
+- [x] **投稿言語設定** — 設定画面から投稿に付与する言語（`langs` フィールド）を選択
+  - `AppSettings.PostLanguage` enum（system + 11言語）、`resolvedPostLangs` 計算プロパティ
+  - 優先順: ユーザー設定 → Bluesky アカウントプリファレンス → 端末ロケール
+  - ALT テキスト自動生成にも同じ言語設定を使用
+- [x] **アプリ表示言語の多言語化** — Localizable.xcstrings（11言語: ja, en, pt, de, zh-TW, zh-CN, fr, ko, es, ru, id）
   - デスクトップ版 `src/i18n/locales/*.json` を `.xcstrings` 形式に変換して流用
+  - 設定画面の「言語」Picker をアプリ表示言語の切り替えにも連動（`UserDefaults["AppleLanguages"]` + 再起動方式）
 
 ---
 
@@ -275,38 +301,40 @@
 
 ---
 
-## ファイル構成（2026-03-19 Phase 4-C コンテンツモデレーション完了時点）
+## ファイル構成（2026-03-19 Phase 4-G 多言語対応・画像クロップ完了時点）
 
 ```
 kazahana-ios/
 ├── kazahana_iosApp.swift          # AppSettings環境注入・preferredColorScheme適用
 ├── ContentView.swift              # ルートビュー + MainTabView（Phase 3 タブ更新済み）
+├── Localizable.xcstrings          # 11言語対応 String Catalog（ja/en/pt/de/zh-TW/zh-CN/fr/ko/es/ru/id）[NEW]
 ├── Models/
 │   ├── Session.swift
 │   ├── Post.swift                 # PostEmbedCreate / ImageEmbedCreate / BlobRef / UploadBlobResponse 追加
-│   ├── Profile.swift
+│   ├── Profile.swift              # PinnedPost struct 追加
 │   └── Notification.swift        # AppNotification, isViaRepost, reasonLabel/Icon/Color
 ├── Services/
 │   ├── ATProtoClient.swift        # XRPC クライアント + getRecord + uploadBlob
 │   ├── AuthService.swift
 │   ├── SessionStore.swift
-│   ├── AppSettings.swift          # テーマ/via/モデレーション設定（@Observable singleton）
-│   ├── ModerationService.swift    # ラベル判定（none/inform/mediaBlur/blur/filter）[NEW]
+│   ├── AppSettings.swift          # テーマ/via/言語/モデレーション設定（@Observable singleton）
+│   ├── ModerationService.swift    # ラベル判定（none/inform/mediaBlur/blur/filter）
 │   ├── TimelineService.swift
 │   ├── PostService.swift          # createPost / uploadImage / getLikes / getRepostedBy / reportPost / reportAccount
 │   ├── RichTextParser.swift       # Facet 解析・AttributedString 変換・自動検出
 │   ├── NotificationService.swift  # listNotifications / getUnreadCount / updateSeen
 │   ├── GraphService.swift         # follow / unfollow / getFollowers / getFollows / getAuthorFeed(filter) / getActorLikes
-│   ├── SearchService.swift        # searchActors / searchPosts
-│   └── FeedService.swift          # getSavedFeeds / getFeed / getTimeline + FeedSource enum
+│   ├── SearchService.swift        # searchActors / searchPosts / searchPostsByAuthor
+│   ├── FeedService.swift          # getSavedFeeds / getFeed / getTimeline + FeedSource enum
+│   └── ClaudeService.swift        # ALT テキスト自動生成（Claude API）
 ├── ViewModels/
 │   ├── AuthViewModel.swift
 │   ├── TimelineViewModel.swift    # FeedSource対応 + removePost(uri:) + filterModeratedPosts
 │   ├── ComposeViewModel.swift
 │   ├── ThreadViewModel.swift
 │   ├── NotificationViewModel.swift # resolvedRepostURIs キャッシュ
-│   ├── ProfileViewModel.swift     # フォロー楽観的 UI + ProfileTab enum + タブ別フィード管理
-│   └── SearchViewModel.swift      # タブ切り替え・Task キャンセルデバウンス + filterModeratedPosts
+│   ├── ProfileViewModel.swift     # フォロー楽観的 UI + ProfileTab enum + タブ別フィード管理 + ピン留め投稿 + プロフィール内検索
+│   └── SearchViewModel.swift      # タブ切り替え・Task キャンセルデバウンス + filterModeratedPosts + 検索履歴（UserDefaults）
 ├── Views/
 │   ├── Auth/
 │   │   └── LoginView.swift
@@ -314,19 +342,20 @@ kazahana-ios/
 │   │   ├── TimelineView.swift     # FAB・返信・引用・いいね/リポストユーザー一覧遷移
 │   │   └── PostCardView.swift     # モデレーション(blur/mediaBlur/filter) + 通報メニュー
 │   ├── Compose/
-│   │   └── ComposeView.swift      # 返信・引用投稿・画像添付（PhotosPicker+Alt入力）対応
+│   │   ├── ComposeView.swift      # 返信・引用投稿・画像添付（PhotosPicker+Alt入力+クロップ）対応
+│   │   └── ImageCropView.swift    # 画像クロップエディタ（オリジナル/正方形/自由、フルスクリーン）[NEW]
 │   ├── Thread/
 │   │   └── ThreadView.swift       # モデレーション(mediaBlur) + 通報メニュー
 │   ├── Notification/
 │   │   ├── NotificationListView.swift
 │   │   └── NotificationItemView.swift
 │   ├── Profile/
-│   │   ├── ProfileView.swift      # ProfileScreenView + ProfileHeaderView + タブバー UI（4タブ）+ コンパクトヘッダー（onScrollGeometryChange）
+│   │   ├── ProfileView.swift      # ProfileScreenView + ProfileHeaderView + タブバー UI（4タブ）+ コンパクトヘッダー + ピン留め表示 + 内部検索バー
 │   │   └── UserListView.swift     # フォロワー/フォロー中一覧 + フォロー/解除ボタン
 │   ├── Search/
-│   │   └── SearchView.swift       # SearchView + ActorRowView + SearchPostRowView（スレッド遷移）
+│   │   └── SearchView.swift       # SearchView + ActorRowView + SearchPostRowView（スレッド遷移）+ 検索履歴一覧（個別/一括削除）
 │   ├── Settings/
-│   │   └── SettingsView.swift     # テーマ切り替え・via表示・モデレーション設定・アカウント情報
+│   │   └── SettingsView.swift     # テーマ/言語切替・via表示・モデレーション設定・Claude API キー管理・アカウント情報
 │   └── Common/
 │       ├── AvatarView.swift
 │       ├── ImageGridView.swift    # Color.clear overlay パターン（画像はみ出し修正済み）
@@ -336,8 +365,8 @@ kazahana-ios/
 │       ├── QuoteEmbedView.swift
 │       ├── FeedSelectorView.swift  # フィード選択シート
 │       ├── PostActorListView.swift # いいね/リポストユーザー一覧
-│       ├── ContentWarningView.swift # PostBlurOverlay / MediaBlurOverlay [NEW]
-│       └── ReportView.swift        # 投稿/アカウント通報UI [NEW]
+│       ├── ContentWarningView.swift # PostBlurOverlay / MediaBlurOverlay
+│       └── ReportView.swift        # 投稿/アカウント通報UI
 ├── Extensions/
 │   ├── IdentifiableString.swift
 │   └── String+DateFormatting.swift # relativeFormatted（相対時刻表示）

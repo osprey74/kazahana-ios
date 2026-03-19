@@ -16,6 +16,7 @@ struct kazahana_iosApp: App {
                 .environment(authViewModel)
                 .environment(appSettings)
                 .preferredColorScheme(appSettings.theme.colorScheme)
+
         }
     }
 }

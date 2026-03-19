@@ -4,12 +4,22 @@
 
 import Foundation
 import Observation
+import SwiftUI
 
 enum ProfileTab: String, CaseIterable {
-    case posts   = "投稿"
-    case replies = "返信"
-    case media   = "メディア"
-    case likes   = "いいね"
+    case posts   = "posts"
+    case replies = "replies"
+    case media   = "media"
+    case likes   = "likes"
+
+    var displayName: String {
+        switch self {
+        case .posts:   return String(localized: "profile.posts")
+        case .replies: return String(localized: "profile.replies")
+        case .media:   return String(localized: "profile.media")
+        case .likes:   return String(localized: "profile.likes")
+        }
+    }
 }
 
 @Observable
@@ -30,15 +40,29 @@ final class ProfileViewModel {
     var tabHasMore: [ProfileTab: Bool] = [:]
     var tabIsLoading: [ProfileTab: Bool] = [:]
 
+    // ピン留め投稿
+    var pinnedPost: PostView? = nil
+    var isLoadingPinnedPost = false
+
+    // プロフィール内検索
+    var profileSearchQuery: String = ""
+    var profileSearchResults: [PostView] = []
+    var isSearchingInProfile = false
+    var profileSearchCursor: String? = nil
+    var profileSearchHasMore = false
+    private var profileSearchTask: Task<Void, Never>?
+
     private var cursor: String?
     private var hasMore = true
     let actor: String
 
     private let graphService: GraphService
+    private var searchService: SearchService?
 
-    init(actor: String, graphService: GraphService) {
+    init(actor: String, graphService: GraphService, searchService: SearchService? = nil) {
         self.actor = actor
         self.graphService = graphService
+        self.searchService = searchService
         // 全タブの初期化
         for tab in ProfileTab.allCases {
             tabFeeds[tab] = []
@@ -170,6 +194,88 @@ final class ProfileViewModel {
         }
     }
 
+    // MARK: - ピン留め投稿
+
+    @MainActor
+    func loadPinnedPost(postService: PostService) async {
+        guard let uri = profile?.pinnedPost?.uri else { return }
+        guard !isLoadingPinnedPost else { return }
+        isLoadingPinnedPost = true
+        if let posts = try? await postService.getPosts(uris: [uri]), let post = posts.first {
+            pinnedPost = post
+        }
+        isLoadingPinnedPost = false
+    }
+
+    // MARK: - プロフィール内検索
+
+    @MainActor
+    func searchInProfile(query: String) async {
+        guard let searchService else { return }
+        let trimmed = query.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else {
+            profileSearchResults = []
+            profileSearchCursor = nil
+            profileSearchHasMore = false
+            return
+        }
+
+        profileSearchTask?.cancel()
+        profileSearchTask = Task {
+            guard !Task.isCancelled else { return }
+            isSearchingInProfile = true
+            profileSearchCursor = nil
+            profileSearchHasMore = false
+
+            do {
+                let response = try await searchService.searchPostsByAuthor(
+                    query: trimmed,
+                    author: actor,
+                    limit: 25,
+                    cursor: nil
+                )
+                guard !Task.isCancelled else { return }
+                profileSearchResults = response.posts
+                profileSearchCursor = response.cursor
+                profileSearchHasMore = response.cursor != nil
+            } catch {
+                if !(error is CancellationError) {
+                    errorMessage = error.localizedDescription
+                }
+            }
+            isSearchingInProfile = false
+        }
+        await profileSearchTask?.value
+    }
+
+    @MainActor
+    func loadMoreSearchResults() async {
+        guard let searchService,
+              !isSearchingInProfile,
+              profileSearchHasMore,
+              let cursor = profileSearchCursor else { return }
+        let trimmed = profileSearchQuery.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else { return }
+
+        isSearchingInProfile = true
+        do {
+            let response = try await searchService.searchPostsByAuthor(
+                query: trimmed,
+                author: actor,
+                limit: 25,
+                cursor: cursor
+            )
+            profileSearchResults.append(contentsOf: response.posts)
+            profileSearchCursor = response.cursor
+            profileSearchHasMore = response.cursor != nil
+        } catch {
+            if !(error is CancellationError) {
+                errorMessage = error.localizedDescription
+            }
+        }
+        isSearchingInProfile = false
+    }
+
     // MARK: - フォロー / フォロー解除
 
     @MainActor
@@ -218,7 +324,8 @@ final class ProfileViewModel {
             postsCount: current.postsCount,
             viewer: newViewer,
             labels: current.labels,
-            createdAt: current.createdAt
+            createdAt: current.createdAt,
+            pinnedPost: current.pinnedPost
         )
     }
 }

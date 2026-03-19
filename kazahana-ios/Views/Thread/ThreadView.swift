@@ -42,7 +42,7 @@ struct ThreadView: View {
             }
         }
         .navigationBarTitleDisplayMode(.inline)
-        .navigationTitle("スレッド")
+        .navigationTitle(String(localized: "thread.title"))
         .navigationDestination(item: $selectedPost) { feedPost in
             ThreadView(uri: feedPost.post.uri, postService: postService)
                 .environment(authVM)
@@ -217,17 +217,17 @@ struct ThreadView: View {
                 Button {
                     postActorListType = .reposts(postURI: post.uri)
                 } label: {
-                    countItem(count: repostCount, label: "リポスト")
+                    countItem(count: repostCount, label: String(localized: "post.reposted"))
                 }
                 .buttonStyle(.plain)
                 .disabled(repostCount == 0)
 
-                countItem(count: post.quoteCount ?? 0, label: "引用")
+                countItem(count: post.quoteCount ?? 0, label: String(localized: "postList.quotedBy"))
 
                 Button {
                     postActorListType = .likes(postURI: post.uri)
                 } label: {
-                    countItem(count: likeCount, label: "いいね")
+                    countItem(count: likeCount, label: String(localized: "profile.likes"))
                 }
                 .buttonStyle(.plain)
                 .disabled(likeCount == 0)
@@ -279,8 +279,8 @@ struct ThreadView: View {
             .padding(.vertical, 4)
         }
         .padding(16)
-        .alert("投稿を削除します", isPresented: $showFocusedDeleteConfirm) {
-            Button("削除する", role: .destructive) {
+        .alert(String(localized: "post.deleteConfirm"), isPresented: $showFocusedDeleteConfirm) {
+            Button(String(localized: "post.deleteAction"), role: .destructive) {
                 Task {
                     if let post = viewModel.thread?.post {
                         try? await postService.deletePost(uri: post.uri)
@@ -288,11 +288,11 @@ struct ThreadView: View {
                     }
                 }
             }
-            Button("キャンセル", role: .cancel) {
+            Button(String(localized: "post.deleteCancel"), role: .cancel) {
                 showFocusedDeleteConfirm = false
             }
         } message: {
-            Text("この操作は取り消せません")
+            Text(String(localized: "post.deleteConfirm"))
         }
     }
 
@@ -305,7 +305,7 @@ struct ThreadView: View {
                 let url = "https://bsky.app/profile/\(post.author.handle)/post/\(post.uri.components(separatedBy: "/").last ?? "")"
                 UIPasteboard.general.string = url
             } label: {
-                Label("リンクをコピー", systemImage: "link")
+                Label(String(localized: "post.copyLink"), systemImage: "link")
             }
 
             // 翻訳
@@ -315,7 +315,7 @@ struct ThreadView: View {
                     UIApplication.shared.open(url)
                 }
             } label: {
-                Label("翻訳", systemImage: "character.bubble")
+                Label(String(localized: "post.translate"), systemImage: "character.bubble")
             }
 
             // 通報
@@ -323,12 +323,12 @@ struct ThreadView: View {
             Button {
                 reportTarget = .post(uri: post.uri, cid: post.cid)
             } label: {
-                Label("投稿を通報", systemImage: "flag")
+                Label(String(localized: "post.reportPost"), systemImage: "flag")
             }
             Button {
                 reportTarget = .account(did: post.author.did)
             } label: {
-                Label("アカウントを通報", systemImage: "person.badge.minus")
+                Label(String(localized: "post.reportAccount"), systemImage: "person.badge.minus")
             }
 
             // 自分の投稿のみ削除
@@ -337,7 +337,7 @@ struct ThreadView: View {
                 Button(role: .destructive) {
                     showFocusedDeleteConfirm = true
                 } label: {
-                    Label("削除", systemImage: "trash")
+                    Label(String(localized: "post.delete"), systemImage: "trash")
                 }
             }
         } label: {
@@ -409,11 +409,11 @@ struct ThreadView: View {
 
     private func focusedLabelBadgeName(_ val: String) -> String {
         switch val {
-        case "porn":          return "ポルノ"
-        case "sexual":        return "性的"
-        case "nudity":        return "ヌード"
-        case "graphic-media": return "グロ画像"
-        case "gore":          return "暴力"
+        case "porn":          return String(localized: "moderation.porn")
+        case "sexual":        return String(localized: "moderation.sexual")
+        case "nudity":        return String(localized: "moderation.nudity")
+        case "graphic-media": return String(localized: "moderation.graphicMedia")
+        case "gore":          return String(localized: "moderation.gore")
         default:              return val
         }
     }
@@ -443,8 +443,8 @@ struct ThreadView: View {
             return dateString
         }
         let df = DateFormatter()
-        df.locale = Locale(identifier: "ja_JP")
-        df.dateFormat = "yyyy年M月d日 H:mm"
+        df.dateStyle = .medium
+        df.timeStyle = .short
         return df.string(from: date)
     }
 
@@ -452,7 +452,7 @@ struct ThreadView: View {
         VStack(spacing: 16) {
             Image(systemName: "exclamationmark.triangle").font(.largeTitle).foregroundStyle(.secondary)
             Text(message).multilineTextAlignment(.center).foregroundStyle(.secondary)
-            Button("再試行") { Task { await viewModel.load() } }.buttonStyle(.bordered)
+            Button(String(localized: "feed.retry")) { Task { await viewModel.load() } }.buttonStyle(.bordered)
         }
         .padding()
         .frame(maxWidth: .infinity, maxHeight: .infinity)

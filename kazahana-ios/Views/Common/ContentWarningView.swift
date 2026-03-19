@@ -19,10 +19,10 @@ struct PostBlurOverlay: View {
                     Image(systemName: "eye.slash")
                         .font(.title2)
                         .foregroundStyle(.secondary)
-                    Text(message ?? "コンテンツ警告")
+                    Text(message ?? String(localized: "moderation.contentWarning"))
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
-                    Button("表示する") {
+                    Button(String(localized: "moderation.show")) {
                         withAnimation(.easeInOut(duration: 0.2)) {
                             isRevealed = true
                         }
@@ -35,6 +35,21 @@ struct PostBlurOverlay: View {
             }
             .padding(.vertical, 24)
             .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
+        } else {
+            HStack {
+                Spacer()
+                Button {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        isRevealed = false
+                    }
+                } label: {
+                    Label(String(localized: "moderation.hide"), systemImage: "eye.slash")
+                        .font(.caption.weight(.medium))
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.mini)
+                .padding(.top, 4)
+            }
         }
     }
 }
@@ -61,7 +76,7 @@ struct MediaBlurOverlay: View {
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
-                    Button("表示する") {
+                    Button(String(localized: "moderation.show")) {
                         withAnimation(.easeInOut(duration: 0.2)) {
                             isRevealed = true
                         }
@@ -72,6 +87,25 @@ struct MediaBlurOverlay: View {
                 }
             }
             .clipShape(RoundedRectangle(cornerRadius: 12))
+        } else {
+            VStack {
+                HStack {
+                    Spacer()
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            isRevealed = false
+                        }
+                    } label: {
+                        Image(systemName: "eye.slash")
+                            .font(.caption2)
+                            .padding(5)
+                            .background(.regularMaterial, in: Circle())
+                    }
+                    .buttonStyle(.plain)
+                    .padding(6)
+                }
+                Spacer()
+            }
         }
     }
 }

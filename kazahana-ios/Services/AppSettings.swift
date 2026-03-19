@@ -17,9 +17,9 @@ final class AppSettings {
 
         var displayName: String {
             switch self {
-            case .system: return "システム連動"
-            case .light: return "ライト"
-            case .dark: return "ダーク"
+            case .system: return String(localized: "theme.system")
+            case .light: return String(localized: "theme.light")
+            case .dark: return String(localized: "theme.dark")
             }
         }
 
@@ -46,8 +46,75 @@ final class AppSettings {
     /// via として付与するクライアント名
     let viaName: String = "kazahana for iOS"
 
-    /// Bluesky プリファレンスから取得した投稿言語設定（空の場合は端末ロケールを使用）
+    // MARK: - 投稿言語設定
+
+    /// 投稿に付与する言語（デスクトップ版と同じ11言語 + システム連動）
+    enum PostLanguage: String, CaseIterable {
+        case system   = "system"
+        case japanese = "ja"
+        case english  = "en"
+        case portuguese = "pt"
+        case german   = "de"
+        case chineseTW = "zh-TW"
+        case chineseCN = "zh-CN"
+        case french   = "fr"
+        case korean   = "ko"
+        case spanish  = "es"
+        case russian  = "ru"
+        case indonesian = "id"
+
+        /// 設定画面に表示する名前（その言語のネイティブ表記）
+        var displayName: String {
+            switch self {
+            case .system:      return String(localized: "lang.system")
+            case .japanese:    return String(localized: "lang.ja")
+            case .english:     return String(localized: "lang.en")
+            case .portuguese:  return String(localized: "lang.pt")
+            case .german:      return String(localized: "lang.de")
+            case .chineseTW:   return String(localized: "lang.zhTW")
+            case .chineseCN:   return String(localized: "lang.zhCN")
+            case .french:      return String(localized: "lang.fr")
+            case .korean:      return String(localized: "lang.ko")
+            case .spanish:     return String(localized: "lang.es")
+            case .russian:     return String(localized: "lang.ru")
+            case .indonesian:  return String(localized: "lang.id")
+            }
+        }
+
+        /// 投稿レコードの `langs` に渡す BCP-47 コード（system の場合は nil → 呼び出し側で端末ロケール使用）
+        var langCode: String? {
+            self == .system ? nil : rawValue
+        }
+    }
+
+    /// ユーザーが設定した投稿言語（system = 端末ロケール自動）
+    var postLanguageSetting: PostLanguage {
+        didSet {
+            UserDefaults.standard.set(postLanguageSetting.rawValue, forKey: "postLanguageSetting")
+            // AppleLanguages を書き込むことで次回起動時の表示言語を変更する
+            if let code = postLanguageSetting.langCode {
+                UserDefaults.standard.set([code], forKey: "AppleLanguages")
+            } else {
+                UserDefaults.standard.removeObject(forKey: "AppleLanguages")
+            }
+        }
+    }
+
+    /// Bluesky アカウントプリファレンスから取得した言語設定（ログイン時に上書き）
     var postLanguages: [String] = []
+
+    /// 実際に投稿レコードに渡す言語コード配列。
+    /// 優先順: ユーザー設定 > Bluesky プリファレンス > 端末ロケール
+    var resolvedPostLangs: [String] {
+        if let code = postLanguageSetting.langCode {
+            return [code]
+        }
+        if !postLanguages.isEmpty {
+            return postLanguages
+        }
+        let locale = Locale.current.language.languageCode?.identifier ?? "ja"
+        return [locale]
+    }
 
     // MARK: - モデレーション設定
 
@@ -59,9 +126,9 @@ final class AppSettings {
 
         var displayName: String {
             switch self {
-            case .hide: return "非表示"
-            case .warn: return "警告"
-            case .ignore: return "表示"
+            case .hide: return String(localized: "settings.pref.hide")
+            case .warn: return String(localized: "settings.pref.warn")
+            case .ignore: return String(localized: "settings.pref.ignore")
             }
         }
     }
@@ -79,6 +146,13 @@ final class AppSettings {
         }
     }
 
+    // MARK: - Claude API 設定
+
+    /// Anthropic Claude API キー（ALT テキスト自動生成に使用）
+    var claudeApiKey: String {
+        didSet { UserDefaults.standard.set(claudeApiKey, forKey: "claudeApiKey") }
+    }
+
     // MARK: - Init
 
     init() {
@@ -86,6 +160,9 @@ final class AppSettings {
         self.theme = Theme(rawValue: themeRaw) ?? .system
         self.showVia = UserDefaults.standard.object(forKey: "showVia") as? Bool ?? false
         self.adultContentEnabled = UserDefaults.standard.object(forKey: "adultContentEnabled") as? Bool ?? false
+        self.claudeApiKey = UserDefaults.standard.string(forKey: "claudeApiKey") ?? ""
+        let langRaw = UserDefaults.standard.string(forKey: "postLanguageSetting") ?? PostLanguage.system.rawValue
+        self.postLanguageSetting = PostLanguage(rawValue: langRaw) ?? .system
         if let stored = UserDefaults.standard.dictionary(forKey: "labelPreferences") as? [String: String] {
             self.labelPreferences = stored.compactMapValues { ModerationBehavior(rawValue: $0) }
         } else {

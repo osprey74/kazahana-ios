@@ -8,6 +8,8 @@ struct SettingsView: View {
 
     @Environment(AuthViewModel.self) private var authVM
     @Environment(AppSettings.self) private var settings
+    @State private var showRestartAlert = false
+    @State private var showRevokeApiKeyAlert = false
 
     var body: some View {
         @Bindable var settings = settings
@@ -15,49 +17,89 @@ struct SettingsView: View {
         NavigationStack {
             Form {
                 // MARK: - 表示設定
-                Section("表示") {
-                    Picker("テーマ", selection: $settings.theme) {
+                Section(String(localized: "settings.display")) {
+                    Picker(String(localized: "settings.theme"), selection: $settings.theme) {
                         ForEach(AppSettings.Theme.allCases, id: \.self) { theme in
                             Text(theme.displayName).tag(theme)
                         }
                     }
                 }
 
-                // MARK: - 投稿設定
+                // MARK: - 言語設定
                 Section {
-                    Toggle("投稿元を表示（via）", isOn: $settings.showVia)
+                    Picker(String(localized: "settings.postLanguage"), selection: $settings.postLanguageSetting) {
+                        ForEach(AppSettings.PostLanguage.allCases, id: \.self) { lang in
+                            Text(lang.displayName).tag(lang)
+                        }
+                    }
+                    .onChange(of: settings.postLanguageSetting) {
+                        showRestartAlert = true
+                    }
+                    Toggle(String(localized: "settings.showVia"), isOn: $settings.showVia)
                 } header: {
-                    Text("投稿")
+                    Text(String(localized: "settings.post"))
                 } footer: {
-                    Text("オンにすると投稿レコードに $via: \"\(settings.viaName)\" が付与されます。")
+                    Text(String(localized: "settings.postLanguageFooter"))
+                }
+                .alert(String(localized: "settings.restartRequired"), isPresented: $showRestartAlert) {
+                    Button(String(localized: "settings.restartAction")) { showRestartAlert = false }
+                } message: {
+                    Text(String(localized: "settings.restartMessage"))
                 }
 
                 // MARK: - コンテンツモデレーション
                 Section {
-                    Toggle("成人向けコンテンツを表示", isOn: $settings.adultContentEnabled)
+                    Toggle(String(localized: "settings.adultContent"), isOn: $settings.adultContentEnabled)
                 } header: {
-                    Text("コンテンツモデレーション")
+                    Text(String(localized: "settings.moderation"))
                 } footer: {
-                    Text("オフの場合、成人向けコンテンツは常に非表示になります。")
+                    Text(String(localized: "settings.adultContentFooter"))
                 }
 
                 if settings.adultContentEnabled {
-                    Section("成人向けコンテンツ") {
-                        moderationPicker("ポルノ", key: "porn", settings: $settings)
-                        moderationPicker("性的コンテンツ", key: "sexual", settings: $settings)
-                        moderationPicker("ヌード", key: "nudity", settings: $settings)
+                    Section(String(localized: "settings.adultContentSection")) {
+                        moderationPicker(String(localized: "moderation.porn"), key: "porn", settings: $settings)
+                        moderationPicker(String(localized: "moderation.sexual"), key: "sexual", settings: $settings)
+                        moderationPicker(String(localized: "moderation.nudity"), key: "nudity", settings: $settings)
                     }
                 }
 
-                Section("過激コンテンツ") {
-                    moderationPicker("グロテスク画像", key: "graphic-media", settings: $settings)
-                    moderationPicker("暴力的画像", key: "gore", settings: $settings)
+                Section(String(localized: "settings.graphicContent")) {
+                    moderationPicker(String(localized: "moderation.graphicMedia"), key: "graphic-media", settings: $settings)
+                    moderationPicker(String(localized: "moderation.gore"), key: "gore", settings: $settings)
+                }
+
+                // MARK: - Claude API
+                Section {
+                    SecureField("sk-ant-...", text: $settings.claudeApiKey)
+                        .textContentType(.password)
+                        .autocorrectionDisabled()
+                        .textInputAutocapitalization(.never)
+                    if !settings.claudeApiKey.isEmpty {
+                        Button(role: .destructive) {
+                            showRevokeApiKeyAlert = true
+                        } label: {
+                            Label(String(localized: "settings.claudeApiRevoke"), systemImage: "key.slash")
+                        }
+                        .alert(String(localized: "settings.claudeApiRevoke"), isPresented: $showRevokeApiKeyAlert) {
+                            Button(String(localized: "settings.claudeApiRevoke"), role: .destructive) {
+                                settings.claudeApiKey = ""
+                            }
+                            Button(String(localized: "common.cancel"), role: .cancel) {}
+                        } message: {
+                            Text(String(localized: "settings.claudeApiRevokeMessage"))
+                        }
+                    }
+                } header: {
+                    Text(String(localized: "settings.claudeApi"))
+                } footer: {
+                    Text(String(localized: "settings.claudeApiFooter"))
                 }
 
                 // MARK: - アカウント
-                Section("アカウント") {
+                Section(String(localized: "settings.account")) {
                     if let session = authVM.client.currentSession {
-                        LabeledContent("ハンドル", value: "@\(session.handle)")
+                        LabeledContent(String(localized: "settings.handle"), value: "@\(session.handle)")
                         LabeledContent("DID", value: session.did)
                             .font(.caption)
                     }
@@ -65,17 +107,17 @@ struct SettingsView: View {
                     Button(role: .destructive) {
                         Task { await authVM.logout() }
                     } label: {
-                        Label("ログアウト", systemImage: "rectangle.portrait.and.arrow.right")
+                        Label(String(localized: "settings.logout"), systemImage: "rectangle.portrait.and.arrow.right")
                     }
                 }
 
                 // MARK: - アプリ情報
-                Section("アプリ情報") {
-                    LabeledContent("バージョン", value: appVersion)
+                Section(String(localized: "settings.appInfo")) {
+                    LabeledContent(String(localized: "settings.version"), value: appVersion)
                     LabeledContent("Bluesky", value: "@app-kazahana.bsky.social")
                 }
             }
-            .navigationTitle("設定")
+            .navigationTitle(String(localized: "settings.title"))
             .navigationBarTitleDisplayMode(.inline)
         }
     }

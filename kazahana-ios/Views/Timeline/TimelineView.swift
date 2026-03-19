@@ -155,7 +155,7 @@ struct TimelineView: View {
             Text(message)
                 .multilineTextAlignment(.center)
                 .foregroundStyle(.secondary)
-            Button("再試行") {
+            Button(String(localized: "feed.retry")) {
                 Task { await viewModel.loadInitial() }
             }
             .buttonStyle(.bordered)

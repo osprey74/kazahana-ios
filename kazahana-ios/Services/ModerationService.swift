@@ -74,7 +74,7 @@ struct ModerationService {
         case "!hide":
             return ModerationResult(decision: .filter, message: nil)
         case "!warn":
-            return ModerationResult(decision: .blur, message: "コンテンツ警告")
+            return ModerationResult(decision: .blur, message: String(localized: "moderation.contentWarning"))
         case "!no-unauthenticated":
             // 認証済みユーザーには影響なし
             return .none
@@ -124,12 +124,12 @@ struct ModerationService {
 
     private func labelDisplayName(_ val: String) -> String {
         switch val {
-        case "porn":         return "ポルノグラフィ"
-        case "sexual":       return "性的コンテンツ"
-        case "graphic-media":return "グラフィックメディア"
-        case "nudity":       return "ヌード"
-        case "gore":         return "暴力的コンテンツ"
-        default:             return "センシティブなコンテンツ"
+        case "porn":          return String(localized: "moderation.porn")
+        case "sexual":        return String(localized: "moderation.sexual")
+        case "graphic-media": return String(localized: "moderation.graphicMedia")
+        case "nudity":        return String(localized: "moderation.nudity")
+        case "gore":          return String(localized: "moderation.gore")
+        default:              return String(localized: "moderation.sensitive")
         }
     }
 }

@@ -12,8 +12,8 @@ enum UserListType: Identifiable, Hashable {
 
     var title: String {
         switch self {
-        case .followers: return "フォロワー"
-        case .following: return "フォロー中"
+        case .followers: return String(localized: "profile.followers")
+        case .following: return String(localized: "profile.following")
         }
     }
 
@@ -46,7 +46,7 @@ struct UserListView: View {
             } else if let error = errorMessage, users.isEmpty {
                 VStack(spacing: 12) {
                     Text(error).foregroundStyle(.secondary)
-                    Button("再試行") { Task { await loadInitial() } }
+                    Button(String(localized: "profile.retry")) { Task { await loadInitial() } }
                         .buttonStyle(.bordered)
                 }
                 .padding()
@@ -55,7 +55,7 @@ struct UserListView: View {
                 VStack(spacing: 12) {
                     Image(systemName: "person.slash")
                         .font(.largeTitle).foregroundStyle(.secondary)
-                    Text("ユーザーはいません").foregroundStyle(.secondary)
+                    Text(String(localized: "profile.noUsers")).foregroundStyle(.secondary)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
@@ -107,7 +107,7 @@ struct UserListView: View {
         Button {
             Task { await toggleFollow(user: user) }
         } label: {
-            Text(isFollowing ? "フォロー中" : "フォロー")
+            Text(isFollowing ? String(localized: "profile.following") : String(localized: "profile.follow"))
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(isFollowing ? Color.secondary : Color.white)
                 .padding(.horizontal, 12)

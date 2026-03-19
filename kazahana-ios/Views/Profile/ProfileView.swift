@@ -33,6 +33,10 @@ struct ProfileScreenView: View {
                 group.addTask { await viewModel?.loadProfile() }
                 group.addTask { await viewModel?.loadTab(.posts) }
             }
+            // プロフィールロード後にピン留め投稿を取得
+            if let vm = viewModel {
+                await vm.loadPinnedPost(postService: PostService(client: authVM.client))
+            }
         }
         .navigationDestination(item: $selectedPost) { post in
             ThreadView(uri: post.post.uri, postService: PostService(client: authVM.client))
@@ -65,7 +69,8 @@ struct ProfileScreenView: View {
     private func setupViewModel() {
         guard viewModel == nil else { return }
         let graphService = GraphService(client: authVM.client)
-        viewModel = ProfileViewModel(actor: actor, graphService: graphService)
+        let searchService = SearchService(client: authVM.client)
+        viewModel = ProfileViewModel(actor: actor, graphService: graphService, searchService: searchService)
     }
 
     @ViewBuilder
@@ -93,37 +98,51 @@ struct ProfileScreenView: View {
                     }
                     .background(Color(.systemBackground))
 
-                    // タブ別フィード
-                    let feed = vm.currentFeed
-                    if vm.isCurrentTabLoading && feed.isEmpty {
-                        ProgressView()
-                            .padding(.top, 32)
-                    } else if feed.isEmpty && !vm.isCurrentTabLoading {
-                        Text("投稿がありません")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                            .padding(.top, 40)
-                            .frame(maxWidth: .infinity)
+                    // プロフィール内検索バー
+                    profileSearchBar(vm: vm)
+
+                    // 検索中は検索結果を表示、それ以外はタブフィード
+                    if !vm.profileSearchQuery.isEmpty {
+                        profileSearchResults(vm: vm)
                     } else {
-                        ForEach(feed) { feedPost in
-                            PostCardView(
-                                feedPost: feedPost,
-                                postService: PostService(client: authVM.client),
-                                onTapPost: { _ in selectedPost = feedPost },
-                                onTapReply: { post in replyToPost = post },
-                                onTapQuote: { post in quotePost = post },
-                                onDelete: { post in vm.removePost(uri: post.uri) },
-                                currentUserDID: authVM.client.currentSession?.did
-                            )
+                        // ピン留め投稿（投稿タブのみ）
+                        if vm.selectedTab == .posts, let pinned = vm.pinnedPost {
+                            pinnedPostView(post: pinned, vm: vm)
                             Divider().padding(.leading, 16)
-                            if feedPost.post.uri == feed.last?.post.uri {
-                                Color.clear
-                                    .frame(height: 1)
-                                    .task { await vm.loadMoreTab(vm.selectedTab) }
-                            }
                         }
-                        if vm.isCurrentTabLoading {
-                            ProgressView().padding()
+
+                        // タブ別フィード
+                        let feed = vm.currentFeed
+                        if vm.isCurrentTabLoading && feed.isEmpty {
+                            ProgressView()
+                                .padding(.top, 32)
+                        } else if feed.isEmpty && !vm.isCurrentTabLoading {
+                            Text(String(localized: "profile.noPosts"))
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                                .padding(.top, 40)
+                                .frame(maxWidth: .infinity)
+                        } else {
+                            ForEach(feed) { feedPost in
+                                PostCardView(
+                                    feedPost: feedPost,
+                                    postService: PostService(client: authVM.client),
+                                    onTapPost: { _ in selectedPost = feedPost },
+                                    onTapReply: { post in replyToPost = post },
+                                    onTapQuote: { post in quotePost = post },
+                                    onDelete: { post in vm.removePost(uri: post.uri) },
+                                    currentUserDID: authVM.client.currentSession?.did
+                                )
+                                Divider().padding(.leading, 16)
+                                if feedPost.post.uri == feed.last?.post.uri {
+                                    Color.clear
+                                        .frame(height: 1)
+                                        .task { await vm.loadMoreTab(vm.selectedTab) }
+                                }
+                            }
+                            if vm.isCurrentTabLoading {
+                                ProgressView().padding()
+                            }
                         }
                     }
                 }
@@ -204,6 +223,110 @@ struct ProfileScreenView: View {
         .padding(.vertical, 10)
     }
 
+    @ViewBuilder
+    private func pinnedPostView(post: PostView, vm: ProfileViewModel) -> some View {
+        let feedPost = FeedViewPost(post: post, reply: nil, reason: nil)
+        ZStack(alignment: .topLeading) {
+            PostCardView(
+                feedPost: feedPost,
+                postService: PostService(client: authVM.client),
+                onTapPost: { _ in selectedPost = feedPost },
+                onTapReply: { p in replyToPost = p },
+                onTapQuote: { p in quotePost = p },
+                onDelete: { p in vm.removePost(uri: p.uri) },
+                currentUserDID: authVM.client.currentSession?.did
+            )
+            HStack(spacing: 4) {
+                Image(systemName: "pin.fill")
+                    .font(.caption2)
+                Text(String(localized: "post.pinned"))
+                    .font(.caption2)
+            }
+            .foregroundStyle(.secondary)
+            .padding(.horizontal, 16)
+            .padding(.top, 6)
+        }
+    }
+
+    @ViewBuilder
+    private func profileSearchBar(vm: ProfileViewModel) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: "magnifyingglass")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+            TextField(String(localized: "profile.searchPlaceholder"), text: Binding(
+                get: { vm.profileSearchQuery },
+                set: { vm.profileSearchQuery = $0 }
+            ))
+            .font(.subheadline)
+            .submitLabel(.search)
+            .onSubmit {
+                Task { await vm.searchInProfile(query: vm.profileSearchQuery) }
+            }
+            .onChange(of: vm.profileSearchQuery) { _, newValue in
+                if newValue.isEmpty {
+                    vm.profileSearchResults = []
+                    vm.profileSearchCursor = nil
+                    vm.profileSearchHasMore = false
+                }
+            }
+            if !vm.profileSearchQuery.isEmpty {
+                Button {
+                    vm.profileSearchQuery = ""
+                    vm.profileSearchResults = []
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(Color(.systemGray6), in: RoundedRectangle(cornerRadius: 10))
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
+    }
+
+    @ViewBuilder
+    private func profileSearchResults(vm: ProfileViewModel) -> some View {
+        if vm.isSearchingInProfile && vm.profileSearchResults.isEmpty {
+            ProgressView().padding(.top, 32)
+        } else if vm.profileSearchResults.isEmpty {
+            VStack(spacing: 12) {
+                Image(systemName: "magnifyingglass")
+                    .font(.largeTitle)
+                    .foregroundStyle(.secondary)
+                Text(String(format: String(localized: "search.noResults"), vm.profileSearchQuery))
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+            .padding(.top, 40)
+            .frame(maxWidth: .infinity)
+        } else {
+            ForEach(vm.profileSearchResults, id: \.uri) { post in
+                let feedPost = FeedViewPost(post: post, reply: nil, reason: nil)
+                PostCardView(
+                    feedPost: feedPost,
+                    postService: PostService(client: authVM.client),
+                    onTapPost: { _ in selectedPost = feedPost },
+                    onTapReply: { p in replyToPost = p },
+                    onTapQuote: { p in quotePost = p },
+                    currentUserDID: authVM.client.currentSession?.did
+                )
+                Divider().padding(.leading, 16)
+                if post.uri == vm.profileSearchResults.last?.uri {
+                    Color.clear
+                        .frame(height: 1)
+                        .task { await vm.loadMoreSearchResults() }
+                }
+            }
+            if vm.isSearchingInProfile {
+                ProgressView().padding()
+            }
+        }
+    }
+
     private func profileTabBar(vm: ProfileViewModel) -> some View {
         HStack(spacing: 0) {
             ForEach(ProfileTab.allCases, id: \.self) { tab in
@@ -216,7 +339,7 @@ struct ProfileScreenView: View {
                     }
                 } label: {
                     VStack(spacing: 4) {
-                        Text(tab.rawValue)
+                        Text(tab.displayName)
                             .font(.subheadline)
                             .fontWeight(vm.selectedTab == tab ? .semibold : .regular)
                             .foregroundStyle(vm.selectedTab == tab ? Color.primary : Color.secondary)
@@ -312,18 +435,18 @@ struct ProfileHeaderView: View {
                     HStack(spacing: 16) {
                         if let followers = profile.followersCount {
                             Button { onTapFollowers?() } label: {
-                                statItem(count: followers, label: "フォロワー")
+                                statItem(count: followers, label: String(localized: "profile.followers"))
                             }
                             .buttonStyle(.plain)
                         }
                         if let follows = profile.followsCount {
                             Button { onTapFollowing?() } label: {
-                                statItem(count: follows, label: "フォロー中")
+                                statItem(count: follows, label: String(localized: "profile.following"))
                             }
                             .buttonStyle(.plain)
                         }
                         if let posts = profile.postsCount {
-                            statItem(count: posts, label: "投稿")
+                            statItem(count: posts, label: String(localized: "profile.posts"))
                         }
                     }
                     .padding(.top, 8)
@@ -350,7 +473,7 @@ struct ProfileHeaderView: View {
                     ProgressView()
                         .frame(width: 80, height: 32)
                 } else {
-                    Text(isFollowing ? "フォロー中" : "フォロー")
+                    Text(isFollowing ? String(localized: "profile.following") : String(localized: "profile.follow"))
                         .font(.subheadline)
                         .fontWeight(.semibold)
                         .foregroundStyle(isFollowing ? Color.primary : Color.white)

@@ -12,8 +12,8 @@ enum PostActorListType: Identifiable, Hashable {
 
     var title: String {
         switch self {
-        case .likes:   return "いいねしたユーザー"
-        case .reposts: return "リポストしたユーザー"
+        case .likes:   return String(localized: "postList.likedBy")
+        case .reposts: return String(localized: "postList.repostedBy")
         }
     }
 
@@ -43,7 +43,7 @@ struct PostActorListView: View {
             } else if let error = errorMessage, users.isEmpty {
                 VStack(spacing: 12) {
                     Text(error).foregroundStyle(.secondary)
-                    Button("再試行") { Task { await loadInitial() } }
+                    Button(String(localized: "postList.retry")) { Task { await loadInitial() } }
                         .buttonStyle(.bordered)
                 }
                 .padding()
@@ -52,7 +52,7 @@ struct PostActorListView: View {
                 VStack(spacing: 12) {
                     Image(systemName: "person.slash")
                         .font(.largeTitle).foregroundStyle(.secondary)
-                    Text("ユーザーはいません").foregroundStyle(.secondary)
+                    Text(String(localized: "postList.noUsers")).foregroundStyle(.secondary)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {

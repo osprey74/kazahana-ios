@@ -10,6 +10,12 @@ struct ImageViewer: View {
     @Binding var selectedIndex: Int
     @Environment(\.dismiss) private var dismiss
 
+    /// 現在表示中の画像の ALT テキスト
+    private var currentAlt: String {
+        guard selectedIndex < images.count else { return "" }
+        return images[selectedIndex].alt
+    }
+
     var body: some View {
         ZStack(alignment: .topTrailing) {
             Color.black.ignoresSafeArea()
@@ -23,6 +29,21 @@ struct ImageViewer: View {
             }
             .tabViewStyle(.page(indexDisplayMode: images.count > 1 ? .always : .never))
             .indexViewStyle(.page(backgroundDisplayMode: .always))
+
+            // ALT テキスト（下部に全文表示）
+            if !currentAlt.isEmpty {
+                VStack {
+                    Spacer()
+                    Text(currentAlt)
+                        .font(.caption)
+                        .foregroundStyle(.white.opacity(0.9))
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 10)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(.ultraThinMaterial.opacity(0.8))
+                }
+                .ignoresSafeArea(edges: .bottom)
+            }
 
             // 閉じるボタン
             Button {

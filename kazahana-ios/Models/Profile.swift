@@ -37,11 +37,17 @@ struct ProfileView: Codable {
     let viewer: ActorViewerState?
     let labels: [ContentLabel]?
     let createdAt: String?
+    let pinnedPost: PinnedPost?
 
     var displayNameOrHandle: String {
         let name = displayName ?? ""
         return name.isEmpty ? handle : name
     }
+}
+
+/// ピン留め投稿への参照
+struct PinnedPost: Codable {
+    let uri: String
 }
 
 // MARK: - アクター間の関係

@@ -22,7 +22,7 @@ struct NotificationListView: View {
                     ProgressView()
                 }
             }
-            .navigationTitle("通知")
+            .navigationTitle(String(localized: "tab.notifications"))
             .navigationBarTitleDisplayMode(.inline)
             // スレッド遷移
             .navigationDestination(item: $selectedPostURI) { item in
@@ -83,7 +83,7 @@ struct NotificationListView: View {
                 Text(error)
                     .multilineTextAlignment(.center)
                     .foregroundStyle(.secondary)
-                Button("再試行") {
+                Button(String(localized: "notification.retry")) {
                     Task { await vm.loadInitial() }
                 }
                 .buttonStyle(.bordered)
@@ -94,7 +94,7 @@ struct NotificationListView: View {
                 Image(systemName: "bell.slash")
                     .font(.largeTitle)
                     .foregroundStyle(.secondary)
-                Text("通知はありません")
+                Text(String(localized: "notification.empty"))
                     .foregroundStyle(.secondary)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)

@@ -4,12 +4,20 @@
 
 import Foundation
 import Observation
+import SwiftUI
 
 enum SearchTab: String, CaseIterable, Identifiable {
-    case people = "ユーザー"
-    case posts = "投稿"
+    case people = "people"
+    case posts  = "posts"
 
     var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .people: return String(localized: "search.people")
+        case .posts:  return String(localized: "search.posts")
+        }
+    }
 }
 
 @Observable
@@ -31,11 +39,49 @@ final class SearchViewModel {
 
     var errorMessage: String?
 
+    // 検索履歴（最新が先頭、最大20件）
+    var searchHistory: [String] = []
+
+    private static let historyKey = "searchHistory"
+    private static let historyLimit = 20
+
     private let searchService: SearchService
     private var searchTask: Task<Void, Never>?
 
     init(searchService: SearchService) {
         self.searchService = searchService
+        loadHistory()
+    }
+
+    // MARK: - 検索履歴
+
+    private func loadHistory() {
+        searchHistory = UserDefaults.standard.stringArray(forKey: Self.historyKey) ?? []
+    }
+
+    private func saveHistory() {
+        UserDefaults.standard.set(searchHistory, forKey: Self.historyKey)
+    }
+
+    private func addToHistory(_ term: String) {
+        let trimmed = term.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else { return }
+        searchHistory.removeAll { $0 == trimmed }
+        searchHistory.insert(trimmed, at: 0)
+        if searchHistory.count > Self.historyLimit {
+            searchHistory = Array(searchHistory.prefix(Self.historyLimit))
+        }
+        saveHistory()
+    }
+
+    func deleteHistory(at offsets: IndexSet) {
+        searchHistory.remove(atOffsets: offsets)
+        saveHistory()
+    }
+
+    func clearAllHistory() {
+        searchHistory.removeAll()
+        saveHistory()
     }
 
     // MARK: - 検索実行
@@ -47,6 +93,8 @@ final class SearchViewModel {
             posts = []
             return
         }
+
+        addToHistory(query)
 
         // 既存のタスクをキャンセル
         searchTask?.cancel()

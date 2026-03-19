@@ -23,7 +23,7 @@ struct SearchView: View {
                     Color.clear
                 }
             }
-            .navigationTitle("検索")
+            .navigationTitle(String(localized: "tab.search"))
             .navigationBarTitleDisplayMode(.inline)
             .navigationDestination(item: $selectedActor) { item in
                 ProfileScreenView(actor: item.id)
@@ -46,36 +46,41 @@ struct SearchView: View {
     @ViewBuilder
     private func searchContent(vm: SearchViewModel) -> some View {
         VStack(spacing: 0) {
-            // タブセレクター
-            Picker("", selection: Binding(
-                get: { vm.selectedTab },
-                set: { tab in
-                    vm.selectedTab = tab
-                    Task { await vm.search() }
+            if vm.query.isEmpty {
+                // 検索履歴
+                historyList(vm: vm)
+            } else {
+                // タブセレクター
+                Picker("", selection: Binding(
+                    get: { vm.selectedTab },
+                    set: { tab in
+                        vm.selectedTab = tab
+                        Task { await vm.search() }
+                    }
+                )) {
+                    ForEach(SearchTab.allCases) { tab in
+                        Text(tab.displayName).tag(tab)
+                    }
                 }
-            )) {
-                ForEach(SearchTab.allCases) { tab in
-                    Text(tab.rawValue).tag(tab)
+                .pickerStyle(.segmented)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+
+                Divider()
+
+                // 検索結果
+                switch vm.selectedTab {
+                case .people:
+                    actorList(vm: vm)
+                case .posts:
+                    postList(vm: vm)
                 }
-            }
-            .pickerStyle(.segmented)
-            .padding(.horizontal, 16)
-            .padding(.vertical, 8)
-
-            Divider()
-
-            // 検索結果
-            switch vm.selectedTab {
-            case .people:
-                actorList(vm: vm)
-            case .posts:
-                postList(vm: vm)
             }
         }
         .searchable(text: Binding(
             get: { vm.query },
             set: { vm.query = $0 }
-        ), prompt: "ユーザーや投稿を検索")
+        ), prompt: String(localized: "search.placeholder"))
         .onSubmit(of: .search) {
             Task { await vm.search() }
         }
@@ -84,6 +89,58 @@ struct SearchView: View {
                 vm.actors = []
                 vm.posts = []
             }
+        }
+    }
+
+    @ViewBuilder
+    private func historyList(vm: SearchViewModel) -> some View {
+        if vm.searchHistory.isEmpty {
+            VStack(spacing: 12) {
+                Image(systemName: "clock")
+                    .font(.largeTitle)
+                    .foregroundStyle(.secondary)
+                Text(String(localized: "search.noHistory"))
+                    .foregroundStyle(.secondary)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        } else {
+            List {
+                Section {
+                    ForEach(vm.searchHistory, id: \.self) { term in
+                        Button {
+                            vm.query = term
+                            Task { await vm.search() }
+                        } label: {
+                            HStack(spacing: 10) {
+                                Image(systemName: "clock")
+                                    .font(.subheadline)
+                                    .foregroundStyle(.secondary)
+                                Text(term)
+                                    .foregroundStyle(.primary)
+                                Spacer()
+                                Image(systemName: "arrow.up.left")
+                                    .font(.caption)
+                                    .foregroundStyle(.tertiary)
+                            }
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    .onDelete { offsets in
+                        vm.deleteHistory(at: offsets)
+                    }
+                } header: {
+                    HStack {
+                        Text(String(localized: "search.history"))
+                        Spacer()
+                        Button(String(localized: "search.clearAll")) {
+                            vm.clearAllHistory()
+                        }
+                        .font(.caption)
+                        .foregroundStyle(.red)
+                    }
+                }
+            }
+            .listStyle(.plain)
         }
     }
 
@@ -155,7 +212,7 @@ struct SearchView: View {
                 Image(systemName: "magnifyingglass")
                     .font(.largeTitle)
                     .foregroundStyle(.secondary)
-                Text("ユーザーや投稿を検索できます")
+                Text(String(localized: "search.hint"))
                     .foregroundStyle(.secondary)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -164,7 +221,7 @@ struct SearchView: View {
                 Image(systemName: "magnifyingglass")
                     .font(.largeTitle)
                     .foregroundStyle(.secondary)
-                Text("「\(vm.query)」の結果はありません")
+                Text(String(format: String(localized: "search.noResults"), vm.query))
                     .foregroundStyle(.secondary)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)

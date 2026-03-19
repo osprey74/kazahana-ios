@@ -16,7 +16,7 @@ struct FeedSelectorView: View {
 
                 // カスタムフィード
                 if !viewModel.savedFeeds.isEmpty {
-                    Section("保存済みフィード") {
+                    Section(String(localized: "feed.savedFeeds")) {
                         ForEach(viewModel.savedFeeds) { generator in
                             feedRow(for: .custom(generator))
                         }
@@ -24,11 +24,11 @@ struct FeedSelectorView: View {
                 }
             }
             .listStyle(.insetGrouped)
-            .navigationTitle("フィードを選択")
+            .navigationTitle(String(localized: "feed.selectFeed"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("閉じる") {
+                    Button(String(localized: "common.close")) {
                         isPresented = false
                     }
                 }

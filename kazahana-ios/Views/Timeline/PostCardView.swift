@@ -149,15 +149,15 @@ struct PostCardView: View {
 
                 Divider()
             }
-            .alert("投稿を削除します", isPresented: $showDeleteConfirm) {
-                Button("削除する", role: .destructive) {
+            .alert(String(localized: "post.deleteConfirm"), isPresented: $showDeleteConfirm) {
+                Button(String(localized: "post.deleteAction"), role: .destructive) {
                     Task { await deletePost() }
                 }
-                Button("キャンセル", role: .cancel) {
+                Button(String(localized: "post.deleteCancel"), role: .cancel) {
                     showDeleteConfirm = false
                 }
             } message: {
-                Text("この操作は取り消せません")
+                Text(String(localized: "post.deleteConfirm"))
             }
             .sheet(item: $reportTarget) { target in
                 if let postService {
@@ -206,11 +206,11 @@ struct PostCardView: View {
 
     private func labelBadgeName(_ val: String) -> String {
         switch val {
-        case "porn":          return "ポルノ"
-        case "sexual":        return "性的"
-        case "nudity":        return "ヌード"
-        case "graphic-media": return "グロ画像"
-        case "gore":          return "暴力"
+        case "porn":          return String(localized: "moderation.porn")
+        case "sexual":        return String(localized: "moderation.sexual")
+        case "nudity":        return String(localized: "moderation.nudity")
+        case "graphic-media": return String(localized: "moderation.graphicMedia")
+        case "gore":          return String(localized: "moderation.gore")
         default:              return val
         }
     }
@@ -220,7 +220,7 @@ struct PostCardView: View {
             Image(systemName: "arrow.2.squarepath")
                 .font(.caption)
                 .foregroundStyle(.secondary)
-            Text("\(profile?.displayNameOrHandle ?? "誰か")がリポスト")
+            Text("\(profile?.displayNameOrHandle ?? "??")\(String(localized: "post.reposted"))")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
@@ -255,7 +255,7 @@ struct PostCardView: View {
                 let url = "https://bsky.app/profile/\(author.handle)/post/\(post.uri.components(separatedBy: "/").last ?? "")"
                 UIPasteboard.general.string = url
             } label: {
-                Label("リンクをコピー", systemImage: "link")
+                Label(String(localized: "post.copyLink"), systemImage: "link")
             }
 
             // 翻訳（外部ブラウザ）
@@ -265,7 +265,7 @@ struct PostCardView: View {
                     UIApplication.shared.open(url)
                 }
             } label: {
-                Label("翻訳", systemImage: "character.bubble")
+                Label(String(localized: "post.translate"), systemImage: "character.bubble")
             }
 
             // 通報
@@ -273,12 +273,12 @@ struct PostCardView: View {
             Button {
                 reportTarget = .post(uri: post.uri, cid: post.cid)
             } label: {
-                Label("投稿を通報", systemImage: "flag")
+                Label(String(localized: "post.reportPost"), systemImage: "flag")
             }
             Button {
                 reportTarget = .account(did: author.did)
             } label: {
-                Label("アカウントを通報", systemImage: "person.badge.minus")
+                Label(String(localized: "post.reportAccount"), systemImage: "person.badge.minus")
             }
 
             // 自分の投稿の場合のみ削除ボタンを表示
@@ -287,7 +287,7 @@ struct PostCardView: View {
                 Button(role: .destructive) {
                     showDeleteConfirm = true
                 } label: {
-                    Label("削除", systemImage: "trash")
+                    Label(String(localized: "post.delete"), systemImage: "trash")
                 }
             }
         } label: {
@@ -304,7 +304,7 @@ struct PostCardView: View {
         HStack(spacing: 4) {
             Image(systemName: "arrowshape.turn.up.left")
                 .font(.caption2)
-            Text("返信")
+            Text(String(localized: "compose.reply"))
                 .font(.caption)
         }
         .foregroundStyle(.secondary)
@@ -517,18 +517,9 @@ struct PostCardView: View {
         guard let date = formatter.date(from: dateString) ?? ISO8601DateFormatter().date(from: dateString) else {
             return ""
         }
-        let diff = Date().timeIntervalSince(date)
-        switch diff {
-        case ..<60:     return "\(Int(diff))秒"
-        case ..<3600:   return "\(Int(diff / 60))分"
-        case ..<86400:  return "\(Int(diff / 3600))時間"
-        default:
-            let cal = Calendar.current
-            let c = cal.dateComponents([.month, .year], from: date, to: Date())
-            if let y = c.year, y > 0 { return "\(y)年前" }
-            if let m = c.month, m > 0 { return "\(m)ヶ月前" }
-            return "\(Int(diff / 86400))日前"
-        }
+        let rel = RelativeDateTimeFormatter()
+        rel.unitsStyle = .abbreviated
+        return rel.localizedString(for: date, relativeTo: Date())
     }
 
     private func formatCount(_ count: Int) -> String {

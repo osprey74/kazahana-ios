@@ -23,6 +23,7 @@ final class PostService {
         replyTo: ReplyTarget? = nil,
         quotePost: PostView? = nil,
         images: [(blob: BlobRef, alt: String)]? = nil,
+        video: (blob: BlobRef, alt: String?, aspectRatio: AspectRatioCreate?)? = nil,
         via: String? = nil
     ) async throws -> CreateRecordResponse {
         guard let did = client.currentSession?.did else { throw ATProtoError.unauthorized }
@@ -35,7 +36,7 @@ final class PostService {
             )
         }
 
-        // embed の組み立て（画像 / 引用 / 画像+引用）
+        // embed の組み立て（画像 / 動画 / 引用 / 画像+引用）
         let embed: PostEmbedCreate?
         if let images, !images.isEmpty {
             let imageEmbed = ImageEmbedCreate(images: images.map { ImageEmbedItem(image: $0.blob, alt: $0.alt, aspectRatio: nil) })
@@ -44,6 +45,8 @@ final class PostService {
             } else {
                 embed = .images(imageEmbed)
             }
+        } else if let video {
+            embed = .video(VideoEmbedCreate(video: video.blob, alt: video.alt, aspectRatio: video.aspectRatio))
         } else if let quotePost {
             embed = .record(QuoteEmbedRecord(uri: quotePost.uri, cid: quotePost.cid))
         } else {
@@ -58,6 +61,13 @@ final class PostService {
     // MARK: - 画像アップロード
 
     func uploadImage(data: Data, mimeType: String) async throws -> BlobRef {
+        let response = try await client.uploadBlob(data: data, mimeType: mimeType)
+        return response.blob
+    }
+
+    // MARK: - 動画アップロード
+
+    func uploadVideo(data: Data, mimeType: String) async throws -> BlobRef {
         let response = try await client.uploadBlob(data: data, mimeType: mimeType)
         return response.blob
     }
@@ -275,12 +285,12 @@ enum ReportReasonType: String, CaseIterable, Identifiable {
 
     var displayName: String {
         switch self {
-        case .spam:       return "スパム"
-        case .violation:  return "利用規約違反"
-        case .misleading: return "誤解を招く情報"
-        case .sexual:     return "性的なコンテンツ"
-        case .rude:       return "ハラスメント"
-        case .other:      return "その他"
+        case .spam:       return String(localized: "report.reason.spam")
+        case .violation:  return String(localized: "report.reason.violation")
+        case .misleading: return String(localized: "report.reason.misleading")
+        case .sexual:     return String(localized: "report.reason.sexual")
+        case .rude:       return String(localized: "report.reason.rude")
+        case .other:      return String(localized: "report.reason.other")
         }
     }
 }

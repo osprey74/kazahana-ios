@@ -73,7 +73,7 @@ final class AuthViewModel {
     /// ログイン
     func login(identifier: String, password: String) async {
         guard !identifier.isEmpty, !password.isEmpty else {
-            errorMessage = "ハンドルとパスワードを入力してください"
+            errorMessage = String(localized: "auth.missingCredentials")
             return
         }
 
