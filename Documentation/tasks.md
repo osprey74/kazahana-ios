@@ -11,7 +11,7 @@
 - Phase 3 (通知・プロフィール・検索): 6/6 ✅ 完了
 - Phase 3.5 (UX改善・バグ修正): 12/12 ✅ 完了
 - Phase 4 (DM・モデレーション・設定): 28/28 ✅ 完了
-- Phase 5 (BSAF・高度な機能): 2/4
+- Phase 5 (BSAF・高度な機能): 2/3（スレッド投稿はペンディング）
 
 ---
 
@@ -268,7 +268,7 @@
   - `PostgateCreate` + `PostgateEmbeddingRule` モデル追加（`Post.swift`）
   - `PostService.createPostgate(postURI:disableEmbedding:)` — `app.bsky.feed.postgate` レコード作成
   - `ComposeView`: ボトムバーに引用制限ボタン追加（confirmationDialog で「引用を許可する / 引用を制限する」選択・現在値に ✓ 表示・制限中はアクセントカラー）
-- [ ] **スレッド投稿** — 複数ポストを繋いで一括投稿
+- [ ] **スレッド投稿** — 複数ポストを繋いで一括投稿（※デスクトップ版でも見送り。ペンディング）
 
 ### 5-C: モバイル固有機能（優先度：低）
 - [ ] **共有シート連携（受信）** — Share Extension: 他アプリからテキスト/URLを受け取り投稿作成画面を開く
