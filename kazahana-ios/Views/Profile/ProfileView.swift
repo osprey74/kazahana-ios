@@ -12,6 +12,7 @@ struct ProfileScreenView: View {
     @State private var selectedPost: FeedViewPost?
     @State private var userListType: UserListType? = nil
     @State private var showSettings = false
+    @State private var showCompose = false
 
     var body: some View {
         Group {
@@ -40,6 +41,10 @@ struct ProfileScreenView: View {
         .sheet(isPresented: $showSettings) {
             SettingsView()
                 .environment(authVM)
+                .environment(AppSettings.shared)
+        }
+        .sheet(isPresented: $showCompose) {
+            ComposeView(postService: PostService(client: authVM.client))
                 .environment(AppSettings.shared)
         }
         .toolbar {
@@ -107,6 +112,20 @@ struct ProfileScreenView: View {
         }
         .refreshable {
             await vm.refresh()
+        }
+        .overlay(alignment: .bottomTrailing) {
+            Button {
+                showCompose = true
+            } label: {
+                Image(systemName: "pencil")
+                    .font(.system(size: 22, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .frame(width: 56, height: 56)
+                    .background(Color.accentColor, in: Circle())
+                    .shadow(radius: 4, y: 2)
+            }
+            .padding(.trailing, 20)
+            .padding(.bottom, 24)
         }
     }
 }
