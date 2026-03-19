@@ -20,6 +20,7 @@ struct ThreadView: View {
     @State private var repostCount = 0
     @State private var likeUri: String? = nil
     @State private var repostUri: String? = nil
+    @State private var showFocusedDeleteConfirm = false
 
     let postService: PostService
 
@@ -96,6 +97,7 @@ struct ThreadView: View {
                                 postService: postService,
                                 onTapPost: { post in selectedPost = post },
                                 onTapReply: { post in replyToPost = post },
+                                onDelete: { post in viewModel.removeReply(uri: post.uri) },
                                 currentUserDID: authVM.client.currentSession?.did
                             )
                             Divider().padding(.leading, 16)
@@ -146,6 +148,8 @@ struct ThreadView: View {
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }
+                Spacer()
+                focusedPostMoreMenu(post: post)
             }
 
             // 本文
@@ -253,6 +257,62 @@ struct ThreadView: View {
             .padding(.vertical, 4)
         }
         .padding(16)
+        .confirmationDialog("投稿を削除します", isPresented: $showFocusedDeleteConfirm, titleVisibility: .visible) {
+            Button("削除する", role: .destructive) {
+                Task {
+                    if let post = viewModel.thread?.post {
+                        try? await postService.deletePost(uri: post.uri)
+                        viewModel.thread = nil
+                    }
+                }
+            }
+            Button("キャンセル", role: .cancel) {
+                showFocusedDeleteConfirm = false
+            }
+        } message: {
+            Text("この操作は取り消せません")
+        }
+    }
+
+    @ViewBuilder
+    private func focusedPostMoreMenu(post: PostView) -> some View {
+        let currentDID = authVM.client.currentSession?.did
+        Menu {
+            // リンクをコピー
+            Button {
+                let url = "https://bsky.app/profile/\(post.author.handle)/post/\(post.uri.components(separatedBy: "/").last ?? "")"
+                UIPasteboard.general.string = url
+            } label: {
+                Label("リンクをコピー", systemImage: "link")
+            }
+
+            // 翻訳
+            Button {
+                let text = post.record.text.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+                if let url = URL(string: "https://translate.google.com/?text=\(text)&sl=auto&tl=ja") {
+                    UIApplication.shared.open(url)
+                }
+            } label: {
+                Label("翻訳", systemImage: "character.bubble")
+            }
+
+            // 自分の投稿のみ削除
+            if let currentDID, currentDID == post.author.did {
+                Divider()
+                Button(role: .destructive) {
+                    showFocusedDeleteConfirm = true
+                } label: {
+                    Label("削除", systemImage: "trash")
+                }
+            }
+        } label: {
+            Image(systemName: "ellipsis")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .padding(.vertical, 4)
+                .padding(.leading, 4)
+        }
+        .buttonStyle(.plain)
     }
 
     @ViewBuilder

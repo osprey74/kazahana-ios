@@ -20,6 +20,11 @@ final class ThreadViewModel {
         self.rootURI = uri
     }
 
+    @MainActor
+    func removeReply(uri: String) {
+        thread?.replies?.removeAll { $0.post?.uri == uri }
+    }
+
     func load() async {
         guard !isLoading else { return }
         isLoading = true

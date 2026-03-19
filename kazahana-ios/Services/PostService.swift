@@ -236,7 +236,7 @@ final class ThreadViewPost: Codable {
     let type: String
     let post: PostView?
     let parent: ThreadViewPost?
-    let replies: [ThreadViewPost]?
+    var replies: [ThreadViewPost]?
 
     enum CodingKeys: String, CodingKey {
         case type = "$type"
