@@ -75,21 +75,7 @@ struct ProfileScreenView: View {
     private func profileContent(vm: ProfileViewModel) -> some View {
         let isSelf = authVM.client.currentSession?.did == actor
 
-        VStack(spacing: 0) {
-            // ── 固定エリア（ScrollViewの外側）──────────────────
-            VStack(spacing: 0) {
-                // コンパクトヘッダー：スクロール開始後に表示
-                if showCompact {
-                    compactHeader(vm: vm, isSelf: isSelf)
-                        .transition(.opacity)
-                }
-                Divider()
-                profileTabBar(vm: vm)
-                Divider()
-            }
-            .background(Color(.systemBackground))
-            .animation(.easeInOut(duration: 0.15), value: showCompact)
-
+        ZStack(alignment: .top) {
             // ── スクロールエリア ────────────────────────────
             ScrollView {
                 // offset 検知アンカー
@@ -111,7 +97,13 @@ struct ProfileScreenView: View {
                         onTapSettings: { showSettings = true }
                     )
 
-                    Divider()
+                    // タブバー（ScrollView内・スクロールで流れる位置に配置）
+                    VStack(spacing: 0) {
+                        Divider()
+                        profileTabBar(vm: vm)
+                        Divider()
+                    }
+                    .background(Color(.systemBackground))
 
                     // タブ別フィード
                     let feed = vm.currentFeed
@@ -154,6 +146,19 @@ struct ProfileScreenView: View {
             }
             .refreshable {
                 await vm.refresh()
+            }
+
+            // ── 固定エリア（スクロール後だけ最前面に表示）──────
+            if showCompact {
+                VStack(spacing: 0) {
+                    compactHeader(vm: vm, isSelf: isSelf)
+                    Divider()
+                    profileTabBar(vm: vm)
+                    Divider()
+                }
+                .background(Color(.systemBackground))
+                .transition(.opacity)
+                .animation(.easeInOut(duration: 0.15), value: showCompact)
             }
         }
         .overlay(alignment: .bottomTrailing) {
