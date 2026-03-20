@@ -101,6 +101,19 @@ struct SettingsView: View {
                     Text(String(localized: "settings.claudeApiFooter"))
                 }
 
+                // MARK: - ホームフィード管理
+                Section(String(localized: "settings.feedManagement")) {
+                    NavigationLink {
+                        FeedManagementView(
+                            client: authVM.client,
+                            actorDID: authVM.client.currentSession?.did ?? ""
+                        )
+                        .environment(settings)
+                    } label: {
+                        Label(String(localized: "settings.feedManagement"), systemImage: "square.stack")
+                    }
+                }
+
                 // MARK: - アカウント
                 Section(String(localized: "settings.account")) {
                     if let session = authVM.client.currentSession {

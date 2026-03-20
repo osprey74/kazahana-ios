@@ -177,6 +177,31 @@ final class AppSettings {
         didSet { UserDefaults.standard.set(claudeApiKey, forKey: "claudeApiKey") }
     }
 
+    // MARK: - ホームフィード管理設定
+
+    /// ホームタブに表示するフィード/リストのURI順序リスト（空 = 全フィード表示）
+    var pinnedFeedURIs: [String] {
+        didSet {
+            if let data = try? JSONEncoder().encode(pinnedFeedURIs) {
+                UserDefaults.standard.set(data, forKey: "pinnedFeedURIs")
+            }
+        }
+    }
+
+    /// 非表示にしたフィード/リストのURIリスト
+    var hiddenFeedURIs: [String] {
+        didSet {
+            if let data = try? JSONEncoder().encode(hiddenFeedURIs) {
+                UserDefaults.standard.set(data, forKey: "hiddenFeedURIs")
+            }
+        }
+    }
+
+    /// フィード選択メニューに全フィード/リストを表示するか
+    var showAllFeedsInSelector: Bool {
+        didSet { UserDefaults.standard.set(showAllFeedsInSelector, forKey: "showAllFeedsInSelector") }
+    }
+
     // MARK: - Init
 
     init() {
@@ -200,6 +225,19 @@ final class AppSettings {
                 "gore": .warn,
             ]
         }
+        if let data = UserDefaults.standard.data(forKey: "pinnedFeedURIs"),
+           let uris = try? JSONDecoder().decode([String].self, from: data) {
+            self.pinnedFeedURIs = uris
+        } else {
+            self.pinnedFeedURIs = []
+        }
+        if let data = UserDefaults.standard.data(forKey: "hiddenFeedURIs"),
+           let uris = try? JSONDecoder().decode([String].self, from: data) {
+            self.hiddenFeedURIs = uris
+        } else {
+            self.hiddenFeedURIs = []
+        }
+        self.showAllFeedsInSelector = UserDefaults.standard.object(forKey: "showAllFeedsInSelector") as? Bool ?? true
     }
 
     // MARK: - Singleton

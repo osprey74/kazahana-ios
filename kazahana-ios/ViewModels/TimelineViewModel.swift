@@ -18,6 +18,7 @@ final class TimelineViewModel {
     // フィード
     var currentFeed: FeedSource = .following
     var savedFeeds: [GeneratorView] = []
+    var savedLists: [GraphListView] = []
     var isLoadingFeeds: Bool = false
 
     // ページネーション
@@ -30,11 +31,44 @@ final class TimelineViewModel {
     // MARK: - Dependencies
 
     private let feedService: FeedService
+    private let client: ATProtoClient
 
     // MARK: - Init
 
     init(client: ATProtoClient) {
+        self.client = client
         self.feedService = FeedService(client: client)
+    }
+
+    // MARK: - フィードソース一覧（タブバー用）
+
+    /// ホームタブバーに表示するフィードソース一覧（hiddenFeedURIs を除外し pinnedFeedURIs 順でソート）
+    var visibleFeedSources: [FeedSource] {
+        let settings = AppSettings.shared
+        let allSources = buildAllFeedSources()
+        let hiddenURIs = Set(settings.hiddenFeedURIs)
+        let visible = allSources.filter { source in
+            guard let uri = source.uri else { return true }
+            return !hiddenURIs.contains(uri)
+        }
+        if settings.pinnedFeedURIs.isEmpty {
+            return [.following] + visible
+        }
+        let ordered = visible.sorted { a, b in
+            let ai = settings.pinnedFeedURIs.firstIndex(of: a.uri ?? "") ?? Int.max
+            let bi = settings.pinnedFeedURIs.firstIndex(of: b.uri ?? "") ?? Int.max
+            return ai < bi
+        }
+        return [.following] + ordered
+    }
+
+    /// 全フィードソース（設定画面用: hidden も含む）
+    var allFeedSources: [FeedSource] {
+        buildAllFeedSources()
+    }
+
+    private func buildAllFeedSources() -> [FeedSource] {
+        savedFeeds.map { .custom($0) } + savedLists.map { .list($0) }
     }
 
     // MARK: - フィード選択
@@ -53,11 +87,17 @@ final class TimelineViewModel {
     func loadSavedFeeds() async {
         guard !isLoadingFeeds else { return }
         isLoadingFeeds = true
+        guard let actor = client.currentSession?.did else {
+            isLoadingFeeds = false
+            return
+        }
         do {
-            savedFeeds = try await feedService.getSavedFeeds()
+            let result = try await feedService.getAllSavedFeedItems(actor: actor)
+            savedFeeds = result.feeds
+            savedLists = result.lists
         } catch {
             // フィード取得失敗はサイレント（フォロー中フィードのみ表示）
-            print("[FeedSelector] getSavedFeeds error: \(error)")
+            print("[FeedSelector] getAllSavedFeedItems error: \(error)")
         }
         isLoadingFeeds = false
     }
@@ -166,6 +206,8 @@ final class TimelineViewModel {
             return try await feedService.getTimeline(limit: 50, cursor: cursor)
         case .custom(let generator):
             return try await feedService.getFeed(feedURI: generator.uri, limit: 50, cursor: cursor)
+        case .list(let listView):
+            return try await feedService.getListFeed(listURI: listView.uri, limit: 50, cursor: cursor)
         }
     }
 }

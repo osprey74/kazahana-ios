@@ -1,6 +1,6 @@
 # kazahana-ios 開発タスク・進捗記録
 
-最終更新: 2026-03-20 (Phase 5-C: 共有シート・ディープリンク・バックグラウンドポーリング実装 / Phase 5-E: サポーターバッジIAP 設計確定 / Phase 5-F: ホームフィード管理 設計確定)
+最終更新: 2026-03-20 (Phase 5-F: ホームフィード・リスト管理 実装完了)
 
 ---
 
@@ -11,7 +11,7 @@
 - Phase 3 (通知・プロフィール・検索): 6/6 ✅ 完了
 - Phase 3.5 (UX改善・バグ修正): 12/12 ✅ 完了
 - Phase 4 (DM・モデレーション・設定): 28/28 ✅ 完了
-- Phase 5 (BSAF・高度な機能): 5-B 完了（スレッド投稿ペンディング）、5-C 一部完了、5-A/5-D/5-E/5-F 未着手
+- Phase 5 (BSAF・高度な機能): 5-B 完了（スレッド投稿ペンディング）、5-C/5-F 完了、5-A/5-D/5-E 未着手
 
 ---
 
@@ -301,30 +301,21 @@
 - 選択状態（ピン止めフィードURIリスト、全表示フラグ）は `AppSettings`（UserDefaults）に保存
 
 **実装タスク**
-- [ ] `FeedService.swift` 拡張
-  - `getSavedFeeds()` で `type == "list"` の items も取得（`GraphListView` モデル追加）
-  - `getListFeed(listURI:limit:cursor:)` 追加（`app.bsky.feed.getListFeed`）
-  - `getAllSavedFeedItems()` — フィードとリスト両方を `FeedSource` 配列として返す
-- [ ] `FeedSource` enum 拡張
-  - `.list(GraphListView)` ケース追加
-  - `displayName` / `icon` 対応
-- [ ] `AppSettings.swift` 拡張
-  - `pinnedFeedURIs: [String]` — ホームタブに表示するフィード/リストのURI順序リスト（UserDefaults永続化）
-  - `showAllFeedsInSelector: Bool` — 「すべてのフィードをメニューに表示」フラグ（デフォルト: true）
-- [ ] `TimelineView.swift` 変更
-  - ナビバー直下に横スクロールタブバーを追加（`pinnedFeedURIs` が2件以上の場合のみ表示）
-  - タブタップで `viewModel.selectFeed(_:)` を呼び出し
-  - 現在の `list.bullet` ナビバーボタンは `showAllFeedsInSelector == true` 時のみ表示
-- [ ] `TimelineViewModel.swift` 変更
-  - `fetchFeed()` に `.list` ケースを追加
-- [ ] `FeedSelectorView.swift` 変更
-  - `showAllFeedsInSelector == false` 時は `pinnedFeedURIs` に含まれるもののみ表示
-- [ ] `SettingsView.swift` 変更
-  - 「ホームフィード管理」セクション追加
-  - 全フィード/リスト一覧をトグルで表示（ON = ホームタブに追加）
-  - ドラッグで並び替え（`.onMove`）
-  - 「すべてのフィードをメニューに表示」トグル
-- [ ] `Localizable.xcstrings` に i18n キー追加（11言語）
+- [x] `FeedService.swift` 拡張
+  - `GraphListView` モデル追加、`getListFeed()` / `getMyLists()` / `getAllSavedFeedItems()` 追加
+- [x] `FeedSource` enum 拡張
+  - `.list(GraphListView)` ケース追加、`uri` 計算プロパティ追加
+- [x] `AppSettings.swift` 拡張
+  - `pinnedFeedURIs`, `hiddenFeedURIs`, `showAllFeedsInSelector` 追加（UserDefaults永続化）
+- [x] `TimelineView.swift` 変更
+  - ナビバー直下に横スクロールタブバー追加（フィード2件以上で表示）
+- [x] `TimelineViewModel.swift` 変更
+  - `savedLists`, `visibleFeedSources`, `allFeedSources` 追加、`fetchFeed()` に `.list` ケース追加
+- [x] `FeedSelectorView.swift` 変更
+  - リストセクション追加、`showAllFeedsInSelector` 対応
+- [x] `SettingsView.swift` 変更 + `FeedManagementView.swift` 新規作成
+  - 「ホームフィード管理」セクション → `FeedManagementView`（表示/非表示トグル・ドラッグ並び替え）
+- [x] `Localizable.xcstrings` に i18n キー追加（11言語）
 
 ### 5-E: サポーターバッジ IAP（優先度：低）
 

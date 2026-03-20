@@ -28,14 +28,19 @@ struct TimelineView: View {
     var body: some View {
         NavigationStack {
             ZStack(alignment: .bottomTrailing) {
-                Group {
-                    if viewModel.isLoading && viewModel.posts.isEmpty {
-                        ProgressView()
-                            .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    } else if let error = viewModel.errorMessage, viewModel.posts.isEmpty {
-                        errorView(message: error)
-                    } else {
-                        postList
+                VStack(spacing: 0) {
+                    // 横スクロールタブバー（フィードが2件以上の場合のみ表示）
+                    feedTabBar
+
+                    Group {
+                        if viewModel.isLoading && viewModel.posts.isEmpty {
+                            ProgressView()
+                                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        } else if let error = viewModel.errorMessage, viewModel.posts.isEmpty {
+                            errorView(message: error)
+                        } else {
+                            postList
+                        }
                     }
                 }
 
@@ -54,17 +59,24 @@ struct TimelineView: View {
                 .padding(.trailing, 20)
                 .padding(.bottom, 20)
             }
-            .navigationTitle(viewModel.currentFeed.displayName)
+            .navigationTitle(
+                viewModel.visibleFeedSources.count > 1
+                    ? String(localized: "tab.home")
+                    : viewModel.currentFeed.displayName
+            )
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    Button {
-                        showFeedSelector = true
-                    } label: {
-                        HStack(spacing: 4) {
-                            Image(systemName: "list.bullet")
-                            Image(systemName: "chevron.down")
-                                .font(.caption2)
+                    // タブバー非表示時 or showAllFeedsInSelector=true のときにフィード選択ボタンを表示
+                    if viewModel.visibleFeedSources.count <= 1 || settings.showAllFeedsInSelector {
+                        Button {
+                            showFeedSelector = true
+                        } label: {
+                            HStack(spacing: 4) {
+                                Image(systemName: "list.bullet")
+                                Image(systemName: "chevron.down")
+                                    .font(.caption2)
+                            }
                         }
                     }
                 }
@@ -105,6 +117,53 @@ struct TimelineView: View {
     }
 
     // MARK: - Subviews
+
+    /// 横スクロールタブバー（フィードが2件以上の場合のみ表示）
+    @ViewBuilder
+    private var feedTabBar: some View {
+        let sources = viewModel.visibleFeedSources
+        if sources.count > 1 {
+            ScrollViewReader { proxy in
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 0) {
+                        ForEach(Array(sources.enumerated()), id: \.offset) { index, source in
+                            let isActive = viewModel.currentFeed == source
+                            Button {
+                                if isActive {
+                                    Task { await viewModel.refresh() }
+                                } else {
+                                    Task { await viewModel.selectFeed(source) }
+                                }
+                            } label: {
+                                VStack(spacing: 6) {
+                                    Text(source.displayName)
+                                        .font(.subheadline)
+                                        .fontWeight(isActive ? .semibold : .regular)
+                                        .foregroundStyle(isActive ? Color.primary : Color.secondary)
+                                        .lineLimit(1)
+                                        .padding(.horizontal, 16)
+                                        .padding(.top, 8)
+
+                                    // アクティブ時のアンダーライン
+                                    Rectangle()
+                                        .fill(isActive ? Color.accentColor : Color.clear)
+                                        .frame(height: 2)
+                                }
+                            }
+                            .id(index)
+                        }
+                    }
+                }
+                .background(Color(.systemBackground))
+                .overlay(alignment: .bottom) { Divider() }
+                .onChange(of: viewModel.currentFeed) { _, _ in
+                    if let activeIndex = sources.firstIndex(of: viewModel.currentFeed) {
+                        withAnimation { proxy.scrollTo(activeIndex, anchor: .center) }
+                    }
+                }
+            }
+        }
+    }
 
     private var postList: some View {
         List {

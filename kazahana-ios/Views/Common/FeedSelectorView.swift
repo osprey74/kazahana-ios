@@ -7,18 +7,39 @@ import SwiftUI
 struct FeedSelectorView: View {
     let viewModel: TimelineViewModel
     @Binding var isPresented: Bool
+    @Environment(AppSettings.self) private var settings
+
+    /// 表示するフィードソース一覧（showAllFeedsInSelector に従う）
+    private var displayedSources: [FeedSource] {
+        if settings.showAllFeedsInSelector {
+            return viewModel.allFeedSources
+        } else {
+            return viewModel.visibleFeedSources.filter { $0 != .following }
+        }
+    }
 
     var body: some View {
         NavigationStack {
             List {
-                // フォロー中フィード
+                // フォロー中フィード（常に表示）
                 feedRow(for: .following)
 
                 // カスタムフィード
-                if !viewModel.savedFeeds.isEmpty {
+                let customFeeds = displayedSources.filter { if case .custom = $0 { return true } else { return false } }
+                if !customFeeds.isEmpty {
                     Section(String(localized: "feed.savedFeeds")) {
-                        ForEach(viewModel.savedFeeds) { generator in
-                            feedRow(for: .custom(generator))
+                        ForEach(customFeeds, id: \.self) { source in
+                            feedRow(for: source)
+                        }
+                    }
+                }
+
+                // リスト
+                let listFeeds = displayedSources.filter { if case .list = $0 { return true } else { return false } }
+                if !listFeeds.isEmpty {
+                    Section(String(localized: "feed.lists")) {
+                        ForEach(listFeeds, id: \.self) { source in
+                            feedRow(for: source)
                         }
                     }
                 }
@@ -34,7 +55,7 @@ struct FeedSelectorView: View {
                 }
             }
             .task {
-                if viewModel.savedFeeds.isEmpty {
+                if viewModel.savedFeeds.isEmpty && viewModel.savedLists.isEmpty {
                     await viewModel.loadSavedFeeds()
                 }
             }

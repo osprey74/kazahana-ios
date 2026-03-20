@@ -2890,6 +2890,51 @@
         }
       }
     },
+    "feed.lists" : {
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Listen" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Lists" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Listas" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Listes" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Daftar" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "リスト" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "리스트" } },
+        "pt" : { "stringUnit" : { "state" : "translated", "value" : "Listas" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Списки" } },
+        "zh-CN" : { "stringUnit" : { "state" : "translated", "value" : "列表" } },
+        "zh-TW" : { "stringUnit" : { "state" : "translated", "value" : "列表" } }
+      }
+    },
+    "feed.typeCustomFeed" : {
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Benutzerdefinierter Feed" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Custom Feed" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Feed personalizado" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Flux personnalisé" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Feed Kustom" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "カスタムフィード" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "커스텀 피드" } },
+        "pt" : { "stringUnit" : { "state" : "translated", "value" : "Feed personalizado" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Пользовательская лента" } },
+        "zh-CN" : { "stringUnit" : { "state" : "translated", "value" : "自定义动态" } },
+        "zh-TW" : { "stringUnit" : { "state" : "translated", "value" : "自訂動態" } }
+      }
+    },
+    "feed.typeList" : {
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Liste" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "List" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Lista" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Liste" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Daftar" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "リスト" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "리스트" } },
+        "pt" : { "stringUnit" : { "state" : "translated", "value" : "Lista" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Список" } },
+        "zh-CN" : { "stringUnit" : { "state" : "translated", "value" : "列表" } },
+        "zh-TW" : { "stringUnit" : { "state" : "translated", "value" : "列表" } }
+      }
+    },
     "feed.savedFeeds" : {
       "localizations" : {
         "de" : {
@@ -10169,6 +10214,96 @@
             "value" : "貼文"
           }
         }
+      }
+    },
+    "settings.feedManagement" : {
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Home-Feed Verwaltung" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Home Feed Management" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Gestión del feed principal" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Gestion du fil d'accueil" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Kelola Feed Utama" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "ホームフィード管理" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "홈 피드 관리" } },
+        "pt" : { "stringUnit" : { "state" : "translated", "value" : "Gerenciar feed principal" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Управление лентой" } },
+        "zh-CN" : { "stringUnit" : { "state" : "translated", "value" : "主页动态管理" } },
+        "zh-TW" : { "stringUnit" : { "state" : "translated", "value" : "主頁動態管理" } }
+      }
+    },
+    "settings.visibleFeeds" : {
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Angezeigte Feeds" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Visible Feeds" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Feeds visibles" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Flux visibles" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Feed Ditampilkan" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "表示中のフィード" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "표시 중인 피드" } },
+        "pt" : { "stringUnit" : { "state" : "translated", "value" : "Feeds visíveis" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Отображаемые ленты" } },
+        "zh-CN" : { "stringUnit" : { "state" : "translated", "value" : "显示中的动态" } },
+        "zh-TW" : { "stringUnit" : { "state" : "translated", "value" : "顯示中的動態" } }
+      }
+    },
+    "settings.hiddenFeeds" : {
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Ausgeblendete Feeds" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Hidden Feeds" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Feeds ocultos" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Flux masqués" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Feed Tersembunyi" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "非表示のフィード" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "숨겨진 피드" } },
+        "pt" : { "stringUnit" : { "state" : "translated", "value" : "Feeds ocultos" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Скрытые ленты" } },
+        "zh-CN" : { "stringUnit" : { "state" : "translated", "value" : "已隐藏的动态" } },
+        "zh-TW" : { "stringUnit" : { "state" : "translated", "value" : "已隱藏的動態" } }
+      }
+    },
+    "settings.showAllFeedsInSelector" : {
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Alle Feeds im Auswahlmenü anzeigen" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Show all feeds in selector menu" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Mostrar todos los feeds en el menú" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Afficher tous les flux dans le menu" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Tampilkan semua feed di menu pilihan" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "フィード選択メニューに全てのフィードを表示" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "선택 메뉴에 모든 피드 표시" } },
+        "pt" : { "stringUnit" : { "state" : "translated", "value" : "Mostrar todos os feeds no menu" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Показывать все ленты в меню выбора" } },
+        "zh-CN" : { "stringUnit" : { "state" : "translated", "value" : "在选择菜单中显示所有动态" } },
+        "zh-TW" : { "stringUnit" : { "state" : "translated", "value" : "在選擇選單中顯示所有動態" } }
+      }
+    },
+    "settings.showAllFeedsInSelectorFooter" : {
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Wenn aktiviert, werden alle Feeds und Listen im Feed-Auswahlmenü angezeigt." } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "When enabled, all feeds and lists are shown in the feed selection menu." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Cuando está activado, todos los feeds y listas se muestran en el menú de selección." } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Quand activé, tous les flux et listes sont affichés dans le menu de sélection." } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Jika diaktifkan, semua feed dan daftar ditampilkan di menu pemilihan feed." } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "オンにすると、フィード選択メニューに全てのフィードとリストが表示されます。" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "켜면 피드 선택 메뉴에 모든 피드와 리스트가 표시됩니다." } },
+        "pt" : { "stringUnit" : { "state" : "translated", "value" : "Quando ativado, todos os feeds e listas são exibidos no menu de seleção." } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "При включении все ленты и списки отображаются в меню выбора лент." } },
+        "zh-CN" : { "stringUnit" : { "state" : "translated", "value" : "开启后，动态选择菜单将显示所有动态和列表。" } },
+        "zh-TW" : { "stringUnit" : { "state" : "translated", "value" : "開啟後，動態選擇選單將顯示所有動態和列表。" } }
+      }
+    },
+    "settings.noFeedsOrLists" : {
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Keine Feeds oder Listen" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "No feeds or lists" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "No hay feeds ni listas" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Aucun flux ni liste" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Tidak ada feed atau daftar" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "フィード・リストがありません" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "피드나 리스트가 없습니다" } },
+        "pt" : { "stringUnit" : { "state" : "translated", "value" : "Sem feeds ou listas" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Нет лент или списков" } },
+        "zh-CN" : { "stringUnit" : { "state" : "translated", "value" : "没有动态或列表" } },
+        "zh-TW" : { "stringUnit" : { "state" : "translated", "value" : "沒有動態或列表" } }
       }
     },
     "settings.account" : {

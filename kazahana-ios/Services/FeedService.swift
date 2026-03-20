@@ -65,6 +65,40 @@ struct FeedGeneratorsResponse: Codable {
     let feeds: [GeneratorView]
 }
 
+// MARK: - グラフリスト モデル
+
+struct GraphListView: Codable, Identifiable, Hashable {
+    let uri: String
+    let cid: String
+    let name: String
+    let purpose: String
+    let avatar: String?
+    let listItemCount: Int?
+    let description: String?
+    let creator: ProfileViewBasic
+    let indexedAt: String?
+
+    var id: String { uri }
+
+    static func == (lhs: GraphListView, rhs: GraphListView) -> Bool { lhs.id == rhs.id }
+    func hash(into hasher: inout Hasher) { hasher.combine(id) }
+}
+
+struct GetListsResponse: Codable {
+    let lists: [GraphListView]
+    let cursor: String?
+}
+
+struct GetListResponse: Codable {
+    let list: GraphListView
+    let cursor: String?
+}
+
+struct ListItemView: Codable {
+    let uri: String
+    let subject: ProfileViewBasic
+}
+
 struct GeneratorView: Codable, Identifiable, Hashable {
     let uri: String
     let cid: String
@@ -150,6 +184,85 @@ struct FeedService {
         if let cursor = cursor { params["cursor"] = cursor }
         return try await client.get(nsid: "app.bsky.feed.getTimeline", params: params)
     }
+
+    /// リストフィードのタイムラインを取得する
+    func getListFeed(listURI: String, limit: Int = 50, cursor: String? = nil) async throws -> TimelineResponse {
+        var params: [String: String] = ["list": listURI, "limit": "\(limit)"]
+        if let cursor = cursor { params["cursor"] = cursor }
+        return try await client.get(nsid: "app.bsky.feed.getListFeed", params: params)
+    }
+
+    /// 自分のキュレーションリストを取得する
+    func getMyLists(actor: String, limit: Int = 100) async throws -> [GraphListView] {
+        let response: GetListsResponse = try await client.get(
+            nsid: "app.bsky.graph.getLists",
+            params: ["actor": actor, "limit": "\(limit)"]
+        )
+        return response.lists.filter { $0.purpose == "app.bsky.graph.defs#curatelist" }
+    }
+
+    /// 保存済みフィードとリスト両方を返す（横スクロールタブバー用）
+    func getAllSavedFeedItems(actor: String) async throws -> (feeds: [GeneratorView], lists: [GraphListView]) {
+        // Step 1: preferences を取得
+        let prefResponse: PreferencesResponse = try await client.get(
+            nsid: "app.bsky.actor.getPreferences",
+            params: [:]
+        )
+
+        var feedURIs: [String] = []
+        var listURIs: [String] = []
+
+        for pref in prefResponse.preferences {
+            if pref.type == "app.bsky.actor.defs#savedFeedsPrefV2",
+               let items = pref.items {
+                feedURIs.append(contentsOf: items.filter { $0.type == "feed" }.map { $0.value })
+                listURIs.append(contentsOf: items.filter { $0.type == "list" }.map { $0.value })
+            } else if pref.type == "app.bsky.actor.defs#savedFeedsPref",
+                      let pinned = pref.pinned {
+                let feedOnly = pinned.filter { $0.hasPrefix("at://") && $0.contains("/app.bsky.feed.generator/") }
+                feedURIs.append(contentsOf: feedOnly)
+            }
+        }
+
+        // Step 2: フィード GeneratorView を一括取得
+        feedURIs = Array(Set(feedURIs))
+        var feeds: [GeneratorView] = []
+        if !feedURIs.isEmpty {
+            let queryItems = feedURIs.map { URLQueryItem(name: "feeds", value: $0) }
+            let generators: FeedGeneratorsResponse = try await client.getWithArrayParams(
+                nsid: "app.bsky.feed.getFeedGenerators",
+                queryItems: queryItems
+            )
+            feeds = generators.feeds
+        }
+
+        // Step 3: 保存されたリストを個別取得
+        listURIs = Array(Set(listURIs))
+        var savedLists: [GraphListView] = []
+        for listURI in listURIs {
+            do {
+                let response: GetListResponse = try await client.get(
+                    nsid: "app.bsky.graph.getList",
+                    params: ["list": listURI, "limit": "1"]
+                )
+                if response.list.purpose == "app.bsky.graph.defs#curatelist" {
+                    savedLists.append(response.list)
+                }
+            } catch {
+                print("[FeedService] getList failed for \(listURI): \(error)")
+            }
+        }
+
+        // Step 4: 自分のキュレーションリストをマージ（重複除去）
+        let myLists = (try? await getMyLists(actor: actor)) ?? []
+        var seen = Set<String>(savedLists.map { $0.uri })
+        for list in myLists where !seen.contains(list.uri) {
+            seen.insert(list.uri)
+            savedLists.append(list)
+        }
+
+        return (feeds: feeds, lists: savedLists)
+    }
 }
 
 // MARK: - フィード識別子
@@ -157,18 +270,30 @@ struct FeedService {
 enum FeedSource: Equatable, Hashable {
     case following                  // フォロー中タイムライン
     case custom(GeneratorView)      // カスタムフィード
+    case list(GraphListView)        // キュレーションリスト
 
     var displayName: String {
         switch self {
-        case .following:         return String(localized: "feed.following")
-        case .custom(let gen):   return gen.displayName
+        case .following:           return String(localized: "feed.following")
+        case .custom(let gen):     return gen.displayName
+        case .list(let listView):  return listView.name
         }
     }
 
     var icon: String {
         switch self {
-        case .following:       return "person.2.fill"
-        case .custom:          return "list.star"
+        case .following:  return "person.2.fill"
+        case .custom:     return "list.star"
+        case .list:       return "list.bullet.rectangle"
+        }
+    }
+
+    /// フィード/リストを識別するURI（following は nil）
+    var uri: String? {
+        switch self {
+        case .following:           return nil
+        case .custom(let gen):     return gen.uri
+        case .list(let listView):  return listView.uri
         }
     }
 }
