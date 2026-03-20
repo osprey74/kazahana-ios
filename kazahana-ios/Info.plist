@@ -2,9 +2,9 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>BGTask​Scheduler​Permitted​Identifiers</key>
+	<key>BGTaskSchedulerPermittedIdentifiers</key>
 	<array>
-		<string>com​.kazahana​.app​.notification​Refresh</string>
+		<string>com.kazahana.app.notificationRefresh</string>
 	</array>
 	<key>CFBundleURLTypes</key>
 	<array>
@@ -12,7 +12,7 @@
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
 			<key>CFBundleURLName</key>
-			<string>com​.kazahana​.app</string>
+			<string>com.kazahana.app</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
 				<string>kazahana</string>
