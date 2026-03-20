@@ -51,6 +51,10 @@ struct ComposeView: View {
     @State private var showThreadgateSheet: Bool = false
     @State private var showPostgateSheet: Bool = false
 
+    // 下書き
+    @State private var showCancelDraftDialog: Bool = false
+    @State private var showDraftList: Bool = false
+
     // メンションオートコンプリート
     @State private var mentionCandidates: [ProfileViewBasic] = []
     @State private var mentionQuery: String? = nil   // nil = 非アクティブ
@@ -141,7 +145,14 @@ struct ComposeView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button(String(localized: "compose.cancel")) { dismiss() }
+                    Button(String(localized: "compose.cancel")) {
+                        let hasContent = !text.isEmpty || !selectedImages.isEmpty || selectedVideo != nil
+                        if hasContent && replyTarget == nil && quotePost == nil {
+                            showCancelDraftDialog = true
+                        } else {
+                            dismiss()
+                        }
+                    }
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button(String(localized: "compose.post")) {
@@ -191,6 +202,27 @@ struct ComposeView: View {
                         .ignoresSafeArea()
                     ProgressView()
                         .scaleEffect(1.5)
+                }
+            }
+            // 下書き保存ダイアログ（キャンセル時）
+            .confirmationDialog(
+                String(localized: "compose.draft.saveTitle"),
+                isPresented: $showCancelDraftDialog,
+                titleVisibility: .visible
+            ) {
+                Button(String(localized: "compose.draft.save")) {
+                    saveDraft()
+                    dismiss()
+                }
+                Button(String(localized: "compose.draft.discard"), role: .destructive) {
+                    dismiss()
+                }
+                Button(String(localized: "common.cancel"), role: .cancel) {}
+            }
+            // 下書き一覧シート
+            .sheet(isPresented: $showDraftList) {
+                DraftListView { draft in
+                    restoreDraft(draft)
                 }
             }
         }
@@ -253,6 +285,59 @@ struct ComposeView: View {
         }
 
         isPosting = false
+    }
+
+    // MARK: - 下書き
+
+    private func saveDraft() {
+        let threadgateIdx = ThreadgateSetting.allCases.firstIndex(of: threadgateSetting) ?? 0
+        let imageItems: [(image: UIImage, alt: String)] = selectedImages.map { ($0.image, $0.alt) }
+        let videoItem: (data: Data, mimeType: String, alt: String)? = selectedVideo.map {
+            ($0.data, $0.mimeType, $0.alt)
+        }
+        DraftService.shared.save(
+            text: text,
+            images: imageItems,
+            video: videoItem,
+            threadgateIndex: threadgateIdx,
+            disableEmbedding: disableEmbedding
+        )
+    }
+
+    private func restoreDraft(_ draft: PostDraft) {
+        // テキスト
+        text = draft.text
+
+        // スレッドゲート設定
+        let cases = ThreadgateSetting.allCases
+        if draft.threadgateIndex < cases.count {
+            threadgateSetting = cases[draft.threadgateIndex]
+        }
+        disableEmbedding = draft.disableEmbedding
+
+        // 画像を復元
+        selectedImages = draft.images.compactMap { meta in
+            guard let data = DraftService.shared.imageData(for: meta),
+                  let uiImage = UIImage(data: data) else { return nil }
+            return SelectedImage(image: uiImage, alt: meta.alt)
+        }
+
+        // 動画を復元
+        if let videoMeta = draft.video,
+           let data = DraftService.shared.videoData(for: videoMeta) {
+            selectedVideo = SelectedVideo(
+                url: URL(fileURLWithPath: videoMeta.filename),
+                data: data,
+                mimeType: videoMeta.mimeType,
+                thumbnail: nil,
+                alt: videoMeta.alt
+            )
+        } else {
+            selectedVideo = nil
+        }
+
+        // 復元後に下書きを削除
+        DraftService.shared.delete(id: draft.id)
     }
 
     // Bluesky 画像アップロード制限
@@ -794,6 +879,17 @@ struct ComposeView: View {
             }
 
             Spacer()
+
+            // 下書きボタン（新規投稿時のみ表示）
+            if replyTarget == nil && quotePost == nil {
+                Button {
+                    showDraftList = true
+                } label: {
+                    Text(String(localized: "compose.draft.button"))
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+            }
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)

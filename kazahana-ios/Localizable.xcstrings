@@ -1288,6 +1288,156 @@
         "zh-TW" : { "stringUnit" : { "state" : "translated", "value" : "禁止引用" } }
       }
     },
+    "compose.draft.button" : {
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Entwürfe" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Drafts" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Borradores" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Brouillons" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Draf" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "下書き" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "임시 저장" } },
+        "pt" : { "stringUnit" : { "state" : "translated", "value" : "Rascunhos" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Черновики" } },
+        "zh-CN" : { "stringUnit" : { "state" : "translated", "value" : "草稿" } },
+        "zh-TW" : { "stringUnit" : { "state" : "translated", "value" : "草稿" } }
+      }
+    },
+    "compose.draft.deleteAll" : {
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Alle löschen" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Delete All" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Eliminar todo" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Tout supprimer" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Hapus semua" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "すべて削除" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "모두 삭제" } },
+        "pt" : { "stringUnit" : { "state" : "translated", "value" : "Excluir tudo" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Удалить все" } },
+        "zh-CN" : { "stringUnit" : { "state" : "translated", "value" : "删除全部" } },
+        "zh-TW" : { "stringUnit" : { "state" : "translated", "value" : "刪除全部" } }
+      }
+    },
+    "compose.draft.deleteAllConfirm" : {
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Alle Entwürfe löschen?" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Delete all drafts?" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "¿Eliminar todos los borradores?" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Supprimer tous les brouillons ?" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Hapus semua draf?" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "すべての下書きを削除しますか？" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "모든 임시 저장을 삭제할까요?" } },
+        "pt" : { "stringUnit" : { "state" : "translated", "value" : "Excluir todos os rascunhos?" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Удалить все черновики?" } },
+        "zh-CN" : { "stringUnit" : { "state" : "translated", "value" : "删除所有草稿？" } },
+        "zh-TW" : { "stringUnit" : { "state" : "translated", "value" : "刪除所有草稿？" } }
+      }
+    },
+    "compose.draft.discard" : {
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Verwerfen" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Discard" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Descartar" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Ignorer" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Buang" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "破棄する" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "삭제" } },
+        "pt" : { "stringUnit" : { "state" : "translated", "value" : "Descartar" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Удалить" } },
+        "zh-CN" : { "stringUnit" : { "state" : "translated", "value" : "放弃" } },
+        "zh-TW" : { "stringUnit" : { "state" : "translated", "value" : "放棄" } }
+      }
+    },
+    "compose.draft.empty" : {
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Keine Entwürfe" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "No Drafts" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Sin borradores" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Aucun brouillon" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Tidak ada draf" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "下書きがありません" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "임시 저장 없음" } },
+        "pt" : { "stringUnit" : { "state" : "translated", "value" : "Sem rascunhos" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Нет черновиков" } },
+        "zh-CN" : { "stringUnit" : { "state" : "translated", "value" : "没有草稿" } },
+        "zh-TW" : { "stringUnit" : { "state" : "translated", "value" : "沒有草稿" } }
+      }
+    },
+    "compose.draft.hasVideo" : {
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Video" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Video" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Video" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Vidéo" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Video" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "動画" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "동영상" } },
+        "pt" : { "stringUnit" : { "state" : "translated", "value" : "Vídeo" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Видео" } },
+        "zh-CN" : { "stringUnit" : { "state" : "translated", "value" : "视频" } },
+        "zh-TW" : { "stringUnit" : { "state" : "translated", "value" : "影片" } }
+      }
+    },
+    "compose.draft.noText" : {
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "(Kein Text)" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "(No text)" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "(Sin texto)" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "(Sans texte)" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "(Tidak ada teks)" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "（テキストなし）" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "(텍스트 없음)" } },
+        "pt" : { "stringUnit" : { "state" : "translated", "value" : "(Sem texto)" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "(Нет текста)" } },
+        "zh-CN" : { "stringUnit" : { "state" : "translated", "value" : "（无文本）" } },
+        "zh-TW" : { "stringUnit" : { "state" : "translated", "value" : "（無文字）" } }
+      }
+    },
+    "compose.draft.save" : {
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Als Entwurf speichern" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Save as Draft" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Guardar como borrador" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Enregistrer comme brouillon" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Simpan sebagai draf" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "下書きに保存する" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "임시 저장하기" } },
+        "pt" : { "stringUnit" : { "state" : "translated", "value" : "Salvar como rascunho" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Сохранить как черновик" } },
+        "zh-CN" : { "stringUnit" : { "state" : "translated", "value" : "保存为草稿" } },
+        "zh-TW" : { "stringUnit" : { "state" : "translated", "value" : "儲存為草稿" } }
+      }
+    },
+    "compose.draft.saveTitle" : {
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Entwurf speichern?" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Save draft?" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "¿Guardar borrador?" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Enregistrer le brouillon ?" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Simpan draf?" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "下書きを保存しますか？" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "임시 저장할까요?" } },
+        "pt" : { "stringUnit" : { "state" : "translated", "value" : "Salvar rascunho?" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Сохранить черновик?" } },
+        "zh-CN" : { "stringUnit" : { "state" : "translated", "value" : "保存草稿？" } },
+        "zh-TW" : { "stringUnit" : { "state" : "translated", "value" : "儲存草稿？" } }
+      }
+    },
+    "compose.draft.title" : {
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Entwürfe" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Drafts" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Borradores" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Brouillons" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Draf" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "下書き" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "임시 저장" } },
+        "pt" : { "stringUnit" : { "state" : "translated", "value" : "Rascunhos" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Черновики" } },
+        "zh-CN" : { "stringUnit" : { "state" : "translated", "value" : "草稿" } },
+        "zh-TW" : { "stringUnit" : { "state" : "translated", "value" : "草稿" } }
+      }
+    },
     "compose.cancel" : {
       "localizations" : {
         "de" : {

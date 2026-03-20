@@ -1,6 +1,6 @@
 # kazahana-ios 開発タスク・進捗記録
 
-最終更新: 2026-03-20 (Phase 5-B: スレッドゲート・ポストゲート実装 / バグ修正: ピン留め投稿レイアウト)
+最終更新: 2026-03-20 (Phase 5-B: スレッドゲート・ポストゲート実装 / 下書き機能 / バグ修正: ピン留め投稿レイアウト)
 
 ---
 
@@ -11,7 +11,7 @@
 - Phase 3 (通知・プロフィール・検索): 6/6 ✅ 完了
 - Phase 3.5 (UX改善・バグ修正): 12/12 ✅ 完了
 - Phase 4 (DM・モデレーション・設定): 28/28 ✅ 完了
-- Phase 5 (BSAF・高度な機能): 2/3（スレッド投稿はペンディング）
+- Phase 5 (BSAF・高度な機能): 3/4（スレッド投稿はペンディング）
 
 ---
 
@@ -268,6 +268,11 @@
   - `PostgateCreate` + `PostgateEmbeddingRule` モデル追加（`Post.swift`）
   - `PostService.createPostgate(postURI:disableEmbedding:)` — `app.bsky.feed.postgate` レコード作成
   - `ComposeView`: ボトムバーに引用制限ボタン追加（confirmationDialog で「引用を許可する / 引用を制限する」選択・現在値に ✓ 表示・制限中はアクセントカラー）
+- [x] **下書き機能** — キャンセル時に「下書きに保存する」ダイアログ表示、最大20件保存、下書き一覧から復元
+  - `Models/PostDraft.swift`: `PostDraft: Codable, Identifiable`（テキスト・画像/動画メタデータ・スレッドゲート設定）
+  - `Services/DraftService.swift`: 保存/読込/削除（画像・動画は `Documents/drafts/` にファイル保存、メタデータは UserDefaults JSON）
+  - `Views/Compose/DraftListView.swift`: 下書き一覧シート（スワイプ削除・一括削除・日時/プレビュー表示）
+  - `ComposeView`: キャンセルボタン → confirmationDialog（保存/破棄/戻る）、bottomBar に「下書き」ボタン追加、`saveDraft()` / `restoreDraft()` 実装
 - [ ] **スレッド投稿** — 複数ポストを繋いで一括投稿（※デスクトップ版でも見送り。ペンディング）
 
 ### 5-C: モバイル固有機能（優先度：低）
