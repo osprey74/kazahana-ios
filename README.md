@@ -29,10 +29,12 @@ Kazahana is designed as a **lightweight companion app** — not a full-featured 
 - **Notifications** — All notification types including like-via-repost and repost-via-repost
 - **Profile** — Author feed (posts/replies/media/likes tabs), pinned post, follow/unfollow, followers/following lists, in-profile search
 - **Search** — Actor search and post search with search history
-- **Compose** — New post, reply, and quote post; image (crop + ALT text) and video attachment; mention autocomplete; threadgate (reply restrictions) and postgate (quote restrictions)
+- **Compose** — New post, reply, and quote post; image (crop + ALT text) and video attachment; mention autocomplete; threadgate (reply restrictions) and postgate (quote restrictions); draft saving on cancel
 - **Direct Messages** — Conversation list, message thread, emoji reactions, new conversation creation with search history
 - **Content Moderation** — Label-based filtering (hide/warn/ignore), adult content toggle, post reporting
 - **Settings** — Theme, post language, auto-refresh interval, via attribution, Claude API key for ALT text generation
+- **Sharing** — Share any post via the iOS share sheet; open `kazahana://` deep links from other apps
+- **Background Refresh** — Periodic background notification polling with local push notifications
 
 ## Tech Stack
 
