@@ -273,8 +273,11 @@ struct ThreadView: View {
 
                 Spacer()
 
-                // 共有（将来用）
-                actionButton(icon: "square.and.arrow.up", color: .secondary) { }
+                // 共有
+                actionButton(icon: "square.and.arrow.up", color: .secondary) {
+                    let url = "https://bsky.app/profile/\(post.author.handle)/post/\(post.uri.components(separatedBy: "/").last ?? "")"
+                    sharePost(urlString: url)
+                }
             }
             .padding(.vertical, 4)
         }
@@ -300,6 +303,14 @@ struct ThreadView: View {
     private func focusedPostMoreMenu(post: PostView) -> some View {
         let currentDID = authVM.client.currentSession?.did
         Menu {
+            // 共有シート
+            Button {
+                let url = "https://bsky.app/profile/\(post.author.handle)/post/\(post.uri.components(separatedBy: "/").last ?? "")"
+                sharePost(urlString: url)
+            } label: {
+                Label(String(localized: "post.share"), systemImage: "square.and.arrow.up")
+            }
+
             // リンクをコピー
             Button {
                 let url = "https://bsky.app/profile/\(post.author.handle)/post/\(post.uri.components(separatedBy: "/").last ?? "")"
@@ -415,6 +426,20 @@ struct ThreadView: View {
         case "graphic-media": return String(localized: "moderation.graphicMedia")
         case "gore":          return String(localized: "moderation.gore")
         default:              return val
+        }
+    }
+
+    private func sharePost(urlString: String) {
+        guard let url = URL(string: urlString) else { return }
+        let av = UIActivityViewController(activityItems: [url], applicationActivities: nil)
+        if let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+           let root = scene.windows.first?.rootViewController {
+            var presenter = root
+            while let presented = presenter.presentedViewController {
+                presenter = presented
+            }
+            av.popoverPresentationController?.sourceView = presenter.view
+            presenter.present(av, animated: true)
         }
     }
 

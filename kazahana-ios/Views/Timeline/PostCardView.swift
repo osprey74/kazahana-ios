@@ -118,7 +118,15 @@ struct PostCardView: View {
                                 .lineLimit(20)
                                 .fixedSize(horizontal: false, vertical: true)
                                 .environment(\.openURL, OpenURLAction { url in
-                                    // kazahana:// スキームは内部遷移（将来対応）
+                                    if url.scheme == "kazahana" {
+                                        // kazahana:// スキームは NotificationCenter 経由で ContentView に転送
+                                        NotificationCenter.default.post(
+                                            name: .kazahanaDeepLink,
+                                            object: nil,
+                                            userInfo: ["url": url]
+                                        )
+                                        return .handled
+                                    }
                                     return .systemAction
                                 })
                             }
@@ -250,6 +258,14 @@ struct PostCardView: View {
     @ViewBuilder
     private var moreMenu: some View {
         Menu {
+            // 共有シート
+            Button {
+                let url = "https://bsky.app/profile/\(author.handle)/post/\(post.uri.components(separatedBy: "/").last ?? "")"
+                sharePost(urlString: url)
+            } label: {
+                Label(String(localized: "post.share"), systemImage: "square.and.arrow.up")
+            }
+
             // リンクをコピー
             Button {
                 let url = "https://bsky.app/profile/\(author.handle)/post/\(post.uri.components(separatedBy: "/").last ?? "")"
@@ -506,6 +522,20 @@ struct PostCardView: View {
             onDelete?(post)
         } catch {
             // 削除失敗は無視（UIフィードバックは将来的にアラートで対応）
+        }
+    }
+
+    private func sharePost(urlString: String) {
+        guard let url = URL(string: urlString) else { return }
+        let av = UIActivityViewController(activityItems: [url], applicationActivities: nil)
+        if let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+           let root = scene.windows.first?.rootViewController {
+            var presenter = root
+            while let presented = presenter.presentedViewController {
+                presenter = presented
+            }
+            av.popoverPresentationController?.sourceView = presenter.view
+            presenter.present(av, animated: true)
         }
     }
 

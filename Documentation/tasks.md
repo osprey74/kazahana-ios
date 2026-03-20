@@ -1,6 +1,6 @@
 # kazahana-ios 開発タスク・進捗記録
 
-最終更新: 2026-03-20 (Phase 5-B: スレッドゲート・ポストゲート実装 / 下書き機能 / バグ修正: ピン留め投稿レイアウト)
+最終更新: 2026-03-20 (Phase 5-C: 共有シート・ディープリンク・バックグラウンドポーリング実装)
 
 ---
 
@@ -11,7 +11,7 @@
 - Phase 3 (通知・プロフィール・検索): 6/6 ✅ 完了
 - Phase 3.5 (UX改善・バグ修正): 12/12 ✅ 完了
 - Phase 4 (DM・モデレーション・設定): 28/28 ✅ 完了
-- Phase 5 (BSAF・高度な機能): 3/4（スレッド投稿はペンディング）
+- Phase 5 (BSAF・高度な機能): 6/7（スレッド投稿はペンディング）
 
 ---
 
@@ -277,9 +277,18 @@
 
 ### 5-C: モバイル固有機能（優先度：低）
 - [ ] **共有シート連携（受信）** — Share Extension: 他アプリからテキスト/URLを受け取り投稿作成画面を開く
-- [ ] **共有シート連携（送信）** — `UIActivityViewController` で投稿URLを共有
-- [ ] **ディープリンク** — Universal Links / カスタムURLスキーム（`kazahana://`）
-- [ ] **バックグラウンドポーリング** — `BGAppRefreshTask` による通知・タイムライン更新
+- [x] **共有シート連携（送信）** — `UIActivityViewController` で投稿URLを共有
+  - PostCardView / ThreadView の三点メニューに「共有」ボタン追加（`sharePost(urlString:)` ヘルパー）
+  - ThreadView フォーカス投稿のアクションバー `square.and.arrow.up` ボタンも有効化
+- [x] **ディープリンク** — カスタムURLスキーム（`kazahana://`）
+  - `kazahana://profile/{actor}` → プロフィールシート表示
+  - `kazahana://post/{at_uri}` → スレッドシート表示
+  - `kazahana://hashtag/{tag}` → 検索タブへ切り替え
+  - `MainTabView.handleDeepLink(_:)` + `.onOpenURL` + `NotificationCenter` (PostCardView 内リンクからの転送)
+- [x] **バックグラウンドポーリング** — `BGAppRefreshTask` による通知未読数チェック + ローカル通知
+  - `Services/BackgroundRefreshService.swift`: `registerTasks()` / `scheduleNotificationRefresh()` / `handleNotificationRefresh(task:)` / `sendLocalNotification(unreadCount:)`
+  - `kazahana_iosApp.swift`: アプリ起動時にタスク登録、バックグラウンド移行時にスケジュール
+  - ローカル通知（`UNUserNotificationCenter`）で未読件数をユーザーに通知
 
 ### 5-D: プロフィール追加機能（優先度：低）
 - [ ] **スターターパック閲覧** — `app.bsky.graph.getStarterPack` / `getActorStarterPacks`

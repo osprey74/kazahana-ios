@@ -6201,6 +6201,51 @@
         }
       }
     },
+    "post.share" : {
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Teilen" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Share" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Compartir" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Partager" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Bagikan" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "共有" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "공유" } },
+        "pt" : { "stringUnit" : { "state" : "translated", "value" : "Compartilhar" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Поделиться" } },
+        "zh-CN" : { "stringUnit" : { "state" : "translated", "value" : "分享" } },
+        "zh-TW" : { "stringUnit" : { "state" : "translated", "value" : "分享" } }
+      }
+    },
+    "notification.bg.body %lld" : {
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "%lld neue Benachrichtigungen" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "%lld new notifications" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "%lld notificaciones nuevas" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "%lld nouvelles notifications" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "%lld notifikasi baru" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "%lld 件の新しい通知があります" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "새 알림 %lld개" } },
+        "pt" : { "stringUnit" : { "state" : "translated", "value" : "%lld novas notificações" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "%lld новых уведомлений" } },
+        "zh-CN" : { "stringUnit" : { "state" : "translated", "value" : "%lld 条新通知" } },
+        "zh-TW" : { "stringUnit" : { "state" : "translated", "value" : "%lld 則新通知" } }
+      }
+    },
+    "notification.bg.title" : {
+      "localizations" : {
+        "de" : { "stringUnit" : { "state" : "translated", "value" : "Kazahana" } },
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Kazahana" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Kazahana" } },
+        "fr" : { "stringUnit" : { "state" : "translated", "value" : "Kazahana" } },
+        "id" : { "stringUnit" : { "state" : "translated", "value" : "Kazahana" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "Kazahana" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "Kazahana" } },
+        "pt" : { "stringUnit" : { "state" : "translated", "value" : "Kazahana" } },
+        "ru" : { "stringUnit" : { "state" : "translated", "value" : "Kazahana" } },
+        "zh-CN" : { "stringUnit" : { "state" : "translated", "value" : "Kazahana" } },
+        "zh-TW" : { "stringUnit" : { "state" : "translated", "value" : "Kazahana" } }
+      }
+    },
     "post.copyLink" : {
       "localizations" : {
         "de" : {

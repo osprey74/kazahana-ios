@@ -26,6 +26,11 @@ struct MainTabView: View {
     @State private var selectedTab: Tab = .home
     @State private var dmUnreadCount = 0
 
+    // ディープリンクで開くプロフィールの actor (DID or handle)
+    @State private var deepLinkProfileActor: String? = nil
+    // ディープリンクで開く投稿スレッドの AT-URI
+    @State private var deepLinkPostURI: IdentifiableString? = nil
+
     enum Tab {
         case home, search, notifications, messages, profile
     }
@@ -65,6 +70,62 @@ struct MainTabView: View {
                     Label(String(localized: "tab.profile"), systemImage: "person.circle")
                 }
                 .tag(Tab.profile)
+        }
+        // ディープリンクでプロフィール遷移（home タブに表示）
+        .sheet(item: Binding(
+            get: { deepLinkProfileActor.map { IdentifiableString(value: $0) } },
+            set: { deepLinkProfileActor = $0?.value }
+        )) { item in
+            NavigationStack {
+                ProfileScreenView(actor: item.value)
+            }
+            .environment(authVM)
+        }
+        // ディープリンクでスレッド遷移
+        .sheet(item: $deepLinkPostURI) { item in
+            if let postService = authVM.isLoggedIn ? PostService(client: authVM.client) : nil {
+                NavigationStack {
+                    ThreadView(uri: item.value, postService: postService)
+                }
+                .environment(authVM)
+            }
+        }
+        .onOpenURL { url in
+            handleDeepLink(url)
+        }
+        // PostCardView 内の openURL ハンドラーから転送される kazahana:// リンクを受信
+        .onReceive(NotificationCenter.default.publisher(for: .kazahanaDeepLink)) { note in
+            if let url = note.userInfo?["url"] as? URL {
+                handleDeepLink(url)
+            }
+        }
+    }
+
+    /// kazahana:// ディープリンクを処理する
+    /// - kazahana://profile/{did_or_handle}
+    /// - kazahana://post/{at_uri_encoded}
+    /// - kazahana://hashtag/{tag} → 検索タブへ
+    private func handleDeepLink(_ url: URL) {
+        guard url.scheme == "kazahana" else { return }
+        let host = url.host ?? ""
+        let path = url.pathComponents.filter { $0 != "/" }
+
+        switch host {
+        case "profile":
+            if let actor = path.first, !actor.isEmpty {
+                deepLinkProfileActor = actor
+            }
+        case "post":
+            // AT-URI は URL エンコードされて渡ってくる想定
+            if let encoded = path.first,
+               let decoded = encoded.removingPercentEncoding {
+                deepLinkPostURI = IdentifiableString(value: decoded)
+            }
+        case "hashtag":
+            // ハッシュタグは検索タブに切り替え（将来的に検索クエリを渡す実装で拡張）
+            selectedTab = .search
+        default:
+            break
         }
     }
 
