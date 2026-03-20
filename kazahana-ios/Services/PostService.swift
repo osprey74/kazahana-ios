@@ -185,6 +185,12 @@ final class PostService {
         return try await client.get(nsid: "app.bsky.feed.getRepostedBy", params: params)
     }
 
+    func getQuotes(uri: String, limit: Int = 50, cursor: String? = nil) async throws -> QuotesResponse {
+        var params: [String: String] = ["uri": uri, "limit": "\(limit)"]
+        if let cursor = cursor { params["cursor"] = cursor }
+        return try await client.get(nsid: "app.bsky.feed.getQuotes", params: params)
+    }
+
     // MARK: - レコード取得
 
     func getRecord(repo: String, collection: String, rkey: String) async throws -> GetRecordResponse {
@@ -341,6 +347,13 @@ struct LikeView: Codable {
 struct RepostedByResponse: Codable {
     let uri: String
     let repostedBy: [ProfileViewBasic]
+    let cursor: String?
+}
+
+struct QuotesResponse: Codable {
+    let uri: String
+    let cid: String?
+    let posts: [PostView]
     let cursor: String?
 }
 

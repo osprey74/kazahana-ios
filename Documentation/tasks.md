@@ -1,6 +1,6 @@
 # kazahana-ios 開発タスク・進捗記録
 
-最終更新: 2026-03-20 (Phase 5-C: 共有シート・ディープリンク・バックグラウンドポーリング実装)
+最終更新: 2026-03-20 (Phase 5-C: 共有シート・ディープリンク・バックグラウンドポーリング実装 / Phase 5-E: サポーターバッジIAP 設計確定 / Phase 5-F: ホームフィード管理 設計確定)
 
 ---
 
@@ -11,7 +11,7 @@
 - Phase 3 (通知・プロフィール・検索): 6/6 ✅ 完了
 - Phase 3.5 (UX改善・バグ修正): 12/12 ✅ 完了
 - Phase 4 (DM・モデレーション・設定): 28/28 ✅ 完了
-- Phase 5 (BSAF・高度な機能): 6/7（スレッド投稿はペンディング）
+- Phase 5 (BSAF・高度な機能): 5-B 完了（スレッド投稿ペンディング）、5-C 一部完了、5-A/5-D/5-E/5-F 未着手
 
 ---
 
@@ -122,7 +122,7 @@
 
 ---
 
-## Phase 4: DM・モデレーション・設定 — 未着手
+## Phase 4: DM・モデレーション・設定 — 完了 ✅
 
 ### 4-A: 投稿アクション補完（優先度：高）
 - [x] **投稿削除** — 自分の投稿の三点メニューから削除（PostCardView + ThreadView）
@@ -245,7 +245,7 @@
 
 ---
 
-## Phase 5: BSAF・高度な機能 — 未着手
+## Phase 5: BSAF・高度な機能
 
 ### 5-A: BSAF対応（優先度：中）
 - [ ] **BSAF マスタートグル** — 設定画面でオン/オフ
@@ -290,6 +290,72 @@
   - `kazahana_iosApp.swift`: アプリ起動時にタスク登録、バックグラウンド移行時にスケジュール
   - ローカル通知（`UNUserNotificationCenter`）で未読件数をユーザーに通知
 
+### 5-F: ホームフィード・リスト管理（優先度：中）
+
+**設計方針（確定）**
+デスクトップ版と同等の挙動を実装する。
+
+- **ホームタブ横スクロールタブバー**: `TimelineView` ナビバー直下に固定タブバーを追加。選択中フィード/リストを切り替えるだけで既存の `TimelineViewModel` 構造を維持できる
+- **設定画面でのフィード/リスト選択管理**: Bluesky preferences の `savedFeedsPrefV2` から `type == "feed"` / `type == "list"` を両方取得し、ホームタブに表示するものをON/OFFで管理
+- **「すべてのフィードを表示」設定**: 有効時は `FeedSelectorView`（メニュー）に全フィード/リストを表示、無効時は設定で選択したもののみ表示
+- 選択状態（ピン止めフィードURIリスト、全表示フラグ）は `AppSettings`（UserDefaults）に保存
+
+**実装タスク**
+- [ ] `FeedService.swift` 拡張
+  - `getSavedFeeds()` で `type == "list"` の items も取得（`GraphListView` モデル追加）
+  - `getListFeed(listURI:limit:cursor:)` 追加（`app.bsky.feed.getListFeed`）
+  - `getAllSavedFeedItems()` — フィードとリスト両方を `FeedSource` 配列として返す
+- [ ] `FeedSource` enum 拡張
+  - `.list(GraphListView)` ケース追加
+  - `displayName` / `icon` 対応
+- [ ] `AppSettings.swift` 拡張
+  - `pinnedFeedURIs: [String]` — ホームタブに表示するフィード/リストのURI順序リスト（UserDefaults永続化）
+  - `showAllFeedsInSelector: Bool` — 「すべてのフィードをメニューに表示」フラグ（デフォルト: true）
+- [ ] `TimelineView.swift` 変更
+  - ナビバー直下に横スクロールタブバーを追加（`pinnedFeedURIs` が2件以上の場合のみ表示）
+  - タブタップで `viewModel.selectFeed(_:)` を呼び出し
+  - 現在の `list.bullet` ナビバーボタンは `showAllFeedsInSelector == true` 時のみ表示
+- [ ] `TimelineViewModel.swift` 変更
+  - `fetchFeed()` に `.list` ケースを追加
+- [ ] `FeedSelectorView.swift` 変更
+  - `showAllFeedsInSelector == false` 時は `pinnedFeedURIs` に含まれるもののみ表示
+- [ ] `SettingsView.swift` 変更
+  - 「ホームフィード管理」セクション追加
+  - 全フィード/リスト一覧をトグルで表示（ON = ホームタブに追加）
+  - ドラッグで並び替え（`.onMove`）
+  - 「すべてのフィードをメニューに表示」トグル
+- [ ] `Localizable.xcstrings` に i18n キー追加（11言語）
+
+### 5-E: サポーターバッジ IAP（優先度：低）
+
+**設計方針（確定）**
+- IAP 種別: **Non-renewing subscription**（自動更新なし）
+- 価格帯: 500円程度
+- 効果: プロフィール画面のアバター右上に勲章アイコンを **30日間** 表示
+- リストア: `Transaction.all` を走査して最新購入日 + 30日を有効期限として計算（サーバー・iCloud 不要）
+- 複数回購入時は最新 `purchaseDate + 30日` を有効期限に採用（自動延長対応）
+- 返金済みトランザクション（`revocationDate != nil`）は除外
+- 小規模デベロッパープログラムへの登録を忘れずに。
+
+**実装タスク**
+- [ ] App Store Connect で Non-renewing subscription 商品を登録（product ID: `com.kazahana.app.supporter_badge_30d`）
+- [ ] `Services/IAPService.swift` 新規作成
+  - `StoreKit` import、`Product.products(for:)` で商品フェッチ
+  - `purchase()` — `product.purchase()` 呼び出し・トランザクション完了処理
+  - `restoreBadge()` — `Transaction.all` 走査・最新有効期限計算・返金除外
+  - `Transaction.updates` リスナー（アプリ起動中の購入完了を即時反映）
+- [ ] `AppSettings.swift` に `supporterBadgeExpiryDate: Date?` 追加（`UserDefaults` 永続化）
+  - `isSupporterBadgeActive: Bool` 計算プロパティ
+- [ ] `AvatarView.swift` に勲章オーバーレイ追加
+  - `showBadge: Bool` パラメータ（デフォルト `false`）
+  - `isSupporterBadgeActive` が `true` かつ自分のプロフィール時のみ表示
+  - SF Symbol `medal.fill`（または `star.circle.fill`）をアバター右上に `.overlay` で配置
+- [ ] `SettingsView.swift` に「サポーターバッジ」セクション追加
+  - 有効期限表示（残 N 日 / 期限切れ）
+  - 「購入する」ボタン（`ProductView` または カスタム UI）
+  - 「リストア」ボタン
+- [ ] `Localizable.xcstrings` に i18n キー追加（11言語）
+
 ### 5-D: プロフィール追加機能（優先度：低）
 - [ ] **スターターパック閲覧** — `app.bsky.graph.getStarterPack` / `getActorStarterPacks`
 - [ ] **カスタムフィード一覧** — `app.bsky.feed.getActorFeeds`（プロフィールタブ）
@@ -333,37 +399,40 @@
 - [x] **メンション DID 解決**: RichTextParser.detectFacets でメンションを検出するが、resolveHandle による DID 解決は未実装 → Phase 4-A メンションオートコンプリートで対応（実装済み）
 - [ ] **ブックマーク**: AT Protocol にネイティブブックマーク API がないため設計要検討
 - [ ] **画像読み込み**: 現在 `AsyncImage` を使用。Kingfisher or Nuke の導入を Phase 4 以降で検討
-- [ ] **バックグラウンドポーリング**: BGAppRefreshTask 未実装 → Phase 5-C
+- [x] **バックグラウンドポーリング**: BGAppRefreshTask 未実装 → Phase 5-C（実装済み）
 - [ ] **Unit Tests**: テストは空のまま。Phase 4 以降でモデル・サービス層を追加予定
 - [ ] **Bundle ID**: 現在 Xcode デフォルト。`com.kazahana.app` への変更が必要（App Store 配布前）
 - [ ] **検索デバウンス**: SearchViewModel は Task キャンセルで対応しているが、厳密なデバウンス実装は未対応
-- [ ] **引用数タップ**: ThreadView の引用数は PostActorListView 非対応（`app.bsky.feed.getQuotes` API は未実装）
+- [x] **引用数タップ**: ThreadView の引用数タップで `PostQuoteListView` に遷移（`app.bsky.feed.getQuotes` 実装済み）
 - [x] **ピン留め投稿レイアウト**: プロフィール画面でピン留め投稿がアバター・名前の上に重なっていたバグを修正（ZStack → VStack に変更）
 - [x] **コンテンツモデレーション**: タイムライン・検索・プロフィールでのラベル判定・ブラー・フィルタが未実装 → Phase 4-C（実装済み）
 - [x] **投稿削除**: 自分の投稿の三点メニューから削除する機能が未実装 → Phase 4-A（実装済み）
 - [x] **投稿元表示（via）**: 設定に基づきレコードにクライアント名を付与する機能が未実装 → Phase 4-D（実装済み）
-- [ ] **DM（ダイレクトメッセージ）**: `chat.bsky.convo.*` API 全体が未実装 → Phase 4-F
+- [x] **DM（ダイレクトメッセージ）**: `chat.bsky.convo.*` API 全体が未実装 → Phase 4-F（実装済み）
 - [x] **プロフィール追加タブ**: 返信/いいね/メディア一覧が未実装 → Phase 4-E（実装済み）
 
 ---
 
-## ファイル構成（2026-03-19 Phase 4-G 多言語対応・画像クロップ完了時点）
+## ファイル構成（2026-03-20 Phase 5-C: 共有シート・ディープリンク・バックグラウンドポーリング完了時点）
 
 ```
 kazahana-ios/
-├── kazahana_iosApp.swift          # AppSettings環境注入・preferredColorScheme適用
-├── ContentView.swift              # ルートビュー + MainTabView（Phase 3 タブ更新済み）
-├── Localizable.xcstrings          # 11言語対応 String Catalog（ja/en/pt/de/zh-TW/zh-CN/fr/ko/es/ru/id）[NEW]
+├── kazahana_iosApp.swift          # AppSettings環境注入・preferredColorScheme適用・BGTask登録
+├── ContentView.swift              # ルートビュー + MainTabView + ディープリンク処理
+├── Info.plist                     # BGTaskSchedulerPermittedIdentifiers / CFBundleURLTypes
+├── Localizable.xcstrings          # 11言語対応 String Catalog（ja/en/pt/de/zh-TW/zh-CN/fr/ko/es/ru/id）
 ├── Models/
 │   ├── Session.swift
-│   ├── Post.swift                 # PostEmbedCreate / ImageEmbedCreate / BlobRef / UploadBlobResponse 追加
+│   ├── Post.swift                 # PostEmbedCreate / ImageEmbedCreate / BlobRef / VideoEmbedCreate など
+│   ├── PostDraft.swift            # PostDraft: Codable, Identifiable（下書き保存用）
 │   ├── Profile.swift              # PinnedPost struct 追加
-│   └── Notification.swift        # AppNotification, isViaRepost, reasonLabel/Icon/Color
+│   ├── Notification.swift         # AppNotification, isViaRepost, reasonLabel/Icon/Color
+│   └── Conversation.swift         # ConvoView / ChatMember / ChatMessageView など DM モデル
 ├── Services/
-│   ├── ATProtoClient.swift        # XRPC クライアント + getRecord + uploadBlob
+│   ├── ATProtoClient.swift        # XRPC クライアント + getRecord + uploadBlob + getWithProxy/postWithProxy
 │   ├── AuthService.swift
 │   ├── SessionStore.swift
-│   ├── AppSettings.swift          # テーマ/via/言語/モデレーション設定（@Observable singleton）
+│   ├── AppSettings.swift          # テーマ/via/言語/モデレーション/ポーリング設定（@Observable singleton）
 │   ├── ModerationService.swift    # ラベル判定（none/inform/mediaBlur/blur/filter）
 │   ├── TimelineService.swift
 │   ├── PostService.swift          # createPost / uploadImage / getLikes / getRepostedBy / reportPost / reportAccount
@@ -372,26 +441,32 @@ kazahana-ios/
 │   ├── GraphService.swift         # follow / unfollow / getFollowers / getFollows / getAuthorFeed(filter) / getActorLikes
 │   ├── SearchService.swift        # searchActors / searchPosts / searchPostsByAuthor
 │   ├── FeedService.swift          # getSavedFeeds / getFeed / getTimeline + FeedSource enum
+│   ├── ChatService.swift          # chat.bsky.convo.* 全 API ラッパー
+│   ├── DraftService.swift         # 下書き保存/読込/削除（Documents/drafts/ + UserDefaults JSON）
+│   ├── BackgroundRefreshService.swift # BGAppRefreshTask + UNUserNotificationCenter
 │   └── ClaudeService.swift        # ALT テキスト自動生成（Claude API）
 ├── ViewModels/
 │   ├── AuthViewModel.swift
-│   ├── TimelineViewModel.swift    # FeedSource対応 + removePost(uri:) + filterModeratedPosts
+│   ├── TimelineViewModel.swift    # FeedSource対応 + removePost(uri:) + filterModeratedPosts + ポーリング
 │   ├── ComposeViewModel.swift
 │   ├── ThreadViewModel.swift
 │   ├── NotificationViewModel.swift # resolvedRepostURIs キャッシュ
 │   ├── ProfileViewModel.swift     # フォロー楽観的 UI + ProfileTab enum + タブ別フィード管理 + ピン留め投稿 + プロフィール内検索
-│   └── SearchViewModel.swift      # タブ切り替え・Task キャンセルデバウンス + filterModeratedPosts + 検索履歴（UserDefaults）
+│   ├── SearchViewModel.swift      # タブ切り替え・Task キャンセルデバウンス + filterModeratedPosts + 検索履歴
+│   ├── ConversationListViewModel.swift # 会話一覧 + 30秒ポーリング + ミュート/退出
+│   └── ChatThreadViewModel.swift  # メッセージ一覧 + 送信 + 削除 + 15秒ポーリング + 既読
 ├── Views/
 │   ├── Auth/
 │   │   └── LoginView.swift
 │   ├── Timeline/
 │   │   ├── TimelineView.swift     # FAB・返信・引用・いいね/リポストユーザー一覧遷移
-│   │   └── PostCardView.swift     # モデレーション(blur/mediaBlur/filter) + 通報メニュー
+│   │   └── PostCardView.swift     # モデレーション(blur/mediaBlur/filter) + 通報メニュー + 共有
 │   ├── Compose/
-│   │   ├── ComposeView.swift      # 返信・引用投稿・画像添付（PhotosPicker+Alt入力+クロップ）対応
-│   │   └── ImageCropView.swift    # 画像クロップエディタ（オリジナル/正方形/自由、フルスクリーン）[NEW]
+│   │   ├── ComposeView.swift      # 返信・引用投稿・画像添付・動画添付・スレッドゲート・ポストゲート・下書き
+│   │   ├── ImageCropView.swift    # 画像クロップエディタ（オリジナル/正方形/自由、フルスクリーン）
+│   │   └── DraftListView.swift    # 下書き一覧シート（スワイプ削除・一括削除）
 │   ├── Thread/
-│   │   └── ThreadView.swift       # モデレーション(mediaBlur) + 通報メニュー
+│   │   └── ThreadView.swift       # モデレーション(mediaBlur) + 通報メニュー + 共有
 │   ├── Notification/
 │   │   ├── NotificationListView.swift
 │   │   └── NotificationItemView.swift
@@ -399,9 +474,13 @@ kazahana-ios/
 │   │   ├── ProfileView.swift      # ProfileScreenView + ProfileHeaderView + タブバー UI（4タブ）+ コンパクトヘッダー + ピン留め表示 + 内部検索バー
 │   │   └── UserListView.swift     # フォロワー/フォロー中一覧 + フォロー/解除ボタン
 │   ├── Search/
-│   │   └── SearchView.swift       # SearchView + ActorRowView + SearchPostRowView（スレッド遷移）+ 検索履歴一覧（個別/一括削除）
+│   │   └── SearchView.swift       # SearchView + ActorRowView + SearchPostRowView（スレッド遷移）+ 検索履歴一覧
 │   ├── Settings/
 │   │   └── SettingsView.swift     # テーマ/言語切替・via表示・モデレーション設定・Claude API キー管理・アカウント情報
+│   ├── Messages/
+│   │   ├── ConversationListView.swift # 会話一覧 + ConversationRowView + スワイプアクション
+│   │   ├── ChatThreadView.swift   # メッセージバブル + 送信ボックス + コンテキストメニュー削除
+│   │   └── NewConversationView.swift  # ユーザー検索 → 会話作成・検索履歴
 │   └── Common/
 │       ├── AvatarView.swift
 │       ├── ImageGridView.swift    # Color.clear overlay パターン（画像はみ出し修正済み）
@@ -414,7 +493,7 @@ kazahana-ios/
 │       ├── ContentWarningView.swift # PostBlurOverlay / MediaBlurOverlay
 │       └── ReportView.swift        # 投稿/アカウント通報UI
 ├── Extensions/
-│   ├── IdentifiableString.swift
+│   ├── IdentifiableString.swift   # Notification.Name.kazahanaDeepLink 追加
 │   └── String+DateFormatting.swift # relativeFormatted（相対時刻表示）
 └── Documentation/
     └── tasks.md

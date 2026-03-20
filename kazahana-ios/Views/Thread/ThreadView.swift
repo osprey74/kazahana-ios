@@ -11,6 +11,7 @@ struct ThreadView: View {
     @State private var replyToPost: PostView? = nil
     @State private var selectedPost: FeedViewPost? = nil
     @State private var postActorListType: PostActorListType? = nil
+    @State private var quotesPostURI: IdentifiableString? = nil
     @State private var quotePost: PostView? = nil
 
     // フォーカス投稿のいいね/リポスト状態（楽観的UI）
@@ -57,6 +58,10 @@ struct ThreadView: View {
         }
         .navigationDestination(item: $postActorListType) { listType in
             PostActorListView(listType: listType)
+                .environment(authVM)
+        }
+        .navigationDestination(item: $quotesPostURI) { item in
+            PostQuoteListView(postURI: item.value)
                 .environment(authVM)
         }
         .sheet(item: $reportTarget) { target in
@@ -222,7 +227,13 @@ struct ThreadView: View {
                 .buttonStyle(.plain)
                 .disabled(repostCount == 0)
 
-                countItem(count: post.quoteCount ?? 0, label: String(localized: "postList.quotedBy"))
+                Button {
+                    quotesPostURI = IdentifiableString(post.uri)
+                } label: {
+                    countItem(count: post.quoteCount ?? 0, label: String(localized: "postList.quotedBy"))
+                }
+                .buttonStyle(.plain)
+                .disabled((post.quoteCount ?? 0) == 0)
 
                 Button {
                     postActorListType = .likes(postURI: post.uri)
