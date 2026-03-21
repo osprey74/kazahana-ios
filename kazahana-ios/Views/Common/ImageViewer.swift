@@ -37,13 +37,13 @@ struct ImageViewer: View {
                     ScrollView {
                         Text(currentAlt)
                             .font(.caption)
-                            .foregroundStyle(.white.opacity(0.9))
+                            .foregroundStyle(.white)
                             .padding(.horizontal, 16)
                             .padding(.vertical, 10)
                             .frame(maxWidth: .infinity, alignment: .leading)
                     }
                     .frame(maxHeight: 100)
-                    .background(.ultraThinMaterial.opacity(0.8))
+                    .background(Color.black.opacity(0.6))
                 }
                 .ignoresSafeArea(edges: .bottom)
             }
