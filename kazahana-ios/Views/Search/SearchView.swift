@@ -183,18 +183,21 @@ struct SearchView: View {
         } else {
             List {
                 ForEach(vm.posts) { post in
-                    SearchPostRowView(post: post)
-                        .contentShape(Rectangle())
-                        .onTapGesture {
-                            selectedPostURI = IdentifiableString(post.uri)
+                    SearchPostRowView(
+                        post: post,
+                        onTapAuthor: { selectedActor = IdentifiableActor(id: post.author.did) }
+                    )
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        selectedPostURI = IdentifiableString(post.uri)
+                    }
+                    .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+                    .listRowSeparator(.hidden)
+                    .task {
+                        if post.uri == vm.posts.last?.uri {
+                            await vm.loadMorePosts()
                         }
-                        .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
-                        .listRowSeparator(.hidden)
-                        .task {
-                            if post.uri == vm.posts.last?.uri {
-                                await vm.loadMorePosts()
-                            }
-                        }
+                    }
                 }
                 if vm.isLoadingPosts {
                     HStack { Spacer(); ProgressView(); Spacer() }
@@ -262,21 +265,33 @@ struct ActorRowView: View {
 
 struct SearchPostRowView: View {
     let post: PostView
+    var onTapAuthor: (() -> Void)? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 8) {
-                AvatarView(url: post.author.avatar, size: 32)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(post.author.displayNameOrHandle)
-                        .font(.subheadline)
-                        .fontWeight(.semibold)
-                        .lineLimit(1)
-                    Text("@\(post.author.handle)")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
+                Button {
+                    onTapAuthor?()
+                } label: {
+                    AvatarView(url: post.author.avatar, size: 32)
                 }
+                .buttonStyle(.plain)
+                Button {
+                    onTapAuthor?()
+                } label: {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(post.author.displayNameOrHandle)
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
+                            .foregroundStyle(.primary)
+                            .lineLimit(1)
+                        Text("@\(post.author.handle)")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                    }
+                }
+                .buttonStyle(.plain)
                 Spacer()
                 Text(post.indexedAt.relativeFormatted)
                     .font(.caption)
