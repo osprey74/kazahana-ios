@@ -275,16 +275,23 @@ struct PostCardView: View {
 
     private var authorRow: some View {
         HStack(spacing: 4) {
-            Text(author.displayNameOrHandle)
-                .font(.subheadline.weight(.semibold))
-                .lineLimit(1)
-            if isBotAccount(did: author.did, labels: author.labels) {
-                BotBadge(size: 14)
+            Button {
+                onTapAuthor?(author.did)
+            } label: {
+                HStack(spacing: 4) {
+                    Text(author.displayNameOrHandle)
+                        .font(.subheadline.weight(.semibold))
+                        .lineLimit(1)
+                    if isBotAccount(did: author.did, labels: author.labels) {
+                        BotBadge(size: 14)
+                    }
+                    Text("@\(author.handle)")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
             }
-            Text("@\(author.handle)")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
+            .buttonStyle(.plain)
             Spacer()
             Text(relativeTime(from: post.indexedAt))
                 .font(.caption)

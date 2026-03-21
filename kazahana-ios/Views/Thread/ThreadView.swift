@@ -13,6 +13,7 @@ struct ThreadView: View {
     @State private var postActorListType: PostActorListType? = nil
     @State private var quotesPostURI: IdentifiableString? = nil
     @State private var quotePost: PostView? = nil
+    @State private var selectedAuthorDID: IdentifiableString? = nil
 
     // フォーカス投稿のいいね/リポスト状態（楽観的UI）
     @State private var isLiked = false
@@ -64,6 +65,11 @@ struct ThreadView: View {
             PostQuoteListView(postURI: item.value)
                 .environment(authVM)
         }
+        // プロフィール遷移
+        .navigationDestination(item: $selectedAuthorDID) { item in
+            ProfileScreenView(actor: item.value)
+                .environment(authVM)
+        }
         .sheet(item: $reportTarget) { target in
             ReportView(target: target, postService: postService)
         }
@@ -105,6 +111,7 @@ struct ThreadView: View {
                                 feedPost: feedPost,
                                 postService: postService,
                                 onTapPost: { post in selectedPost = post },
+                                onTapAuthor: { did in selectedAuthorDID = IdentifiableString(did) },
                                 onTapReply: { post in replyToPost = post },
                                 onDelete: { post in viewModel.removeReply(uri: post.uri) },
                                 currentUserDID: authVM.client.currentSession?.did
@@ -129,6 +136,7 @@ struct ThreadView: View {
                     feedPost: FeedViewPost(post: post, reply: nil, reason: nil),
                     postService: postService,
                     onTapPost: { p in selectedPost = p },
+                    onTapAuthor: { did in selectedAuthorDID = IdentifiableString(did) },
                     onTapReply: { post in replyToPost = post },
                     currentUserDID: authVM.client.currentSession?.did
                 )
@@ -149,21 +157,32 @@ struct ThreadView: View {
         let moderation = ModerationService().moderatePost(post)
 
         return VStack(alignment: .leading, spacing: 10) {
-            // 著者
+            // 著者（タップでプロフィール遷移）
             HStack(spacing: 10) {
-                AvatarView(url: post.author.avatar, size: 48)
-                VStack(alignment: .leading, spacing: 2) {
-                    HStack(spacing: 4) {
-                        Text(post.author.displayNameOrHandle)
-                            .font(.headline)
-                        if isBotAccount(did: post.author.did, labels: post.author.labels) {
-                            BotBadge(size: 14)
-                        }
-                    }
-                    Text("@\(post.author.handle)")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                Button {
+                    selectedAuthorDID = IdentifiableString(post.author.did)
+                } label: {
+                    AvatarView(url: post.author.avatar, size: 48)
                 }
+                .buttonStyle(.plain)
+                Button {
+                    selectedAuthorDID = IdentifiableString(post.author.did)
+                } label: {
+                    VStack(alignment: .leading, spacing: 2) {
+                        HStack(spacing: 4) {
+                            Text(post.author.displayNameOrHandle)
+                                .font(.headline)
+                                .foregroundStyle(.primary)
+                            if isBotAccount(did: post.author.did, labels: post.author.labels) {
+                                BotBadge(size: 14)
+                            }
+                        }
+                        Text("@\(post.author.handle)")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .buttonStyle(.plain)
                 Spacer()
                 focusedPostMoreMenu(post: post)
             }

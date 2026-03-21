@@ -6,6 +6,7 @@ import SwiftUI
 
 struct ProfileScreenView: View {
     @Environment(AuthViewModel.self) private var authVM
+    @Environment(\.dismiss) private var dismiss
     let actor: String
 
     @State private var viewModel: ProfileViewModel?
@@ -214,6 +215,21 @@ struct ProfileScreenView: View {
             }
             .padding(.trailing, 20)
             .padding(.bottom, 24)
+        }
+        .overlay(alignment: .topLeading) {
+            if !isSelf {
+                Button {
+                    dismiss()
+                } label: {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundStyle(.primary)
+                        .frame(width: 36, height: 36)
+                        .background(.ultraThinMaterial, in: Circle())
+                }
+                .padding(.leading, 16)
+                .padding(.top, 8)
+            }
         }
     }
 
