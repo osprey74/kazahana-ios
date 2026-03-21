@@ -7,6 +7,7 @@ import SwiftUI
 struct ThreadView: View {
 
     @Environment(AuthViewModel.self) private var authVM
+    @Environment(\.dismiss) private var dismiss
     @State private var viewModel: ThreadViewModel
     @State private var replyToPost: PostView? = nil
     @State private var selectedPost: FeedViewPost? = nil
@@ -45,6 +46,20 @@ struct ThreadView: View {
         }
         .navigationBarTitleDisplayMode(.inline)
         .navigationTitle(String(localized: "thread.title"))
+        .toolbar(.hidden, for: .navigationBar)
+        .overlay(alignment: .topLeading) {
+            Button {
+                dismiss()
+            } label: {
+                Image(systemName: "chevron.left")
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundStyle(.primary)
+                    .frame(width: 36, height: 36)
+                    .background(.ultraThinMaterial, in: Circle())
+            }
+            .padding(.leading, 16)
+            .padding(.top, 8)
+        }
         .navigationDestination(item: $selectedPost) { feedPost in
             ThreadView(uri: feedPost.post.uri, postService: postService)
                 .environment(authVM)
