@@ -48,13 +48,14 @@ struct ImageViewer: View {
                 .ignoresSafeArea(edges: .bottom)
             }
 
-            // 閉じるボタン
+            // 閉じるボタン（シャドウで背景色に依らず視認性を確保）
             Button {
                 dismiss()
             } label: {
                 Image(systemName: "xmark.circle.fill")
                     .font(.system(size: 28))
-                    .foregroundStyle(.white.opacity(0.8))
+                    .foregroundStyle(.white)
+                    .shadow(color: .black.opacity(0.6), radius: 3, x: 0, y: 1)
                     .padding(16)
             }
         }
