@@ -67,6 +67,23 @@ struct FeedGeneratorsResponse: Codable {
 
 // MARK: - グラフリスト モデル
 
+/// app.bsky.graph.defs#listViewBasic（creator フィールドなし）
+struct GraphListViewBasic: Codable, Identifiable, Hashable {
+    let uri: String
+    let cid: String
+    let name: String
+    let purpose: String
+    let avatar: String?
+    let listItemCount: Int?
+    let indexedAt: String?
+
+    var id: String { uri }
+
+    static func == (lhs: GraphListViewBasic, rhs: GraphListViewBasic) -> Bool { lhs.id == rhs.id }
+    func hash(into hasher: inout Hasher) { hasher.combine(id) }
+}
+
+/// app.bsky.graph.defs#listView（creator フィールドあり）
 struct GraphListView: Codable, Identifiable, Hashable {
     let uri: String
     let cid: String
@@ -111,7 +128,7 @@ struct StarterPackView: Codable, Identifiable {
     let cid: String
     let record: StarterPackRecord
     let creator: ProfileViewBasic
-    let list: GraphListView?
+    let list: GraphListViewBasic?
     let listItemCount: Int?
     let joinedWeekCount: Int?
     let joinedAllTimeCount: Int?
