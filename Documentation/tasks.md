@@ -1,6 +1,6 @@
 # kazahana-ios 開発タスク・進捗記録
 
-最終更新: 2026-03-21 (Bot自動化ラベルバッジ 実装完了)
+最終更新: 2026-03-21 (5-D プロフィールフィード/リストタブ・設定ボタン移動・アプリアイコン設定)
 
 ---
 
@@ -11,7 +11,7 @@
 - Phase 3 (通知・プロフィール・検索): 6/6 ✅ 完了
 - Phase 3.5 (UX改善・バグ修正): 12/12 ✅ 完了
 - Phase 4 (DM・モデレーション・設定): 28/28 ✅ 完了
-- Phase 5 (BSAF・高度な機能): 5-B 完了（スレッド投稿ペンディング）、5-C/5-F 完了、Bot Badge 完了、5-A/5-D/5-E 未着手
+- Phase 5 (BSAF・高度な機能): 5-B 完了（スレッド投稿ペンディング）、5-C/5-F/Bot Badge 完了、5-D 一部完了（フィード/リストタブ）、5-A/5-E 未着手
 
 ---
 
@@ -362,11 +362,22 @@
 - [x] **ActorRowView（SearchView / UserListView）** — 表示名横に BotBadge 追加（14pt）
 - [x] **Localizable.xcstrings** — `bot.label` キーを11言語で追加
 
-### 5-D: プロフィール追加機能（優先度：低）
+### 5-D: プロフィール追加機能（優先度：低）— 一部完了
+- [x] **カスタムフィード一覧** — `app.bsky.feed.getActorFeeds`（プロフィール「フィード」タブ）
+  - `FeedService.getActorFeeds()` / `GetActorFeedsResponse` 追加
+  - `ProfileTab` に `.feeds` ケース追加
+  - `ProfileViewModel` に `actorFeeds: [GeneratorView]` / `loadActorFeeds()` 追加
+  - `ProfileView` に `profileFeedsTab()` ビュー追加（アバター・名前・説明・いいね数）
+- [x] **リスト一覧** — `app.bsky.graph.getLists`（プロフィール「リスト」タブ）
+  - `FeedService.getLists()` 追加
+  - `ProfileTab` に `.lists` ケース追加
+  - `ProfileViewModel` に `actorLists: [GraphListView]` / `loadActorLists()` 追加
+  - `ProfileView` に `profileListsTab()` ビュー追加（アバター・名前・説明・メンバー数）
+- [x] **タブバー横スクロール対応** — `ScrollView(.horizontal)` ラップでタブが多くてもはみ出さない
+- [x] **設定ボタン移動** — バナー右上 → アバターと同じ高さの行の右端（`HStack(alignment: .bottom)` 右側）
+- [x] **Localizable.xcstrings** — `profile.feeds` / `profile.lists` / `profile.noFeeds` / `profile.noLists` を11言語追加
 - [ ] **スターターパック閲覧** — `app.bsky.graph.getStarterPack` / `getActorStarterPacks`
-- [ ] **カスタムフィード一覧** — `app.bsky.feed.getActorFeeds`（プロフィールタブ）
-- [ ] **リスト一覧** — `app.bsky.graph.getLists`（プロフィールタブ）
-- [ ] **リストフィード閲覧** — `app.bsky.feed.getListFeed`
+- [ ] **リストフィード閲覧** — リストタップで `app.bsky.feed.getListFeed` を表示する遷移
 
 ---
 
@@ -419,7 +430,7 @@
 
 ---
 
-## ファイル構成（2026-03-21 Bot自動化ラベルバッジ完了時点）
+## ファイル構成（2026-03-21 5-D フィード/リストタブ・アプリアイコン設定時点）
 
 ```
 kazahana-ios/
@@ -458,7 +469,7 @@ kazahana-ios/
 │   ├── ComposeViewModel.swift
 │   ├── ThreadViewModel.swift
 │   ├── NotificationViewModel.swift # resolvedRepostURIs キャッシュ
-│   ├── ProfileViewModel.swift     # フォロー楽観的 UI + ProfileTab enum + タブ別フィード管理 + ピン留め投稿 + プロフィール内検索
+│   ├── ProfileViewModel.swift     # フォロー楽観的 UI + ProfileTab enum（6タブ）+ actorFeeds/actorLists + タブ別フィード管理 + ピン留め投稿 + プロフィール内検索
 │   ├── SearchViewModel.swift      # タブ切り替え・Task キャンセルデバウンス + filterModeratedPosts + 検索履歴
 │   ├── ConversationListViewModel.swift # 会話一覧 + 30秒ポーリング + ミュート/退出
 │   └── ChatThreadViewModel.swift  # メッセージ一覧 + 送信 + 削除 + 15秒ポーリング + 既読
@@ -478,12 +489,13 @@ kazahana-ios/
 │   │   ├── NotificationListView.swift
 │   │   └── NotificationItemView.swift
 │   ├── Profile/
-│   │   ├── ProfileView.swift      # ProfileScreenView + ProfileHeaderView + タブバー UI（4タブ）+ コンパクトヘッダー + ピン留め表示 + 内部検索バー
+│   │   ├── ProfileView.swift      # ProfileScreenView + ProfileHeaderView + 横スクロールタブバー（6タブ：投稿/返信/メディア/いいね/フィード/リスト）+ コンパクトヘッダー + ピン留め表示 + 内部検索バー
 │   │   └── UserListView.swift     # フォロワー/フォロー中一覧 + フォロー/解除ボタン
 │   ├── Search/
 │   │   └── SearchView.swift       # SearchView + ActorRowView + SearchPostRowView（スレッド遷移）+ 検索履歴一覧
 │   ├── Settings/
-│   │   └── SettingsView.swift     # テーマ/言語切替・via表示・モデレーション設定・Claude API キー管理・アカウント情報
+│   │   ├── SettingsView.swift     # テーマ/言語切替・via表示・モデレーション設定・Claude API キー管理・アカウント情報・ホームフィード管理
+│   │   └── FeedManagementView.swift # フィード/リスト表示管理（表示/非表示トグル・ドラッグ並び替え）
 │   ├── Messages/
 │   │   ├── ConversationListView.swift # 会話一覧 + ConversationRowView + スワイプアクション
 │   │   ├── ChatThreadView.swift   # メッセージバブル + 送信ボックス + コンテキストメニュー削除
@@ -503,6 +515,10 @@ kazahana-ios/
 ├── Extensions/
 │   ├── IdentifiableString.swift   # Notification.Name.kazahanaDeepLink 追加
 │   └── String+DateFormatting.swift # relativeFormatted（相対時刻表示）
+├── Assets.xcassets/
+│   └── AppIcon.appiconset/
+│       ├── AppIcon-1024.png       # kazahana デスクトップ icon.png から生成（1024×1024）
+│       └── Contents.json
 └── Documentation/
     └── tasks.md
 ```
