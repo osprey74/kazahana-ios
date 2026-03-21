@@ -1,6 +1,6 @@
 // ShareViewController.swift
 // Share​Extension
-// 共有コンテンツのタイトルと URL を kazahana アプリへ渡して起動する
+// 共有コンテンツのタイトルと URL を App Groups 経由で kazahana アプリへ渡す
 
 import UIKit
 import UniformTypeIdentifiers
@@ -8,11 +8,15 @@ import UniformTypeIdentifiers
 @objc(ShareViewController)
 class ShareViewController: UIViewController {
 
+    private static let suiteName   = "group.com.osprey74.kazahana-ios"
+    private static let pendingKey  = "shareExtension.pendingText"
+
     override func viewDidLoad() {
         super.viewDidLoad()
         extractContent { [weak self] text in
             guard let self else { return }
-            self.launchKazahana(with: text)
+            self.savePendingText(text)
+            self.extensionContext?.completeRequest(returningItems: nil)
         }
     }
 
@@ -64,35 +68,12 @@ class ShareViewController: UIViewController {
         return "\(t)\n\(u)"
     }
 
-    // MARK: - kazahana 起動
+    // MARK: - App Groups への保存
 
-    private func launchKazahana(with text: String) {
-        guard let encoded = text.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
-              let url = URL(string: "kazahana://compose?text=\(encoded)") else {
-            extensionContext?.completeRequest(returningItems: nil)
-            return
-        }
-
-        // Share Extension から他アプリを URL スキームで起動する
-        // responder chain を辿って UIApplication を取得し open(_:) を呼ぶ
-        openURL(url)
-        extensionContext?.completeRequest(returningItems: nil)
-    }
-
-    // UIResponder の openURL を辿るヘルパー
-    // Swift では UIApplication.open を直接呼べないため @objc セレクタ経由で実行
-    @objc private func openURL(_ url: URL) {
-        var responder: UIResponder? = self
-        while let r = responder {
-            if r.responds(to: #selector(UIApplication.open(_:options:completionHandler:))) {
-                r.perform(
-                    #selector(UIApplication.open(_:options:completionHandler:)),
-                    with: url,
-                    with: [String: Any]()
-                )
-                return
-            }
-            responder = r.next
-        }
+    private func savePendingText(_ text: String) {
+        guard !text.isEmpty,
+              let defaults = UserDefaults(suiteName: Self.suiteName) else { return }
+        defaults.set(text, forKey: Self.pendingKey)
+        defaults.synchronize()
     }
 }
