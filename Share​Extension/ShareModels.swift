@@ -53,6 +53,28 @@ final class SessionStore {
     }
 }
 
+// MARK: - ShareSettings（UserDefaults から via / langs を読み取る）
+
+struct ShareSettings {
+    /// showVia が true の場合に付与するクライアント名
+    static let viaName = "kazahana for iOS"
+
+    static var via: String? {
+        let showVia = UserDefaults.standard.object(forKey: "showVia") as? Bool ?? false
+        return showVia ? viaName : nil
+    }
+
+    /// 投稿レコードに渡す langs 配列（ユーザー設定 > 端末ロケール）
+    static var langs: [String] {
+        let langRaw = UserDefaults.standard.string(forKey: "postLanguageSetting") ?? "system"
+        if langRaw != "system" {
+            return [langRaw]
+        }
+        let locale = Locale.current.language.languageCode?.identifier ?? "ja"
+        return [locale]
+    }
+}
+
 // MARK: - BlobRef（画像アップロードレスポンス）
 
 struct BlobRef: Codable {
@@ -102,7 +124,7 @@ struct FacetFeature: Codable {
     }
 }
 
-// MARK: - Post 関連
+// MARK: - Post Embed
 
 struct PostRefStrong: Codable {
     let uri: String
@@ -134,16 +156,36 @@ struct AspectRatioCreate: Codable {
     let height: Int
 }
 
+/// app.bsky.embed.external（リンクカード）
+struct ExternalEmbedCreate: Encodable {
+    let type = "app.bsky.embed.external"
+    let external: ExternalCard
+    enum CodingKeys: String, CodingKey {
+        case type = "$type"
+        case external
+    }
+}
+
+struct ExternalCard: Encodable {
+    let uri: String
+    let title: String
+    let description: String
+    let thumb: BlobRef?
+}
+
 enum PostEmbedCreate: Encodable {
     case images(ImageEmbedCreate)
+    case external(ExternalEmbedCreate)
 
     func encode(to encoder: Encoder) throws {
         switch self {
-        case .images(let e):
-            try e.encode(to: encoder)
+        case .images(let e):    try e.encode(to: encoder)
+        case .external(let e):  try e.encode(to: encoder)
         }
     }
 }
+
+// MARK: - PostRecord
 
 struct PostRecordCreate: Encodable {
     let type = "app.bsky.feed.post"
@@ -151,6 +193,7 @@ struct PostRecordCreate: Encodable {
     let facets: [Facet]?
     let replyRef: PostReplyRef?
     let embed: PostEmbedCreate?
+    let langs: [String]?
     let createdAt: String = ISO8601DateFormatter().string(from: Date())
     let via: String?
 
@@ -158,8 +201,7 @@ struct PostRecordCreate: Encodable {
         case type = "$type"
         case text, facets
         case replyRef = "reply"
-        case embed, createdAt
-        case via
+        case embed, langs, createdAt, via
     }
 
     func encode(to encoder: Encoder) throws {
@@ -169,8 +211,9 @@ struct PostRecordCreate: Encodable {
         try container.encodeIfPresent(facets, forKey: .facets)
         try container.encodeIfPresent(replyRef, forKey: .replyRef)
         try container.encodeIfPresent(embed, forKey: .embed)
+        try container.encodeIfPresent(langs, forKey: .langs)
         try container.encode(createdAt, forKey: .createdAt)
-        if let via { try container.encode(via, forKey: .via) }
+        try container.encodeIfPresent(via, forKey: .via)
     }
 }
 

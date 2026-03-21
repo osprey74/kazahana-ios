@@ -20,19 +20,31 @@ final class ShareATProtoClient {
         text: String,
         facets: [Facet]?,
         images: [(blob: BlobRef, alt: String)]?,
+        linkCard: ExternalCard?,
+        langs: [String]?,
         via: String?
     ) async throws -> CreateRecordResponse {
         let did = currentSession.did
 
+        // embed: 画像 > リンクカード
         let embed: PostEmbedCreate?
         if let images, !images.isEmpty {
             let imageEmbed = ImageEmbedCreate(images: images.map { ImageEmbedItem(image: $0.blob, alt: $0.alt, aspectRatio: nil) })
             embed = .images(imageEmbed)
+        } else if let linkCard {
+            embed = .external(ExternalEmbedCreate(external: linkCard))
         } else {
             embed = nil
         }
 
-        let record = PostRecordCreate(text: text, facets: facets, replyRef: nil, embed: embed, via: via)
+        let record = PostRecordCreate(
+            text: text,
+            facets: facets,
+            replyRef: nil,
+            embed: embed,
+            langs: langs,
+            via: via
+        )
         let body = CreateRecordRequest(repo: did, collection: "app.bsky.feed.post", record: record)
         return try await post(nsid: "com.atproto.repo.createRecord", body: body)
     }
@@ -40,7 +52,7 @@ final class ShareATProtoClient {
     // MARK: - 画像アップロード
 
     func uploadImage(data: Data, mimeType: String) async throws -> BlobRef {
-        let session = try await ensureFreshSession()
+        let session = currentSession
         let url = URL(string: "\(session.pdsHost)/xrpc/com.atproto.repo.uploadBlob")!
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
@@ -59,10 +71,67 @@ final class ShareATProtoClient {
         return result.blob
     }
 
+    // MARK: - OGP 取得（リンクカード用）
+
+    /// URL の OGP メタタグを取得して ExternalCard を返す
+    /// サムネイル画像があればアップロードして BlobRef を含める
+    func fetchLinkCard(url: URL) async throws -> ExternalCard {
+        var request = URLRequest(url: url)
+        request.setValue("Mozilla/5.0 (compatible; kazahana/1.0)", forHTTPHeaderField: "User-Agent")
+        request.timeoutInterval = 10
+
+        let (data, _) = try await urlSession.data(for: request)
+        let html = String(data: data, encoding: .utf8) ?? String(data: data, encoding: .isoLatin1) ?? ""
+
+        let title = ogValue(html: html, property: "og:title") ?? titleTag(html: html) ?? url.host ?? ""
+        let description = ogValue(html: html, property: "og:description") ?? metaDescription(html: html) ?? ""
+        let imageURLString = ogValue(html: html, property: "og:image")
+
+        // サムネイルのアップロード（失敗しても続行）
+        var thumbBlob: BlobRef? = nil
+        if let imgStr = imageURLString, let imgURL = URL(string: imgStr) {
+            thumbBlob = try? await uploadThumbnail(from: imgURL)
+        }
+
+        return ExternalCard(
+            uri: url.absoluteString,
+            title: title,
+            description: description,
+            thumb: thumbBlob
+        )
+    }
+
+    private func uploadThumbnail(from url: URL) async throws -> BlobRef {
+        var request = URLRequest(url: url)
+        request.timeoutInterval = 10
+        let (data, response) = try await urlSession.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse,
+              (200..<300).contains(httpResponse.statusCode) else {
+            throw ATProtoError.httpError(0, nil)
+        }
+        let mimeType = httpResponse.mimeType ?? "image/jpeg"
+        // 1MB 以内に圧縮
+        let compressed = compressIfNeeded(data: data, mimeType: mimeType)
+        return try await uploadImage(data: compressed, mimeType: "image/jpeg")
+    }
+
+    private func compressIfNeeded(data: Data, mimeType: String) -> Data {
+        guard data.count > 1_000_000,
+              mimeType.hasPrefix("image/"),
+              let uiImage = UIImage(data: data) else { return data }
+        var quality: CGFloat = 0.8
+        var result = uiImage.jpegData(compressionQuality: quality) ?? data
+        while result.count > 950_000 && quality > 0.2 {
+            quality -= 0.1
+            result = uiImage.jpegData(compressionQuality: quality) ?? result
+        }
+        return result
+    }
+
     // MARK: - XRPC POST
 
     private func post<B: Encodable, R: Decodable>(nsid: String, body: B) async throws -> R {
-        let session = try await ensureFreshSession()
+        let session = currentSession
         let url = URL(string: "\(session.pdsHost)/xrpc/\(nsid)")!
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
@@ -76,7 +145,6 @@ final class ShareATProtoClient {
         }
 
         if httpResponse.statusCode == 401 {
-            // トークンリフレッシュを試みる
             try await refreshSession()
             return try await post(nsid: nsid, body: body)
         }
@@ -92,10 +160,6 @@ final class ShareATProtoClient {
     }
 
     // MARK: - セッションリフレッシュ
-
-    private func ensureFreshSession() async throws -> Session {
-        return currentSession
-    }
 
     private func refreshSession() async throws {
         let url = URL(string: "\(currentSession.pdsHost)/xrpc/com.atproto.server.refreshSession")!
@@ -126,10 +190,86 @@ final class ShareATProtoClient {
     }
 }
 
+// MARK: - HTML パース（OGP）
+
+private extension ShareATProtoClient {
+
+    func ogValue(html: String, property: String) -> String? {
+        // <meta property="og:title" content="..."> または <meta name="og:title" content="...">
+        let patterns = [
+            #"<meta[^>]+property="\#(property)"[^>]+content="([^"]*)"[^>]*/?>""#,
+            #"<meta[^>]+content="([^"]*)"[^>]+property="\#(property)"[^>]*/?>""#,
+            #"<meta[^>]+property='\#(property)'[^>]+content='([^']*)'[^>]*/?>""#,
+        ]
+        for pattern in patterns {
+            if let regex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive),
+               let match = regex.firstMatch(in: html, range: NSRange(html.startIndex..., in: html)),
+               let range = Range(match.range(at: 1), in: html) {
+                return htmlDecode(String(html[range]))
+            }
+        }
+        return nil
+    }
+
+    func titleTag(html: String) -> String? {
+        guard let regex = try? NSRegularExpression(pattern: #"<title[^>]*>([^<]+)</title>"#, options: .caseInsensitive),
+              let match = regex.firstMatch(in: html, range: NSRange(html.startIndex..., in: html)),
+              let range = Range(match.range(at: 1), in: html) else { return nil }
+        return htmlDecode(String(html[range]).trimmingCharacters(in: .whitespacesAndNewlines))
+    }
+
+    func metaDescription(html: String) -> String? {
+        let patterns = [
+            #"<meta[^>]+name="description"[^>]+content="([^"]*)"[^>]*/?>""#,
+            #"<meta[^>]+content="([^"]*)"[^>]+name="description"[^>]*/?>""#,
+        ]
+        for pattern in patterns {
+            if let regex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive),
+               let match = regex.firstMatch(in: html, range: NSRange(html.startIndex..., in: html)),
+               let range = Range(match.range(at: 1), in: html) {
+                return htmlDecode(String(html[range]))
+            }
+        }
+        return nil
+    }
+
+    func htmlDecode(_ string: String) -> String {
+        let entities: [(String, String)] = [
+            ("&amp;", "&"), ("&lt;", "<"), ("&gt;", ">"),
+            ("&quot;", "\""), ("&#39;", "'"), ("&apos;", "'"),
+            ("&nbsp;", " "),
+        ]
+        var result = string
+        for (entity, char) in entities {
+            result = result.replacingOccurrences(of: entity, with: char)
+        }
+        // &#数値; 形式
+        if let regex = try? NSRegularExpression(pattern: "&#(\\d+);") {
+            let nsResult = regex.stringByReplacingMatches(
+                in: result,
+                range: NSRange(result.startIndex..., in: result),
+                withTemplate: ""
+            )
+            // 簡易処理: 数値エンティティはそのまま除去せず Unicode 変換
+            let matches = regex.matches(in: result, range: NSRange(result.startIndex..., in: result))
+            for match in matches.reversed() {
+                if let range = Range(match.range(at: 1), in: result),
+                   let code = UInt32(result[range]),
+                   let scalar = Unicode.Scalar(code) {
+                    let r = Range(match.range, in: result)!
+                    result.replaceSubrange(r, with: String(scalar))
+                }
+            }
+            _ = nsResult  // suppress warning
+        }
+        return result
+    }
+}
+
 // MARK: - RichText Facet 自動検出
 
 extension ShareATProtoClient {
-    /// テキストから URL Facet を自動検出する簡易版
+    /// テキストから URL および @mention Facet を自動検出する
     static func detectFacets(in text: String) -> [Facet] {
         var facets: [Facet] = []
         let utf8 = Array(text.utf8)
@@ -152,3 +292,6 @@ extension ShareATProtoClient {
         return facets
     }
 }
+
+// UIImage import
+import UIKit
