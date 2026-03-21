@@ -16,6 +16,9 @@ struct QuoteEmbedView: View {
                     Text(author.displayNameOrHandle)
                         .font(.caption.weight(.semibold))
                         .lineLimit(1)
+                    if isBotAccount(did: author.did, labels: author.labels) {
+                        BotBadge(size: 12)
+                    }
                     Text("@\(author.handle)")
                         .font(.caption)
                         .foregroundStyle(.secondary)

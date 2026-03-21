@@ -238,10 +238,15 @@ struct ActorRowView: View {
         HStack(spacing: 12) {
             AvatarView(url: actor.avatar, size: 44)
             VStack(alignment: .leading, spacing: 2) {
-                Text(actor.displayNameOrHandle)
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
-                    .lineLimit(1)
+                HStack(spacing: 4) {
+                    Text(actor.displayNameOrHandle)
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                        .lineLimit(1)
+                    if isBotAccount(did: actor.did, labels: actor.labels) {
+                        BotBadge(size: 14)
+                    }
+                }
                 Text("@\(actor.handle)")
                     .font(.caption)
                     .foregroundStyle(.secondary)

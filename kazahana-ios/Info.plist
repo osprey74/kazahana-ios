@@ -6,6 +6,10 @@
 	<array>
 		<string>com.kazahana.app.notificationRefresh</string>
 	</array>
+	<key>UIAppFonts</key>
+	<array>
+		<string>SmartToy.ttf</string>
+	</array>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>

@@ -153,8 +153,13 @@ struct ThreadView: View {
             HStack(spacing: 10) {
                 AvatarView(url: post.author.avatar, size: 48)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(post.author.displayNameOrHandle)
-                        .font(.headline)
+                    HStack(spacing: 4) {
+                        Text(post.author.displayNameOrHandle)
+                            .font(.headline)
+                        if isBotAccount(did: post.author.did, labels: post.author.labels) {
+                            BotBadge(size: 14)
+                        }
+                    }
                     Text("@\(post.author.handle)")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)

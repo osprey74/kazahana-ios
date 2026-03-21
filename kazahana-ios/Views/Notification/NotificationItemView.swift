@@ -41,10 +41,15 @@ struct NotificationItemView: View {
                     Button {
                         onTapAuthor?(notification.author.did)
                     } label: {
-                        Text(notification.author.displayName ?? notification.author.handle)
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(.primary)
-                            .lineLimit(1)
+                        HStack(spacing: 4) {
+                            Text(notification.author.displayName ?? notification.author.handle)
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(.primary)
+                                .lineLimit(1)
+                            if isBotAccount(did: notification.author.did, labels: notification.author.labels) {
+                                BotBadge(size: 13)
+                            }
+                        }
                     }
                     .buttonStyle(.plain)
 

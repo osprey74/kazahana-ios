@@ -328,6 +328,7 @@
 - 返金済みトランザクション（`revocationDate != nil`）は除外
 - 小規模デベロッパープログラムへの登録を忘れずに。
 
+
 **実装タスク**
 - [ ] App Store Connect で Non-renewing subscription 商品を登録（product ID: `com.kazahana.app.supporter_badge_30d`）
 - [ ] `Services/IAPService.swift` 新規作成

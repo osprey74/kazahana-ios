@@ -195,10 +195,15 @@ struct ProfileScreenView: View {
 
             VStack(alignment: .leading, spacing: 1) {
                 if let profile = vm.profile {
-                    Text(profile.displayNameOrHandle)
-                        .font(.subheadline)
-                        .fontWeight(.semibold)
-                        .lineLimit(1)
+                    HStack(spacing: 4) {
+                        Text(profile.displayNameOrHandle)
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
+                            .lineLimit(1)
+                        if isBotAccount(did: profile.did, labels: profile.labels) {
+                            BotBadge(size: 18)
+                        }
+                    }
                     Text("@\(profile.handle)")
                         .font(.caption)
                         .foregroundStyle(.secondary)
@@ -422,9 +427,14 @@ struct ProfileHeaderView: View {
             // 表示名 + ハンドル
             VStack(alignment: .leading, spacing: 4) {
                 if let profile = vm.profile {
-                    Text(profile.displayNameOrHandle)
-                        .font(.title3)
-                        .fontWeight(.bold)
+                    HStack(spacing: 6) {
+                        Text(profile.displayNameOrHandle)
+                            .font(.title3)
+                            .fontWeight(.bold)
+                        if isBotAccount(did: profile.did, labels: profile.labels) {
+                            BotBadge(size: 18)
+                        }
+                    }
                     Text("@\(profile.handle)")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)

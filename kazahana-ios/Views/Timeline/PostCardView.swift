@@ -243,6 +243,9 @@ struct PostCardView: View {
             Text(author.displayNameOrHandle)
                 .font(.subheadline.weight(.semibold))
                 .lineLimit(1)
+            if isBotAccount(did: author.did, labels: author.labels) {
+                BotBadge(size: 14)
+            }
             Text("@\(author.handle)")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
