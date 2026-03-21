@@ -158,6 +158,10 @@ struct ProfileScreenView: View {
                             }
                         }
                     }
+
+                    // 最下部の余白（画面高の50%）— 最後のアイテムをタップしやすくする
+                    Color.clear
+                        .containerRelativeFrame(.vertical) { size, _ in size * 0.5 }
                 }
             }
             .onScrollGeometryChange(for: Bool.self) { geometry in
