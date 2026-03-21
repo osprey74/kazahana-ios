@@ -1,6 +1,6 @@
 # kazahana-ios 開発タスク・進捗記録
 
-最終更新: 2026-03-21 (UX改善バグ修正・棚卸し)
+最終更新: 2026-03-21 (Share Extension 実装完了)
 
 ---
 
@@ -11,7 +11,7 @@
 - Phase 3 (通知・プロフィール・検索): 6/6 ✅ 完了
 - Phase 3.5 (UX改善・バグ修正): 12/12 ✅ 完了
 - Phase 4 (DM・モデレーション・設定): 28/28 ✅ 完了
-- Phase 5 (BSAF・高度な機能): 5-B 完了（スレッド投稿ペンディング）、5-C/5-F/Bot Badge 完了、5-D 完了、5-A/5-E 未着手
+- Phase 5 (BSAF・高度な機能): 5-B 完了（スレッド投稿ペンディング）、5-C 完了（送受信共有）、5-F/Bot Badge 完了、5-D 完了、5-A/5-E 未着手
 
 ---
 
@@ -276,7 +276,14 @@
 - [ ] **スレッド投稿** — 複数ポストを繋いで一括投稿（※デスクトップ版でも見送り。ペンディング）
 
 ### 5-C: モバイル固有機能（優先度：低）
-- [ ] **共有シート連携（受信）** — Share Extension: 他アプリからテキスト/URLを受け取り投稿作成画面を開く
+- [x] **共有シート連携（受信）** — Share Extension: 他アプリからテキスト/URL/画像を受け取り Extension 内で投稿
+  - `ShareExtension/` ターゲット追加（Bundle ID: `com.osprey74.kazahana-ios.ShareExtension`）
+  - `ShareViewController.swift`: `@objc(ShareViewController)` + `UIHostingController` で SwiftUI をホスト
+  - `ShareComposeView.swift`: テキスト入力・URL プレビュー（OGP）・画像プレビュー（最大4枚）・投稿送信
+  - `ShareATProtoClient.swift`: Share Extension 専用軽量 AT Protocol クライアント（投稿・画像アップロード・OGP取得・Facet自動検出）
+  - `ShareModels.swift`: Session・SessionStore（Keychain accessGroup 共有）・ShareSettings・BlobRef・Facet・PostRecordCreate
+  - Keychain accessGroup `9L6A9KDH5P.com.osprey74.kazahana-ios` でメインアプリとセッション共有
+  - App Groups `group.com.osprey74.kazahana-ios` で UserDefaults（via/langs 設定）を共有
 - [x] **共有シート連携（送信）** — `UIActivityViewController` で投稿URLを共有
   - PostCardView / ThreadView の三点メニューに「共有」ボタン追加（`sharePost(urlString:)` ヘルパー）
   - ThreadView フォーカス投稿のアクションバー `square.and.arrow.up` ボタンも有効化
@@ -537,4 +544,15 @@ kazahana-ios/
 │       └── Contents.json
 └── Documentation/
     └── tasks.md
+```
+
+```
+ShareExtension/
+├── ShareExtension.entitlements    # keychain-access-groups + com.apple.security.application-groups
+├── Info.plist                     # NSExtensionActivationSupports{Text,WebURL,Image} 設定
+├── ShareViewController.swift      # @objc(ShareViewController) + UIHostingController で SwiftUI をホスト
+├── ShareComposeView.swift         # テキスト入力・URLプレビュー（OGP）・画像プレビュー（最大4枚）・投稿送信
+├── ShareATProtoClient.swift       # 軽量 AT Protocol クライアント（createPost / uploadImage / fetchLinkCard / detectFacets）
+├── ShareModels.swift              # Session / SessionStore（accessGroup 共有）/ ShareSettings / BlobRef / Facet / PostRecordCreate
+└── Localizable.xcstrings          # share.title / share.notLoggedIn / share.notLoggedInMessage（11言語）
 ```
