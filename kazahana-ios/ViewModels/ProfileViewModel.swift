@@ -7,21 +7,23 @@ import Observation
 import SwiftUI
 
 enum ProfileTab: String, CaseIterable {
-    case posts   = "posts"
-    case replies = "replies"
-    case media   = "media"
-    case likes   = "likes"
-    case feeds   = "feeds"
-    case lists   = "lists"
+    case posts        = "posts"
+    case replies      = "replies"
+    case media        = "media"
+    case likes        = "likes"
+    case feeds        = "feeds"
+    case lists        = "lists"
+    case starterPacks = "starterPacks"
 
     var displayName: String {
         switch self {
-        case .posts:   return String(localized: "profile.posts")
-        case .replies: return String(localized: "profile.replies")
-        case .media:   return String(localized: "profile.media")
-        case .likes:   return String(localized: "profile.likes")
-        case .feeds:   return String(localized: "profile.feeds")
-        case .lists:   return String(localized: "profile.lists")
+        case .posts:        return String(localized: "profile.posts")
+        case .replies:      return String(localized: "profile.replies")
+        case .media:        return String(localized: "profile.media")
+        case .likes:        return String(localized: "profile.likes")
+        case .feeds:        return String(localized: "profile.feeds")
+        case .lists:        return String(localized: "profile.lists")
+        case .starterPacks: return String(localized: "profile.starterPacks")
         }
     }
 }
@@ -120,13 +122,17 @@ final class ProfileViewModel {
 
     @MainActor
     func loadTab(_ tab: ProfileTab) async {
-        // feeds / lists タブは専用メソッドで処理
+        // feeds / lists / starterPacks タブは専用メソッドで処理
         if tab == .feeds {
             await loadActorFeeds()
             return
         }
         if tab == .lists {
             await loadActorLists()
+            return
+        }
+        if tab == .starterPacks {
+            // StarterPackListTabView が自前でロードするため何もしない
             return
         }
 
@@ -150,8 +156,8 @@ final class ProfileViewModel {
 
     @MainActor
     func loadMoreTab(_ tab: ProfileTab) async {
-        // feeds / lists タブはページネーションなし
-        guard tab != .feeds, tab != .lists else { return }
+        // feeds / lists / starterPacks タブはページネーションなし
+        guard tab != .feeds, tab != .lists, tab != .starterPacks else { return }
         guard !(tabIsLoading[tab] ?? false),
               tabHasMore[tab] ?? false,
               let currentCursor = tabCursors[tab] ?? nil else { return }
@@ -179,7 +185,7 @@ final class ProfileViewModel {
             return try await graphService.getAuthorFeed(actor: actor, limit: 30, cursor: cursor, filter: "posts_with_media")
         case .likes:
             return try await graphService.getActorLikes(actor: actor, limit: 30, cursor: cursor)
-        case .feeds, .lists:
+        case .feeds, .lists, .starterPacks:
             // これらのタブは loadTab で分岐済みのため到達しない
             return TimelineResponse(feed: [], cursor: nil)
         }

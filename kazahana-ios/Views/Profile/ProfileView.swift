@@ -11,6 +11,7 @@ struct ProfileScreenView: View {
     @State private var viewModel: ProfileViewModel?
     @State private var selectedPost: FeedViewPost?
     @State private var userListType: UserListType? = nil
+    @State private var selectedList: GraphListView? = nil
     @State private var showSettings = false
     @State private var showCompose = false
     @State private var quotePost: PostView? = nil
@@ -44,6 +45,10 @@ struct ProfileScreenView: View {
         }
         .navigationDestination(item: $userListType) { listType in
             UserListView(listType: listType)
+                .environment(authVM)
+        }
+        .navigationDestination(item: $selectedList) { list in
+            ListFeedView(list: list)
                 .environment(authVM)
         }
         .sheet(isPresented: $showSettings) {
@@ -109,6 +114,9 @@ struct ProfileScreenView: View {
                         profileFeedsTab(vm: vm)
                     } else if vm.selectedTab == .lists {
                         profileListsTab(vm: vm)
+                    } else if vm.selectedTab == .starterPacks {
+                        StarterPackListTabView(actor: actor)
+                            .environment(authVM)
                     } else {
                         // ピン留め投稿（投稿タブのみ）
                         if vm.selectedTab == .posts, let pinned = vm.pinnedPost {
@@ -409,43 +417,52 @@ struct ProfileScreenView: View {
                 .frame(maxWidth: .infinity)
         } else {
             ForEach(vm.actorLists) { list in
-                HStack(spacing: 12) {
-                    if let avatarURL = list.avatar, let url = URL(string: avatarURL) {
-                        AsyncImage(url: url) { image in
-                            image.resizable().scaledToFill()
-                        } placeholder: {
-                            Color.gray.opacity(0.3)
-                        }
-                        .frame(width: 44, height: 44)
-                        .clipShape(Circle())
-                    } else {
-                        Image(systemName: "list.bullet.rectangle")
-                            .font(.title3)
-                            .foregroundStyle(.secondary)
+                Button {
+                    selectedList = list
+                } label: {
+                    HStack(spacing: 12) {
+                        if let avatarURL = list.avatar, let url = URL(string: avatarURL) {
+                            AsyncImage(url: url) { image in
+                                image.resizable().scaledToFill()
+                            } placeholder: {
+                                Color.gray.opacity(0.3)
+                            }
                             .frame(width: 44, height: 44)
-                            .background(Color(.systemGray5), in: Circle())
-                    }
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(list.name)
-                            .font(.subheadline)
-                            .fontWeight(.semibold)
-                            .lineLimit(1)
-                        if let desc = list.description, !desc.isEmpty {
-                            Text(desc)
-                                .font(.caption)
+                            .clipShape(Circle())
+                        } else {
+                            Image(systemName: "list.bullet.rectangle")
+                                .font(.title3)
                                 .foregroundStyle(.secondary)
-                                .lineLimit(2)
+                                .frame(width: 44, height: 44)
+                                .background(Color(.systemGray5), in: Circle())
                         }
-                        if let count = list.listItemCount {
-                            Label("\(count)", systemImage: "person.2")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(list.name)
+                                .font(.subheadline)
+                                .fontWeight(.semibold)
+                                .foregroundStyle(.primary)
+                                .lineLimit(1)
+                            if let desc = list.description, !desc.isEmpty {
+                                Text(desc)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                    .lineLimit(2)
+                            }
+                            if let count = list.listItemCount {
+                                Label("\(count)", systemImage: "person.2")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
                         }
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.caption)
+                            .foregroundStyle(.tertiary)
                     }
-                    Spacer()
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
                 }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 10)
+                .buttonStyle(.plain)
                 Divider().padding(.leading, 16)
             }
         }
@@ -461,9 +478,10 @@ struct ProfileScreenView: View {
                             // feeds/lists タブは専用フラグ、それ以外は tabFeeds で判断
                             let needsLoad: Bool = {
                                 switch tab {
-                                case .feeds: return vm.actorFeeds.isEmpty && !vm.isLoadingFeeds
-                                case .lists: return vm.actorLists.isEmpty && !vm.isLoadingLists
-                                default:     return vm.tabFeeds[tab]?.isEmpty ?? true
+                                case .feeds:        return vm.actorFeeds.isEmpty && !vm.isLoadingFeeds
+                                case .lists:        return vm.actorLists.isEmpty && !vm.isLoadingLists
+                                case .starterPacks: return false  // StarterPackListTabView が自前でロード
+                                default:            return vm.tabFeeds[tab]?.isEmpty ?? true
                                 }
                             }()
                             if needsLoad {

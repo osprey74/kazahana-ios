@@ -1,6 +1,6 @@
 # kazahana-ios 開発タスク・進捗記録
 
-最終更新: 2026-03-21 (5-D プロフィールフィード/リストタブ・設定ボタン移動・アプリアイコン設定)
+最終更新: 2026-03-21 (5-D リストフィード閲覧・スターターパック閲覧)
 
 ---
 
@@ -11,7 +11,7 @@
 - Phase 3 (通知・プロフィール・検索): 6/6 ✅ 完了
 - Phase 3.5 (UX改善・バグ修正): 12/12 ✅ 完了
 - Phase 4 (DM・モデレーション・設定): 28/28 ✅ 完了
-- Phase 5 (BSAF・高度な機能): 5-B 完了（スレッド投稿ペンディング）、5-C/5-F/Bot Badge 完了、5-D 一部完了（フィード/リストタブ）、5-A/5-E 未着手
+- Phase 5 (BSAF・高度な機能): 5-B 完了（スレッド投稿ペンディング）、5-C/5-F/Bot Badge 完了、5-D 完了、5-A/5-E 未着手
 
 ---
 
@@ -362,7 +362,7 @@
 - [x] **ActorRowView（SearchView / UserListView）** — 表示名横に BotBadge 追加（14pt）
 - [x] **Localizable.xcstrings** — `bot.label` キーを11言語で追加
 
-### 5-D: プロフィール追加機能（優先度：低）— 一部完了
+### 5-D: プロフィール追加機能（優先度：低）— 完了 ✅
 - [x] **カスタムフィード一覧** — `app.bsky.feed.getActorFeeds`（プロフィール「フィード」タブ）
   - `FeedService.getActorFeeds()` / `GetActorFeedsResponse` 追加
   - `ProfileTab` に `.feeds` ケース追加
@@ -376,8 +376,17 @@
 - [x] **タブバー横スクロール対応** — `ScrollView(.horizontal)` ラップでタブが多くてもはみ出さない
 - [x] **設定ボタン移動** — バナー右上 → アバターと同じ高さの行の右端（`HStack(alignment: .bottom)` 右側）
 - [x] **Localizable.xcstrings** — `profile.feeds` / `profile.lists` / `profile.noFeeds` / `profile.noLists` を11言語追加
-- [ ] **スターターパック閲覧** — `app.bsky.graph.getStarterPack` / `getActorStarterPacks`
-- [ ] **リストフィード閲覧** — リストタップで `app.bsky.feed.getListFeed` を表示する遷移
+- [x] **スターターパック閲覧** — `app.bsky.graph.getActorStarterPacks` / `getStarterPack`
+  - `FeedService` に `StarterPackView` / `StarterPackViewBasic` / `GetActorStarterPacksResponse` モデル追加
+  - `FeedService.getActorStarterPacks()` / `getStarterPack()` メソッド追加
+  - `ProfileTab` に `.starterPacks` ケース追加
+  - `StarterPackView.swift` 新規作成（`StarterPackListTabView` + `StarterPackDetailView`）
+  - `ProfileView` にスターターパックタブ追加
+- [x] **リストフィード閲覧** — リストタップで `app.bsky.feed.getListFeed` を表示する遷移
+  - `ListFeedView.swift` 新規作成（無限スクロール・プルリフレッシュ対応）
+  - `ProfileView` のリスト行をタップ可能に変更（chevron 表示）
+  - `navigationDestination` で `ListFeedView` へ遷移
+- [x] **Localizable.xcstrings** — `profile.starterPacks` / `profile.noStarterPacks` / `list.noPosts` / `starterPack.joinedAllTime` / `starterPack.members` を11言語追加
 
 ---
 
@@ -430,7 +439,7 @@
 
 ---
 
-## ファイル構成（2026-03-21 5-D フィード/リストタブ・アプリアイコン設定時点）
+## ファイル構成（2026-03-21 5-D 完了時点）
 
 ```
 kazahana-ios/
@@ -489,8 +498,10 @@ kazahana-ios/
 │   │   ├── NotificationListView.swift
 │   │   └── NotificationItemView.swift
 │   ├── Profile/
-│   │   ├── ProfileView.swift      # ProfileScreenView + ProfileHeaderView + 横スクロールタブバー（6タブ：投稿/返信/メディア/いいね/フィード/リスト）+ コンパクトヘッダー + ピン留め表示 + 内部検索バー
-│   │   └── UserListView.swift     # フォロワー/フォロー中一覧 + フォロー/解除ボタン
+│   │   ├── ProfileView.swift      # ProfileScreenView + ProfileHeaderView + 横スクロールタブバー（7タブ：投稿/返信/メディア/いいね/フィード/リスト/スターターパック）+ コンパクトヘッダー + ピン留め表示 + 内部検索バー
+│   │   ├── UserListView.swift     # フォロワー/フォロー中一覧 + フォロー/解除ボタン
+│   │   ├── ListFeedView.swift     # リストフィード表示（getListFeed・無限スクロール）
+│   │   └── StarterPackView.swift  # スターターパック一覧（StarterPackListTabView）+ 詳細（StarterPackDetailView）
 │   ├── Search/
 │   │   └── SearchView.swift       # SearchView + ActorRowView + SearchPostRowView（スレッド遷移）+ 検索履歴一覧
 │   ├── Settings/

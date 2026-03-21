@@ -104,6 +104,55 @@ struct ListItemView: Codable {
     let subject: ProfileViewBasic
 }
 
+// MARK: - スターターパック モデル
+
+struct StarterPackView: Codable, Identifiable {
+    let uri: String
+    let cid: String
+    let record: StarterPackRecord
+    let creator: ProfileViewBasic
+    let list: GraphListView?
+    let listItemCount: Int?
+    let joinedWeekCount: Int?
+    let joinedAllTimeCount: Int?
+    let indexedAt: String
+
+    var id: String { uri }
+}
+
+struct StarterPackRecord: Codable {
+    let name: String
+    let description: String?
+}
+
+struct StarterPackViewBasic: Codable, Identifiable {
+    let uri: String
+    let cid: String
+    let record: StarterPackRecord
+    let creator: ProfileViewBasic
+    let listItemCount: Int?
+    let joinedWeekCount: Int?
+    let joinedAllTimeCount: Int?
+    let indexedAt: String
+
+    var id: String { uri }
+}
+
+struct GetActorStarterPacksResponse: Codable {
+    let starterPacks: [StarterPackViewBasic]
+    let cursor: String?
+}
+
+struct GetStarterPackResponse: Codable {
+    let starterPack: StarterPackView
+}
+
+struct GetListMembersResponse: Codable {
+    let list: GraphListView
+    let items: [ListItemView]
+    let cursor: String?
+}
+
 struct GeneratorView: Codable, Identifiable, Hashable {
     let uri: String
     let cid: String
@@ -218,6 +267,25 @@ struct FeedService {
         var params: [String: String] = ["actor": actor, "limit": "\(limit)"]
         if let cursor = cursor { params["cursor"] = cursor }
         return try await client.get(nsid: "app.bsky.graph.getLists", params: params)
+    }
+
+    /// 指定アクターが作成したスターターパック一覧を取得する
+    func getActorStarterPacks(actor: String, limit: Int = 50, cursor: String? = nil) async throws -> GetActorStarterPacksResponse {
+        var params: [String: String] = ["actor": actor, "limit": "\(limit)"]
+        if let cursor = cursor { params["cursor"] = cursor }
+        return try await client.get(nsid: "app.bsky.graph.getActorStarterPacks", params: params)
+    }
+
+    /// スターターパックを取得する
+    func getStarterPack(uri: String) async throws -> GetStarterPackResponse {
+        return try await client.get(nsid: "app.bsky.graph.getStarterPack", params: ["starterPack": uri])
+    }
+
+    /// リストのメンバー一覧を取得する
+    func getListMembers(listURI: String, limit: Int = 50, cursor: String? = nil) async throws -> GetListMembersResponse {
+        var params: [String: String] = ["list": listURI, "limit": "\(limit)"]
+        if let cursor = cursor { params["cursor"] = cursor }
+        return try await client.get(nsid: "app.bsky.graph.getList", params: params)
     }
 
     /// 保存済みフィードとリスト両方を返す（横スクロールタブバー用）
