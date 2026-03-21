@@ -8,6 +8,15 @@ import Observation
 @Observable
 final class AppSettings {
 
+    // MARK: - App Group UserDefaults
+
+    /// メインアプリと Share Extension で設定を共有するための UserDefaults
+    static let suiteName = "group.com.osprey74.kazahana-ios"
+    private static var defaults: UserDefaults {
+        UserDefaults(suiteName: suiteName) ?? .standard
+    }
+    private var defaults: UserDefaults { AppSettings.defaults }
+
     // MARK: - テーマ設定
 
     enum Theme: String, CaseIterable {
@@ -54,17 +63,17 @@ final class AppSettings {
     // MARK: - 設定値
 
     var theme: Theme {
-        didSet { UserDefaults.standard.set(theme.rawValue, forKey: "theme") }
+        didSet { defaults.set(theme.rawValue, forKey: "theme") }
     }
 
     /// タイムライン自動更新の間隔
     var timelinePollingInterval: PollingInterval {
-        didSet { UserDefaults.standard.set(timelinePollingInterval.rawValue, forKey: "timelinePollingInterval") }
+        didSet { defaults.set(timelinePollingInterval.rawValue, forKey: "timelinePollingInterval") }
     }
 
     /// 投稿元（via）をレコードに付与するか
     var showVia: Bool {
-        didSet { UserDefaults.standard.set(showVia, forKey: "showVia") }
+        didSet { defaults.set(showVia, forKey: "showVia") }
     }
 
     /// via として付与するクライアント名
@@ -114,12 +123,12 @@ final class AppSettings {
     /// ユーザーが設定した投稿言語（system = 端末ロケール自動）
     var postLanguageSetting: PostLanguage {
         didSet {
-            UserDefaults.standard.set(postLanguageSetting.rawValue, forKey: "postLanguageSetting")
+            defaults.set(postLanguageSetting.rawValue, forKey: "postLanguageSetting")
             // AppleLanguages を書き込むことで次回起動時の表示言語を変更する
             if let code = postLanguageSetting.langCode {
-                UserDefaults.standard.set([code], forKey: "AppleLanguages")
+                defaults.set([code], forKey: "AppleLanguages")
             } else {
-                UserDefaults.standard.removeObject(forKey: "AppleLanguages")
+                defaults.removeObject(forKey: "AppleLanguages")
             }
         }
     }
@@ -159,14 +168,14 @@ final class AppSettings {
 
     /// 成人向けコンテンツの表示を許可するか（false = 全て非表示）
     var adultContentEnabled: Bool {
-        didSet { UserDefaults.standard.set(adultContentEnabled, forKey: "adultContentEnabled") }
+        didSet { defaults.set(adultContentEnabled, forKey: "adultContentEnabled") }
     }
 
     /// ラベル値ごとの表示設定（キー: ラベル値、値: ModerationBehavior）
     var labelPreferences: [String: ModerationBehavior] {
         didSet {
             let encoded = labelPreferences.mapValues { $0.rawValue }
-            UserDefaults.standard.set(encoded, forKey: "labelPreferences")
+            defaults.set(encoded, forKey: "labelPreferences")
         }
     }
 
@@ -174,7 +183,7 @@ final class AppSettings {
 
     /// Anthropic Claude API キー（ALT テキスト自動生成に使用）
     var claudeApiKey: String {
-        didSet { UserDefaults.standard.set(claudeApiKey, forKey: "claudeApiKey") }
+        didSet { defaults.set(claudeApiKey, forKey: "claudeApiKey") }
     }
 
     // MARK: - ホームフィード管理設定
@@ -183,7 +192,7 @@ final class AppSettings {
     var pinnedFeedURIs: [String] {
         didSet {
             if let data = try? JSONEncoder().encode(pinnedFeedURIs) {
-                UserDefaults.standard.set(data, forKey: "pinnedFeedURIs")
+                defaults.set(data, forKey: "pinnedFeedURIs")
             }
         }
     }
@@ -192,29 +201,30 @@ final class AppSettings {
     var hiddenFeedURIs: [String] {
         didSet {
             if let data = try? JSONEncoder().encode(hiddenFeedURIs) {
-                UserDefaults.standard.set(data, forKey: "hiddenFeedURIs")
+                defaults.set(data, forKey: "hiddenFeedURIs")
             }
         }
     }
 
     /// フィード選択メニューに全フィード/リストを表示するか
     var showAllFeedsInSelector: Bool {
-        didSet { UserDefaults.standard.set(showAllFeedsInSelector, forKey: "showAllFeedsInSelector") }
+        didSet { defaults.set(showAllFeedsInSelector, forKey: "showAllFeedsInSelector") }
     }
 
     // MARK: - Init
 
     init() {
-        let themeRaw = UserDefaults.standard.string(forKey: "theme") ?? Theme.system.rawValue
+        let d = AppSettings.defaults
+        let themeRaw = d.string(forKey: "theme") ?? Theme.system.rawValue
         self.theme = Theme(rawValue: themeRaw) ?? .system
-        let pollingRaw = UserDefaults.standard.integer(forKey: "timelinePollingInterval")
+        let pollingRaw = d.integer(forKey: "timelinePollingInterval")
         self.timelinePollingInterval = PollingInterval(rawValue: pollingRaw) ?? .sec60
-        self.showVia = UserDefaults.standard.object(forKey: "showVia") as? Bool ?? false
-        self.adultContentEnabled = UserDefaults.standard.object(forKey: "adultContentEnabled") as? Bool ?? false
-        self.claudeApiKey = UserDefaults.standard.string(forKey: "claudeApiKey") ?? ""
-        let langRaw = UserDefaults.standard.string(forKey: "postLanguageSetting") ?? PostLanguage.system.rawValue
+        self.showVia = d.object(forKey: "showVia") as? Bool ?? false
+        self.adultContentEnabled = d.object(forKey: "adultContentEnabled") as? Bool ?? false
+        self.claudeApiKey = d.string(forKey: "claudeApiKey") ?? ""
+        let langRaw = d.string(forKey: "postLanguageSetting") ?? PostLanguage.system.rawValue
         self.postLanguageSetting = PostLanguage(rawValue: langRaw) ?? .system
-        if let stored = UserDefaults.standard.dictionary(forKey: "labelPreferences") as? [String: String] {
+        if let stored = d.dictionary(forKey: "labelPreferences") as? [String: String] {
             self.labelPreferences = stored.compactMapValues { ModerationBehavior(rawValue: $0) }
         } else {
             self.labelPreferences = [
@@ -225,19 +235,19 @@ final class AppSettings {
                 "gore": .warn,
             ]
         }
-        if let data = UserDefaults.standard.data(forKey: "pinnedFeedURIs"),
+        if let data = d.data(forKey: "pinnedFeedURIs"),
            let uris = try? JSONDecoder().decode([String].self, from: data) {
             self.pinnedFeedURIs = uris
         } else {
             self.pinnedFeedURIs = []
         }
-        if let data = UserDefaults.standard.data(forKey: "hiddenFeedURIs"),
+        if let data = d.data(forKey: "hiddenFeedURIs"),
            let uris = try? JSONDecoder().decode([String].self, from: data) {
             self.hiddenFeedURIs = uris
         } else {
             self.hiddenFeedURIs = []
         }
-        self.showAllFeedsInSelector = UserDefaults.standard.object(forKey: "showAllFeedsInSelector") as? Bool ?? true
+        self.showAllFeedsInSelector = d.object(forKey: "showAllFeedsInSelector") as? Bool ?? true
     }
 
     // MARK: - Singleton

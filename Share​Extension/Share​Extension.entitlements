@@ -6,5 +6,9 @@
 	<array>
 		<string>$(AppIdentifierPrefix)com.osprey74.kazahana-ios</string>
 	</array>
+	<key>com.apple.security.application-groups</key>
+	<array>
+		<string>group.com.osprey74.kazahana-ios</string>
+	</array>
 </dict>
 </plist>

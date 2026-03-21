@@ -59,14 +59,19 @@ struct ShareSettings {
     /// showVia が true の場合に付与するクライアント名
     static let viaName = "kazahana for iOS"
 
+    /// メインアプリと共有する App Group UserDefaults
+    private static var defaults: UserDefaults {
+        UserDefaults(suiteName: "group.com.osprey74.kazahana-ios") ?? .standard
+    }
+
     static var via: String? {
-        let showVia = UserDefaults.standard.object(forKey: "showVia") as? Bool ?? false
+        let showVia = defaults.object(forKey: "showVia") as? Bool ?? false
         return showVia ? viaName : nil
     }
 
     /// 投稿レコードに渡す langs 配列（ユーザー設定 > 端末ロケール）
     static var langs: [String] {
-        let langRaw = UserDefaults.standard.string(forKey: "postLanguageSetting") ?? "system"
+        let langRaw = defaults.string(forKey: "postLanguageSetting") ?? "system"
         if langRaw != "system" {
             return [langRaw]
         }
