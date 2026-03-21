@@ -30,6 +30,8 @@ struct MainTabView: View {
     @State private var deepLinkProfileActor: String? = nil
     // ディープリンクで開く投稿スレッドの AT-URI
     @State private var deepLinkPostURI: IdentifiableString? = nil
+    // ディープリンクで開く投稿作成画面の初期テキスト（kazahana://compose?text=...）
+    @State private var deepLinkComposeText: IdentifiableString? = nil
 
     enum Tab {
         case home, search, notifications, messages, profile
@@ -90,6 +92,14 @@ struct MainTabView: View {
                 .environment(authVM)
             }
         }
+        // ディープリンクで投稿作成画面を開く（Share Extension 経由）
+        .sheet(item: $deepLinkComposeText) { item in
+            if let postService = authVM.isLoggedIn ? PostService(client: authVM.client) : nil {
+                ComposeView(postService: postService, initialText: item.value)
+                    .environment(authVM)
+                    .environment(AppSettings.shared)
+            }
+        }
         .onOpenURL { url in
             handleDeepLink(url)
         }
@@ -124,6 +134,11 @@ struct MainTabView: View {
         case "hashtag":
             // ハッシュタグは検索タブに切り替え（将来的に検索クエリを渡す実装で拡張）
             selectedTab = .search
+        case "compose":
+            // Share Extension から起動: ?text= クエリパラメータを投稿エリアに渡す
+            let components = URLComponents(url: url, resolvingAgainstBaseURL: false)
+            let text = components?.queryItems?.first(where: { $0.name == "text" })?.value ?? ""
+            deepLinkComposeText = IdentifiableString(value: text)
         default:
             break
         }

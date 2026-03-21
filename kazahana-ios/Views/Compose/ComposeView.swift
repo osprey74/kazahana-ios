@@ -68,7 +68,7 @@ struct ComposeView: View {
     private let replyTarget: ReplyTarget?
     private let quotePost: PostView?
 
-    init(postService: PostService, searchService: SearchService? = nil, replyTo: PostView? = nil, quotedPost: PostView? = nil) {
+    init(postService: PostService, searchService: SearchService? = nil, replyTo: PostView? = nil, quotedPost: PostView? = nil, initialText: String = "") {
         self.postService = postService
         self.searchService = searchService ?? SearchService(client: postService.atProtoClient)
         self.replyToPost = replyTo
@@ -83,6 +83,7 @@ struct ComposeView: View {
         } else {
             self.replyTarget = nil
         }
+        self._text = State(initialValue: initialText)
     }
 
     private var graphemeCount: Int { text.count }
