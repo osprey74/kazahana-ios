@@ -47,6 +47,7 @@ struct ThreadView: View {
         .navigationBarTitleDisplayMode(.inline)
         .navigationTitle(String(localized: "thread.title"))
         .toolbar(.hidden, for: .navigationBar)
+        .enableInteractivePop()
         .overlay(alignment: .topLeading) {
             Button {
                 dismiss()

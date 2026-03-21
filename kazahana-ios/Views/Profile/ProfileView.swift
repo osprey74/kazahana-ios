@@ -80,6 +80,7 @@ struct ProfileScreenView: View {
                 .environment(AppSettings.shared)
         }
         .toolbar(.hidden, for: .navigationBar)
+        .enableInteractivePop()
     }
 
     private func setupViewModel() {
