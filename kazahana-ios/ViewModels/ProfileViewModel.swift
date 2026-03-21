@@ -11,6 +11,8 @@ enum ProfileTab: String, CaseIterable {
     case replies = "replies"
     case media   = "media"
     case likes   = "likes"
+    case feeds   = "feeds"
+    case lists   = "lists"
 
     var displayName: String {
         switch self {
@@ -18,6 +20,8 @@ enum ProfileTab: String, CaseIterable {
         case .replies: return String(localized: "profile.replies")
         case .media:   return String(localized: "profile.media")
         case .likes:   return String(localized: "profile.likes")
+        case .feeds:   return String(localized: "profile.feeds")
+        case .lists:   return String(localized: "profile.lists")
         }
     }
 }
@@ -52,19 +56,28 @@ final class ProfileViewModel {
     var profileSearchHasMore = false
     private var profileSearchTask: Task<Void, Never>?
 
+    // カスタムフィード / リスト一覧（feedsタブ・listsタブ用）
+    var actorFeeds: [GeneratorView] = []
+    var actorLists: [GraphListView] = []
+    var isLoadingFeeds = false
+    var isLoadingLists = false
+
     private var cursor: String?
     private var hasMore = true
     let actor: String
 
     private let graphService: GraphService
     private var searchService: SearchService?
+    private var feedService: FeedService?
 
-    init(actor: String, graphService: GraphService, searchService: SearchService? = nil) {
+    init(actor: String, graphService: GraphService, searchService: SearchService? = nil, feedService: FeedService? = nil) {
         self.actor = actor
         self.graphService = graphService
         self.searchService = searchService
-        // 全タブの初期化
-        for tab in ProfileTab.allCases {
+        self.feedService = feedService
+        // feeds/lists タブはフィードポストを持たないので tabFeeds から除外
+        let postTabs: [ProfileTab] = [.posts, .replies, .media, .likes]
+        for tab in postTabs {
             tabFeeds[tab] = []
             tabCursors[tab] = nil
             tabHasMore[tab] = true
@@ -107,6 +120,16 @@ final class ProfileViewModel {
 
     @MainActor
     func loadTab(_ tab: ProfileTab) async {
+        // feeds / lists タブは専用メソッドで処理
+        if tab == .feeds {
+            await loadActorFeeds()
+            return
+        }
+        if tab == .lists {
+            await loadActorLists()
+            return
+        }
+
         guard !(tabIsLoading[tab] ?? false) else { return }
         tabIsLoading[tab] = true
         tabCursors[tab] = nil
@@ -127,6 +150,8 @@ final class ProfileViewModel {
 
     @MainActor
     func loadMoreTab(_ tab: ProfileTab) async {
+        // feeds / lists タブはページネーションなし
+        guard tab != .feeds, tab != .lists else { return }
         guard !(tabIsLoading[tab] ?? false),
               tabHasMore[tab] ?? false,
               let currentCursor = tabCursors[tab] ?? nil else { return }
@@ -154,7 +179,38 @@ final class ProfileViewModel {
             return try await graphService.getAuthorFeed(actor: actor, limit: 30, cursor: cursor, filter: "posts_with_media")
         case .likes:
             return try await graphService.getActorLikes(actor: actor, limit: 30, cursor: cursor)
+        case .feeds, .lists:
+            // これらのタブは loadTab で分岐済みのため到達しない
+            return TimelineResponse(feed: [], cursor: nil)
         }
+    }
+
+    // MARK: - フィード / リスト一覧読み込み
+
+    @MainActor
+    func loadActorFeeds() async {
+        guard !isLoadingFeeds, let feedService else { return }
+        isLoadingFeeds = true
+        do {
+            let response = try await feedService.getActorFeeds(actor: actor)
+            actorFeeds = response.feeds
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+        isLoadingFeeds = false
+    }
+
+    @MainActor
+    func loadActorLists() async {
+        guard !isLoadingLists, let feedService else { return }
+        isLoadingLists = true
+        do {
+            let response = try await feedService.getLists(actor: actor)
+            actorLists = response.lists
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+        isLoadingLists = false
     }
 
     @MainActor

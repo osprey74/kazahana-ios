@@ -89,6 +89,11 @@ struct GetListsResponse: Codable {
     let cursor: String?
 }
 
+struct GetActorFeedsResponse: Codable {
+    let feeds: [GeneratorView]
+    let cursor: String?
+}
+
 struct GetListResponse: Codable {
     let list: GraphListView
     let cursor: String?
@@ -199,6 +204,20 @@ struct FeedService {
             params: ["actor": actor, "limit": "\(limit)"]
         )
         return response.lists.filter { $0.purpose == "app.bsky.graph.defs#curatelist" }
+    }
+
+    /// 指定アクターが作成したカスタムフィード一覧を取得する
+    func getActorFeeds(actor: String, limit: Int = 100, cursor: String? = nil) async throws -> GetActorFeedsResponse {
+        var params: [String: String] = ["actor": actor, "limit": "\(limit)"]
+        if let cursor = cursor { params["cursor"] = cursor }
+        return try await client.get(nsid: "app.bsky.feed.getActorFeeds", params: params)
+    }
+
+    /// 指定アクターのリスト一覧を取得する
+    func getLists(actor: String, limit: Int = 100, cursor: String? = nil) async throws -> GetListsResponse {
+        var params: [String: String] = ["actor": actor, "limit": "\(limit)"]
+        if let cursor = cursor { params["cursor"] = cursor }
+        return try await client.get(nsid: "app.bsky.graph.getLists", params: params)
     }
 
     /// 保存済みフィードとリスト両方を返す（横スクロールタブバー用）

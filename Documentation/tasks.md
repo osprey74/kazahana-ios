@@ -1,6 +1,6 @@
 # kazahana-ios 開発タスク・進捗記録
 
-最終更新: 2026-03-20 (Phase 5-F: ホームフィード・リスト管理 実装完了)
+最終更新: 2026-03-21 (Bot自動化ラベルバッジ 実装完了)
 
 ---
 
@@ -11,7 +11,7 @@
 - Phase 3 (通知・プロフィール・検索): 6/6 ✅ 完了
 - Phase 3.5 (UX改善・バグ修正): 12/12 ✅ 完了
 - Phase 4 (DM・モデレーション・設定): 28/28 ✅ 完了
-- Phase 5 (BSAF・高度な機能): 5-B 完了（スレッド投稿ペンディング）、5-C/5-F 完了、5-A/5-D/5-E 未着手
+- Phase 5 (BSAF・高度な機能): 5-B 完了（スレッド投稿ペンディング）、5-C/5-F 完了、Bot Badge 完了、5-A/5-D/5-E 未着手
 
 ---
 
@@ -348,6 +348,20 @@
   - 「リストア」ボタン
 - [ ] `Localizable.xcstrings` に i18n キー追加（11言語）
 
+### Bot自動化ラベルバッジ — 完了 ✅
+
+- [x] **BotBadge ビュー** — `Views/Common/BotBadge.swift` 新規作成
+  - Material Symbols Rounded `smart_toy`（U+F06C）グリフを使用（サブセットフォント `SmartToy.ttf` 6.2KB）
+  - `Info.plist` に `UIAppFonts` キーで登録
+  - `isBotAccount(did:labels:)` ユーティリティ関数（`label.val == "bot"` かつ `label.src == did` の2条件）
+- [x] **PostCardView** — 著者名横に BotBadge 追加（14pt）
+- [x] **ThreadView** — フォーカス投稿著者名横に BotBadge 追加（14pt）
+- [x] **QuoteEmbedView** — 引用埋め込みヘッダーに BotBadge 追加（12pt）
+- [x] **ProfileView** — コンパクト・フルヘッダー両方に BotBadge 追加（18pt）
+- [x] **NotificationItemView** — 通知著者名横に BotBadge 追加（13pt）
+- [x] **ActorRowView（SearchView / UserListView）** — 表示名横に BotBadge 追加（14pt）
+- [x] **Localizable.xcstrings** — `bot.label` キーを11言語で追加
+
 ### 5-D: プロフィール追加機能（優先度：低）
 - [ ] **スターターパック閲覧** — `app.bsky.graph.getStarterPack` / `getActorStarterPacks`
 - [ ] **カスタムフィード一覧** — `app.bsky.feed.getActorFeeds`（プロフィールタブ）
@@ -405,14 +419,15 @@
 
 ---
 
-## ファイル構成（2026-03-20 Phase 5-C: 共有シート・ディープリンク・バックグラウンドポーリング完了時点）
+## ファイル構成（2026-03-21 Bot自動化ラベルバッジ完了時点）
 
 ```
 kazahana-ios/
 ├── kazahana_iosApp.swift          # AppSettings環境注入・preferredColorScheme適用・BGTask登録
 ├── ContentView.swift              # ルートビュー + MainTabView + ディープリンク処理
-├── Info.plist                     # BGTaskSchedulerPermittedIdentifiers / CFBundleURLTypes
+├── Info.plist                     # BGTaskSchedulerPermittedIdentifiers / CFBundleURLTypes / UIAppFonts
 ├── Localizable.xcstrings          # 11言語対応 String Catalog（ja/en/pt/de/zh-TW/zh-CN/fr/ko/es/ru/id）
+├── SmartToy.ttf                   # Material Symbols Rounded サブセット（smart_toy グリフのみ、6.2KB）
 ├── Models/
 │   ├── Session.swift
 │   ├── Post.swift                 # PostEmbedCreate / ImageEmbedCreate / BlobRef / VideoEmbedCreate など
@@ -480,6 +495,7 @@ kazahana-ios/
 │       ├── VideoPlayerView.swift
 │       ├── LinkCardView.swift
 │       ├── QuoteEmbedView.swift
+│       ├── BotBadge.swift          # Bot自動化ラベルバッジ（smart_toy グリフ + isBotAccount() ユーティリティ）
 │       ├── FeedSelectorView.swift  # フィード選択シート
 │       ├── PostActorListView.swift # いいね/リポストユーザー一覧
 │       ├── ContentWarningView.swift # PostBlurOverlay / MediaBlurOverlay

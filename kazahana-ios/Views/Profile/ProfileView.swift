@@ -70,7 +70,8 @@ struct ProfileScreenView: View {
         guard viewModel == nil else { return }
         let graphService = GraphService(client: authVM.client)
         let searchService = SearchService(client: authVM.client)
-        viewModel = ProfileViewModel(actor: actor, graphService: graphService, searchService: searchService)
+        let feedService = FeedService(client: authVM.client)
+        viewModel = ProfileViewModel(actor: actor, graphService: graphService, searchService: searchService, feedService: feedService)
     }
 
     @ViewBuilder
@@ -104,6 +105,10 @@ struct ProfileScreenView: View {
                     // 検索中は検索結果を表示、それ以外はタブフィード
                     if !vm.profileSearchQuery.isEmpty {
                         profileSearchResults(vm: vm)
+                    } else if vm.selectedTab == .feeds {
+                        profileFeedsTab(vm: vm)
+                    } else if vm.selectedTab == .lists {
+                        profileListsTab(vm: vm)
                     } else {
                         // ピン留め投稿（投稿タブのみ）
                         if vm.selectedTab == .posts, let pinned = vm.pinnedPost {
@@ -336,31 +341,152 @@ struct ProfileScreenView: View {
         }
     }
 
-    private func profileTabBar(vm: ProfileViewModel) -> some View {
-        HStack(spacing: 0) {
-            ForEach(ProfileTab.allCases, id: \.self) { tab in
-                Button {
-                    if vm.selectedTab != tab {
-                        vm.selectedTab = tab
-                        if vm.tabFeeds[tab]?.isEmpty ?? true {
-                            Task { await vm.loadTab(tab) }
+    @ViewBuilder
+    private func profileFeedsTab(vm: ProfileViewModel) -> some View {
+        if vm.isLoadingFeeds && vm.actorFeeds.isEmpty {
+            ProgressView().padding(.top, 32)
+        } else if vm.actorFeeds.isEmpty {
+            Text(String(localized: "profile.noFeeds"))
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .padding(.top, 40)
+                .frame(maxWidth: .infinity)
+        } else {
+            ForEach(vm.actorFeeds) { feed in
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack(spacing: 12) {
+                        if let avatarURL = feed.avatar, let url = URL(string: avatarURL) {
+                            AsyncImage(url: url) { image in
+                                image.resizable().scaledToFill()
+                            } placeholder: {
+                                Color.gray.opacity(0.3)
+                            }
+                            .frame(width: 44, height: 44)
+                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                        } else {
+                            Image(systemName: "list.star")
+                                .font(.title3)
+                                .foregroundStyle(.secondary)
+                                .frame(width: 44, height: 44)
+                                .background(Color(.systemGray5), in: RoundedRectangle(cornerRadius: 8))
+                        }
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(feed.displayName)
+                                .font(.subheadline)
+                                .fontWeight(.semibold)
+                                .lineLimit(1)
+                            if let desc = feed.description, !desc.isEmpty {
+                                Text(desc)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                    .lineLimit(2)
+                            }
+                            if let likes = feed.likeCount {
+                                Label("\(likes)", systemImage: "heart")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                        Spacer()
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+                }
+                Divider().padding(.leading, 16)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func profileListsTab(vm: ProfileViewModel) -> some View {
+        if vm.isLoadingLists && vm.actorLists.isEmpty {
+            ProgressView().padding(.top, 32)
+        } else if vm.actorLists.isEmpty {
+            Text(String(localized: "profile.noLists"))
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .padding(.top, 40)
+                .frame(maxWidth: .infinity)
+        } else {
+            ForEach(vm.actorLists) { list in
+                HStack(spacing: 12) {
+                    if let avatarURL = list.avatar, let url = URL(string: avatarURL) {
+                        AsyncImage(url: url) { image in
+                            image.resizable().scaledToFill()
+                        } placeholder: {
+                            Color.gray.opacity(0.3)
+                        }
+                        .frame(width: 44, height: 44)
+                        .clipShape(Circle())
+                    } else {
+                        Image(systemName: "list.bullet.rectangle")
+                            .font(.title3)
+                            .foregroundStyle(.secondary)
+                            .frame(width: 44, height: 44)
+                            .background(Color(.systemGray5), in: Circle())
+                    }
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(list.name)
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
+                            .lineLimit(1)
+                        if let desc = list.description, !desc.isEmpty {
+                            Text(desc)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(2)
+                        }
+                        if let count = list.listItemCount {
+                            Label("\(count)", systemImage: "person.2")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
                         }
                     }
-                } label: {
-                    VStack(spacing: 4) {
-                        Text(tab.displayName)
-                            .font(.subheadline)
-                            .fontWeight(vm.selectedTab == tab ? .semibold : .regular)
-                            .foregroundStyle(vm.selectedTab == tab ? Color.primary : Color.secondary)
-                            .padding(.vertical, 10)
-                        Rectangle()
-                            .fill(vm.selectedTab == tab ? Color.accentColor : Color.clear)
-                            .frame(height: 2)
-                    }
+                    Spacer()
                 }
-                .buttonStyle(.plain)
-                .frame(maxWidth: .infinity)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 10)
+                Divider().padding(.leading, 16)
             }
+        }
+    }
+
+    private func profileTabBar(vm: ProfileViewModel) -> some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 0) {
+                ForEach(ProfileTab.allCases, id: \.self) { tab in
+                    Button {
+                        if vm.selectedTab != tab {
+                            vm.selectedTab = tab
+                            // feeds/lists タブは専用フラグ、それ以外は tabFeeds で判断
+                            let needsLoad: Bool = {
+                                switch tab {
+                                case .feeds: return vm.actorFeeds.isEmpty && !vm.isLoadingFeeds
+                                case .lists: return vm.actorLists.isEmpty && !vm.isLoadingLists
+                                default:     return vm.tabFeeds[tab]?.isEmpty ?? true
+                                }
+                            }()
+                            if needsLoad {
+                                Task { await vm.loadTab(tab) }
+                            }
+                        }
+                    } label: {
+                        VStack(spacing: 4) {
+                            Text(tab.displayName)
+                                .font(.subheadline)
+                                .fontWeight(vm.selectedTab == tab ? .semibold : .regular)
+                                .foregroundStyle(vm.selectedTab == tab ? Color.primary : Color.secondary)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 10)
+                            Rectangle()
+                                .fill(vm.selectedTab == tab ? Color.accentColor : Color.clear)
+                                .frame(height: 2)
+                        }
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal, 8)
         }
     }
 }
@@ -376,37 +502,21 @@ struct ProfileHeaderView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // バナー（自分のプロフィールの場合のみ右上に設定ボタンをオーバーレイ）
-            ZStack(alignment: .topTrailing) {
-                if let bannerURL = vm.profile?.banner, let url = URL(string: bannerURL) {
-                    AsyncImage(url: url) { image in
-                        image.resizable().scaledToFill()
-                    } placeholder: {
-                        Color.gray.opacity(0.3)
-                    }
+            // バナー
+            if let bannerURL = vm.profile?.banner, let url = URL(string: bannerURL) {
+                AsyncImage(url: url) { image in
+                    image.resizable().scaledToFill()
+                } placeholder: {
+                    Color.gray.opacity(0.3)
+                }
+                .frame(height: 120)
+                .clipped()
+            } else {
+                Color.gray.opacity(0.2)
                     .frame(height: 120)
-                    .clipped()
-                } else {
-                    Color.gray.opacity(0.2)
-                        .frame(height: 120)
-                }
-
-                if isSelf {
-                    Button {
-                        onTapSettings?()
-                    } label: {
-                        Image(systemName: "gearshape.fill")
-                            .font(.system(size: 16))
-                            .foregroundStyle(.white)
-                            .frame(width: 32, height: 32)
-                            .background(Color.black.opacity(0.35), in: Circle())
-                    }
-                    .padding(.top, 12)
-                    .padding(.trailing, 16)
-                }
             }
 
-            // アバター + フォローボタン
+            // アバター + フォロー/設定ボタン（アバターと同じ高さの行）
             HStack(alignment: .bottom) {
                 AvatarView(url: vm.profile?.avatar, size: 72)
                     .padding(4)
@@ -416,7 +526,19 @@ struct ProfileHeaderView: View {
 
                 Spacer()
 
-                if !isSelf {
+                if isSelf {
+                    Button {
+                        onTapSettings?()
+                    } label: {
+                        Image(systemName: "gearshape")
+                            .font(.system(size: 18))
+                            .foregroundStyle(.primary)
+                            .frame(width: 36, height: 36)
+                            .background(Color(.systemGray5), in: Circle())
+                    }
+                    .padding(.trailing, 16)
+                    .padding(.top, 8)
+                } else {
                     followButton
                         .padding(.trailing, 16)
                         .padding(.top, 8)
