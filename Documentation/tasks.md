@@ -1,6 +1,6 @@
 # kazahana-ios 開発タスク・進捗記録
 
-最終更新: 2026-03-21 (5-D リストフィード閲覧・スターターパック閲覧)
+最終更新: 2026-03-21 (UX改善バグ修正・棚卸し)
 
 ---
 
@@ -419,27 +419,30 @@
 
 ---
 
-## 既知の課題・TODO
+## UX改善・バグ修正（2026-03-21）
 
-- [x] **画像添付**: ComposeView のフォトライブラリ選択・uploadBlob は未実装 → Phase 4-B（実装済み）
-- [x] **メンション DID 解決**: RichTextParser.detectFacets でメンションを検出するが、resolveHandle による DID 解決は未実装 → Phase 4-A メンションオートコンプリートで対応（実装済み）
-- [ ] **ブックマーク**: AT Protocol にネイティブブックマーク API がないため設計要検討
-- [ ] **画像読み込み**: 現在 `AsyncImage` を使用。Kingfisher or Nuke の導入を Phase 4 以降で検討
-- [x] **バックグラウンドポーリング**: BGAppRefreshTask 未実装 → Phase 5-C（実装済み）
-- [ ] **Unit Tests**: テストは空のまま。Phase 4 以降でモデル・サービス層を追加予定
-- [ ] **Bundle ID**: 現在 Xcode デフォルト。`com.kazahana.app` への変更が必要（App Store 配布前）
-- [ ] **検索デバウンス**: SearchViewModel は Task キャンセルで対応しているが、厳密なデバウンス実装は未対応
-- [x] **引用数タップ**: ThreadView の引用数タップで `PostQuoteListView` に遷移（`app.bsky.feed.getQuotes` 実装済み）
-- [x] **ピン留め投稿レイアウト**: プロフィール画面でピン留め投稿がアバター・名前の上に重なっていたバグを修正（ZStack → VStack に変更）
-- [x] **コンテンツモデレーション**: タイムライン・検索・プロフィールでのラベル判定・ブラー・フィルタが未実装 → Phase 4-C（実装済み）
-- [x] **投稿削除**: 自分の投稿の三点メニューから削除する機能が未実装 → Phase 4-A（実装済み）
-- [x] **投稿元表示（via）**: 設定に基づきレコードにクライアント名を付与する機能が未実装 → Phase 4-D（実装済み）
-- [x] **DM（ダイレクトメッセージ）**: `chat.bsky.convo.*` API 全体が未実装 → Phase 4-F（実装済み）
-- [x] **プロフィール追加タブ**: 返信/いいね/メディア一覧が未実装 → Phase 4-E（実装済み）
+- [x] **スターターパック詳細デコードエラー修正** — `StarterPackView.list` の型を `GraphListView` → `GraphListViewBasic` に変更（AT Protocol の `listViewBasic` は `creator` フィールドを持たないため）
+- [x] **ImageViewer ALTテキスト表示改善** — 長文ALTが画面外にはみ出す問題を修正。`ScrollView` + `maxHeight: 100pt` でスクロール可能に
+- [x] **ImageViewer 閉じるボタン視認性改善** — 白 + 黒シャドウにより明/暗両方の画像背景で常に視認できるように
+- [x] **ImageViewer ALTテキスト背景改善** — `ultraThinMaterial` → `Color.black.opacity(0.6)` で白い画像上でも読みやすく
+- [x] **画像1枚のアスペクト比表示** — `aspectRatio` が既知の場合は `scaledToFit`（最大400pt）で実際の比率表示。不明時は従来通り固定220ptにフォールバック
+- [x] **検索結果投稿からプロフィール遷移** — `SearchPostRowView` にアバター/ユーザー名タップ → `ProfileScreenView` 遷移を追加
+- [x] **プロフィール画面最下部余白** — 各タブ末尾に50%高余白を追加し最終行タップを容易に
+- [x] **フィード/スターターパックタブのタップ問題** — `NavigationLink` → `@State + navigationDestination` パターンに統一して遷移を修正
 
 ---
 
-## ファイル構成（2026-03-21 5-D 完了時点）
+## 既知の課題・TODO
+
+- [ ] **ブックマーク**: AT Protocol にネイティブブックマーク API がないため設計要検討
+- [ ] **画像読み込み**: 現在 `AsyncImage` を使用。Kingfisher or Nuke の導入を検討
+- [ ] **Unit Tests**: テストは空のまま。モデル・サービス層のテストを追加予定
+- [ ] **Bundle ID**: 現在 Xcode デフォルト。`com.kazahana.app` への変更が必要（App Store 配布前）
+- [ ] **検索デバウンス**: SearchViewModel は Task キャンセルで対応しているが、厳密なデバウンス実装は未対応
+
+---
+
+## ファイル構成（2026-03-21 棚卸し時点）
 
 ```
 kazahana-ios/
@@ -450,7 +453,7 @@ kazahana-ios/
 ├── SmartToy.ttf                   # Material Symbols Rounded サブセット（smart_toy グリフのみ、6.2KB）
 ├── Models/
 │   ├── Session.swift
-│   ├── Post.swift                 # PostEmbedCreate / ImageEmbedCreate / BlobRef / VideoEmbedCreate など
+│   ├── Post.swift                 # PostEmbedCreate / ImageEmbedCreate / BlobRef / VideoEmbedCreate / EmbedImageView(aspectRatio) など
 │   ├── PostDraft.swift            # PostDraft: Codable, Identifiable（下書き保存用）
 │   ├── Profile.swift              # PinnedPost struct 追加
 │   ├── Notification.swift         # AppNotification, isViaRepost, reasonLabel/Icon/Color
@@ -459,7 +462,7 @@ kazahana-ios/
 │   ├── ATProtoClient.swift        # XRPC クライアント + getRecord + uploadBlob + getWithProxy/postWithProxy
 │   ├── AuthService.swift
 │   ├── SessionStore.swift
-│   ├── AppSettings.swift          # テーマ/via/言語/モデレーション/ポーリング設定（@Observable singleton）
+│   ├── AppSettings.swift          # テーマ/via/言語/モデレーション/ポーリング/pinnedFeedURIs/hiddenFeedURIs/showAllFeedsInSelector（@Observable singleton）
 │   ├── ModerationService.swift    # ラベル判定（none/inform/mediaBlur/blur/filter）
 │   ├── TimelineService.swift
 │   ├── PostService.swift          # createPost / uploadImage / getLikes / getRepostedBy / reportPost / reportAccount
@@ -467,18 +470,18 @@ kazahana-ios/
 │   ├── NotificationService.swift  # listNotifications / getUnreadCount / updateSeen
 │   ├── GraphService.swift         # follow / unfollow / getFollowers / getFollows / getAuthorFeed(filter) / getActorLikes
 │   ├── SearchService.swift        # searchActors / searchPosts / searchPostsByAuthor
-│   ├── FeedService.swift          # getSavedFeeds / getFeed / getTimeline + FeedSource enum
+│   ├── FeedService.swift          # getSavedFeeds / getFeed / getTimeline / GraphListView / GraphListViewBasic / FeedSource enum / StarterPack モデル群
 │   ├── ChatService.swift          # chat.bsky.convo.* 全 API ラッパー
 │   ├── DraftService.swift         # 下書き保存/読込/削除（Documents/drafts/ + UserDefaults JSON）
 │   ├── BackgroundRefreshService.swift # BGAppRefreshTask + UNUserNotificationCenter
 │   └── ClaudeService.swift        # ALT テキスト自動生成（Claude API）
 ├── ViewModels/
 │   ├── AuthViewModel.swift
-│   ├── TimelineViewModel.swift    # FeedSource対応 + removePost(uri:) + filterModeratedPosts + ポーリング
+│   ├── TimelineViewModel.swift    # FeedSource対応 + removePost(uri:) + filterModeratedPosts + ポーリング + savedLists + visibleFeedSources
 │   ├── ComposeViewModel.swift
 │   ├── ThreadViewModel.swift
 │   ├── NotificationViewModel.swift # resolvedRepostURIs キャッシュ
-│   ├── ProfileViewModel.swift     # フォロー楽観的 UI + ProfileTab enum（6タブ）+ actorFeeds/actorLists + タブ別フィード管理 + ピン留め投稿 + プロフィール内検索
+│   ├── ProfileViewModel.swift     # フォロー楽観的 UI + ProfileTab enum（7タブ）+ actorFeeds/actorLists + タブ別フィード管理 + ピン留め投稿 + プロフィール内検索
 │   ├── SearchViewModel.swift      # タブ切り替え・Task キャンセルデバウンス + filterModeratedPosts + 検索履歴
 │   ├── ConversationListViewModel.swift # 会話一覧 + 30秒ポーリング + ミュート/退出
 │   └── ChatThreadViewModel.swift  # メッセージ一覧 + 送信 + 削除 + 15秒ポーリング + 既読
@@ -486,7 +489,7 @@ kazahana-ios/
 │   ├── Auth/
 │   │   └── LoginView.swift
 │   ├── Timeline/
-│   │   ├── TimelineView.swift     # FAB・返信・引用・いいね/リポストユーザー一覧遷移
+│   │   ├── TimelineView.swift     # FAB・返信・引用・横スクロールタブバー（フィード2件以上で表示）
 │   │   └── PostCardView.swift     # モデレーション(blur/mediaBlur/filter) + 通報メニュー + 共有
 │   ├── Compose/
 │   │   ├── ComposeView.swift      # 返信・引用投稿・画像添付・動画添付・スレッドゲート・ポストゲート・下書き
@@ -501,9 +504,10 @@ kazahana-ios/
 │   │   ├── ProfileView.swift      # ProfileScreenView + ProfileHeaderView + 横スクロールタブバー（7タブ：投稿/返信/メディア/いいね/フィード/リスト/スターターパック）+ コンパクトヘッダー + ピン留め表示 + 内部検索バー
 │   │   ├── UserListView.swift     # フォロワー/フォロー中一覧 + フォロー/解除ボタン
 │   │   ├── ListFeedView.swift     # リストフィード表示（getListFeed・無限スクロール）
+│   │   ├── FeedGeneratorFeedView.swift # カスタムフィード投稿一覧（getFeed・無限スクロール）
 │   │   └── StarterPackView.swift  # スターターパック一覧（StarterPackListTabView）+ 詳細（StarterPackDetailView）
 │   ├── Search/
-│   │   └── SearchView.swift       # SearchView + ActorRowView + SearchPostRowView（スレッド遷移）+ 検索履歴一覧
+│   │   └── SearchView.swift       # SearchView + ActorRowView + SearchPostRowView（スレッド遷移・著者プロフィール遷移）+ 検索履歴一覧
 │   ├── Settings/
 │   │   ├── SettingsView.swift     # テーマ/言語切替・via表示・モデレーション設定・Claude API キー管理・アカウント情報・ホームフィード管理
 │   │   └── FeedManagementView.swift # フィード/リスト表示管理（表示/非表示トグル・ドラッグ並び替え）
@@ -513,14 +517,15 @@ kazahana-ios/
 │   │   └── NewConversationView.swift  # ユーザー検索 → 会話作成・検索履歴
 │   └── Common/
 │       ├── AvatarView.swift
-│       ├── ImageGridView.swift    # Color.clear overlay パターン（画像はみ出し修正済み）
-│       ├── ImageViewer.swift
-│       ├── VideoPlayerView.swift
+│       ├── ImageGridView.swift    # 1枚画像はaspectRatio対応（scaledToFit/最大400pt）・複数枚はグリッドクロップ
+│       ├── ImageViewer.swift      # ALTテキストScrollView(maxHeight:100pt)・閉じるボタンshadow・黒半透明背景
+│       ├── VideoPlayerView.swift  # AVPlayer + HLS + aspectRatio対応サムネイル
 │       ├── LinkCardView.swift
 │       ├── QuoteEmbedView.swift
-│       ├── BotBadge.swift          # Bot自動化ラベルバッジ（smart_toy グリフ + isBotAccount() ユーティリティ）
-│       ├── FeedSelectorView.swift  # フィード選択シート
+│       ├── BotBadge.swift         # Bot自動化ラベルバッジ（smart_toy グリフ + isBotAccount() ユーティリティ）
+│       ├── FeedSelectorView.swift # フィード選択シート（showAllFeedsInSelector 対応）
 │       ├── PostActorListView.swift # いいね/リポストユーザー一覧
+│       ├── PostQuoteListView.swift # 引用一覧
 │       ├── ContentWarningView.swift # PostBlurOverlay / MediaBlurOverlay
 │       └── ReportView.swift        # 投稿/アカウント通報UI
 ├── Extensions/
