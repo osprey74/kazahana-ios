@@ -30,17 +30,20 @@ struct ImageViewer: View {
             .tabViewStyle(.page(indexDisplayMode: images.count > 1 ? .always : .never))
             .indexViewStyle(.page(backgroundDisplayMode: .always))
 
-            // ALT テキスト（下部に全文表示）
+            // ALT テキスト（下部に最大3行、スクロール可能）
             if !currentAlt.isEmpty {
                 VStack {
                     Spacer()
-                    Text(currentAlt)
-                        .font(.caption)
-                        .foregroundStyle(.white.opacity(0.9))
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 10)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(.ultraThinMaterial.opacity(0.8))
+                    ScrollView {
+                        Text(currentAlt)
+                            .font(.caption)
+                            .foregroundStyle(.white.opacity(0.9))
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 10)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    .frame(maxHeight: 100)
+                    .background(.ultraThinMaterial.opacity(0.8))
                 }
                 .ignoresSafeArea(edges: .bottom)
             }
