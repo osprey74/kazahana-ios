@@ -74,17 +74,18 @@ struct ImageGridView: View {
 
     private func singleImage(_ image: EmbedImageView, index: Int) -> some View {
         VStack(alignment: .leading, spacing: 4) {
-            Color.clear
-                .frame(maxWidth: .infinity)
-                .frame(height: 220)
-                .overlay {
-                    AsyncImage(url: URL(string: image.thumb)) { phase in
-                        switch phase {
-                        case .success(let img): img.resizable().scaledToFill()
-                        default: placeholderRect
-                        }
+            if let ar = image.aspectRatio, ar.height > 0 {
+                // アスペクト比が既知の場合: 実際の比率で表示（縦長は最大400ptでキャップ）
+                let ratio = CGFloat(ar.width) / CGFloat(ar.height)
+                AsyncImage(url: URL(string: image.thumb)) { phase in
+                    switch phase {
+                    case .success(let img):
+                        img.resizable().scaledToFit()
+                    default:
+                        placeholderRect.aspectRatio(ratio, contentMode: .fit)
                     }
                 }
+                .frame(maxWidth: .infinity, maxHeight: 400)
                 .clipShape(RoundedRectangle(cornerRadius: 12))
                 .contentShape(Rectangle())
                 .onTapGesture {
@@ -92,6 +93,27 @@ struct ImageGridView: View {
                     isViewerPresented = true
                 }
                 .accessibilityLabel(image.alt.isEmpty ? String(localized: "image.accessibility") : image.alt)
+            } else {
+                // アスペクト比不明の場合: 従来通り固定高さ + scaledToFill
+                Color.clear
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 220)
+                    .overlay {
+                        AsyncImage(url: URL(string: image.thumb)) { phase in
+                            switch phase {
+                            case .success(let img): img.resizable().scaledToFill()
+                            default: placeholderRect
+                            }
+                        }
+                    }
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        selectedImageIndex = index
+                        isViewerPresented = true
+                    }
+                    .accessibilityLabel(image.alt.isEmpty ? String(localized: "image.accessibility") : image.alt)
+            }
 
             if !image.alt.isEmpty {
                 altTextLabel(image.alt)
