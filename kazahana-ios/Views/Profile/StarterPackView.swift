@@ -8,6 +8,7 @@ import SwiftUI
 struct StarterPackListTabView: View {
     @Environment(AuthViewModel.self) private var authVM
     let actor: String
+    var onSelect: ((StarterPackViewBasic) -> Void)? = nil
 
     @State private var starterPacks: [StarterPackViewBasic] = []
     @State private var isLoading = false
@@ -35,9 +36,8 @@ struct StarterPackListTabView: View {
                     .frame(maxWidth: .infinity)
             } else {
                 ForEach(starterPacks) { pack in
-                    NavigationLink {
-                        StarterPackDetailView(uri: pack.uri)
-                            .environment(authVM)
+                    Button {
+                        onSelect?(pack)
                     } label: {
                         starterPackRow(pack: pack)
                     }

@@ -12,6 +12,8 @@ struct ProfileScreenView: View {
     @State private var selectedPost: FeedViewPost?
     @State private var userListType: UserListType? = nil
     @State private var selectedList: GraphListView? = nil
+    @State private var selectedFeed: GeneratorView? = nil
+    @State private var selectedStarterPack: StarterPackViewBasic? = nil
     @State private var showSettings = false
     @State private var showCompose = false
     @State private var quotePost: PostView? = nil
@@ -49,6 +51,14 @@ struct ProfileScreenView: View {
         }
         .navigationDestination(item: $selectedList) { list in
             ListFeedView(list: list)
+                .environment(authVM)
+        }
+        .navigationDestination(item: $selectedFeed) { feed in
+            FeedGeneratorFeedView(feed: feed)
+                .environment(authVM)
+        }
+        .navigationDestination(item: $selectedStarterPack) { pack in
+            StarterPackDetailView(uri: pack.uri)
                 .environment(authVM)
         }
         .sheet(isPresented: $showSettings) {
@@ -115,8 +125,10 @@ struct ProfileScreenView: View {
                     } else if vm.selectedTab == .lists {
                         profileListsTab(vm: vm)
                     } else if vm.selectedTab == .starterPacks {
-                        StarterPackListTabView(actor: actor)
-                            .environment(authVM)
+                        StarterPackListTabView(actor: actor, onSelect: { pack in
+                            selectedStarterPack = pack
+                        })
+                        .environment(authVM)
                     } else {
                         // ピン留め投稿（投稿タブのみ）
                         if vm.selectedTab == .posts, let pinned = vm.pinnedPost {
@@ -365,7 +377,9 @@ struct ProfileScreenView: View {
                 .frame(maxWidth: .infinity)
         } else {
             ForEach(vm.actorFeeds) { feed in
-                VStack(alignment: .leading, spacing: 6) {
+                Button {
+                    selectedFeed = feed
+                } label: {
                     HStack(spacing: 12) {
                         if let avatarURL = feed.avatar, let url = URL(string: avatarURL) {
                             AsyncImage(url: url) { image in
@@ -386,6 +400,7 @@ struct ProfileScreenView: View {
                             Text(feed.displayName)
                                 .font(.subheadline)
                                 .fontWeight(.semibold)
+                                .foregroundStyle(.primary)
                                 .lineLimit(1)
                             if let desc = feed.description, !desc.isEmpty {
                                 Text(desc)
@@ -400,10 +415,14 @@ struct ProfileScreenView: View {
                             }
                         }
                         Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.caption)
+                            .foregroundStyle(.tertiary)
                     }
                     .padding(.horizontal, 16)
                     .padding(.vertical, 10)
                 }
+                .buttonStyle(.plain)
                 Divider().padding(.leading, 16)
             }
         }

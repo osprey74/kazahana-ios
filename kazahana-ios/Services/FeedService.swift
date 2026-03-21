@@ -125,7 +125,7 @@ struct StarterPackRecord: Codable {
     let description: String?
 }
 
-struct StarterPackViewBasic: Codable, Identifiable {
+struct StarterPackViewBasic: Codable, Identifiable, Hashable {
     let uri: String
     let cid: String
     let record: StarterPackRecord
@@ -136,6 +136,9 @@ struct StarterPackViewBasic: Codable, Identifiable {
     let indexedAt: String
 
     var id: String { uri }
+
+    static func == (lhs: StarterPackViewBasic, rhs: StarterPackViewBasic) -> Bool { lhs.uri == rhs.uri }
+    func hash(into hasher: inout Hasher) { hasher.combine(uri) }
 }
 
 struct GetActorStarterPacksResponse: Codable {
