@@ -21,6 +21,11 @@ final class TimelineViewModel {
     var savedLists: [GraphListView] = []
     var isLoadingFeeds: Bool = false
 
+    // BSAF 重複検出
+    /// primary 投稿 URI → 重複情報（PostCardView に渡す）
+    var bsafDuplicateInfo: [String: BsafDuplicateInfo] = [:]
+    private var bsafHiddenDuplicates: Set<String> = []
+
     // ページネーション
     private var cursor: String? = nil
     private var hasMore: Bool = true
@@ -115,7 +120,7 @@ final class TimelineViewModel {
 
         do {
             let response = try await fetchFeed(cursor: nil)
-            posts = filterModeratedPosts(response.feed)
+            posts = filterAndProcessPosts(response.feed)
             cursor = response.cursor
             hasMore = response.cursor != nil
         } catch {
@@ -136,7 +141,7 @@ final class TimelineViewModel {
 
         do {
             let response = try await fetchFeed(cursor: nil)
-            posts = filterModeratedPosts(response.feed)
+            posts = filterAndProcessPosts(response.feed)
             cursor = response.cursor
             hasMore = response.cursor != nil
         } catch {
@@ -154,7 +159,15 @@ final class TimelineViewModel {
 
         do {
             let response = try await fetchFeed(cursor: cursor)
-            posts.append(contentsOf: filterModeratedPosts(response.feed))
+            // 新規投稿をモデレーションフィルタのみ適用して追加
+            let newFiltered = response.feed.filter {
+                ModerationService().moderatePost($0.post).decision != .filter
+            }
+            posts.append(contentsOf: newFiltered)
+            // 全投稿でBSAF重複を再計算してフィルタ適用
+            let allPosts = posts
+            computeBsafDuplicates(allPosts)
+            posts = applyBsafFilters(allPosts)
             self.cursor = response.cursor
             hasMore = response.cursor != nil
         } catch {
@@ -194,10 +207,67 @@ final class TimelineViewModel {
 
     // MARK: - Private
 
-    /// filter 判定の投稿をタイムラインから除外する
-    private func filterModeratedPosts(_ posts: [FeedViewPost]) -> [FeedViewPost] {
-        let service = ModerationService()
-        return posts.filter { service.moderatePost($0.post).decision != .filter }
+    /// モデレーション + BSAF フィルタ + BSAF 重複非表示を適用する
+    private func filterAndProcessPosts(_ posts: [FeedViewPost]) -> [FeedViewPost] {
+        let moderationFiltered = posts.filter {
+            ModerationService().moderatePost($0.post).decision != .filter
+        }
+        computeBsafDuplicates(moderationFiltered)
+        return applyBsafFilters(moderationFiltered)
+    }
+
+    /// BSAF 重複グループを計算し bsafDuplicateInfo / bsafHiddenDuplicates を更新する
+    private func computeBsafDuplicates(_ posts: [FeedViewPost]) {
+        let settings = AppSettings.shared
+        var newDuplicateInfo: [String: BsafDuplicateInfo] = [:]
+        var newHiddenDuplicates: Set<String> = []
+
+        guard settings.bsafEnabled else {
+            bsafDuplicateInfo = [:]
+            bsafHiddenDuplicates = []
+            return
+        }
+
+        // type|value|time|target でグループ化
+        var groups: [String: [(uri: String, handle: String)]] = [:]
+        for feedPost in posts {
+            guard let tags = feedPost.post.record.tags,
+                  let parsed = BsafService.parseBsafTags(tags) else { continue }
+            let key = BsafService.duplicateKey(parsed)
+            let entry = (uri: feedPost.post.uri, handle: feedPost.post.author.handle)
+            groups[key, default: []].append(entry)
+        }
+
+        // 先頭が primary、残りは非表示
+        for group in groups.values where group.count > 1 {
+            let primary = group[0]
+            let rest = Array(group.dropFirst())
+            newDuplicateInfo[primary.uri] = BsafDuplicateInfo(
+                duplicateUris: rest.map { $0.uri },
+                duplicateHandles: rest.map { $0.handle }
+            )
+            for dup in rest { newHiddenDuplicates.insert(dup.uri) }
+        }
+
+        bsafDuplicateInfo = newDuplicateInfo
+        bsafHiddenDuplicates = newHiddenDuplicates
+    }
+
+    /// BSAF フィルタと重複非表示を適用する（モデレーション済みリストに対して）
+    private func applyBsafFilters(_ posts: [FeedViewPost]) -> [FeedViewPost] {
+        let settings = AppSettings.shared
+        return posts.filter { feedPost in
+            // BSAF 重複非表示
+            if bsafHiddenDuplicates.contains(feedPost.post.uri) { return false }
+            // BSAF フィルタ（有効時のみ）
+            if settings.bsafEnabled,
+               let tags = feedPost.post.record.tags,
+               let parsed = BsafService.parseBsafTags(tags),
+               let bot = settings.findRegisteredBot(did: feedPost.post.author.did) {
+                return BsafService.shouldShowBsafPost(parsed, bot: bot)
+            }
+            return true
+        }
     }
 
     private func fetchFeed(cursor: String?) async throws -> TimelineResponse {

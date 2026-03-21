@@ -1,6 +1,6 @@
 # kazahana-ios 開発タスク・進捗記録
 
-最終更新: 2026-03-21 (Share Extension 実装完了)
+最終更新: 2026-03-21 (Phase 5-A BSAF対応 実装完了)
 
 ---
 
@@ -11,7 +11,7 @@
 - Phase 3 (通知・プロフィール・検索): 6/6 ✅ 完了
 - Phase 3.5 (UX改善・バグ修正): 12/12 ✅ 完了
 - Phase 4 (DM・モデレーション・設定): 28/28 ✅ 完了
-- Phase 5 (BSAF・高度な機能): 5-B 完了（スレッド投稿ペンディング）、5-C 完了（送受信共有）、5-F/Bot Badge 完了、5-D 完了、5-A/5-E 未着手
+- Phase 5 (BSAF・高度な機能): 5-A 完了（BSAF対応）、5-B 完了（スレッド投稿ペンディング）、5-C 完了（送受信共有）、5-F/Bot Badge 完了、5-D 完了、5-E 未着手
 
 ---
 
@@ -247,17 +247,29 @@
 
 ## Phase 5: BSAF・高度な機能
 
-### 5-A: BSAF対応（優先度：中）
-- [ ] **BSAF マスタートグル** — 設定画面でオン/オフ
-- [ ] **Bot 定義 JSON パーサー & バリデーター** — デスクトップ版 `bsaf.ts` のロジックを移植
-- [ ] **Bot 登録** — URL 入力で Bot 定義を fetch・登録
-- [ ] **Bot 登録解除** — 登録解除 + 自動アンフォロー
-- [ ] **動的フィルタ UI** — Bot 定義に基づくフィルタ選択肢の自動生成
-- [ ] **タイムライン BSAF フィルタリング** — AND 条件フィルタ
-- [ ] **重複投稿検出 & 折りたたみ** — 同一イベントの折りたたみ
-- [ ] **深刻度カラーボーダー表示** — BSAF 投稿の左ボーダー色
-- [ ] **BSAF タグ表示** — 投稿本文下にタグバッジ表示
-- [ ] **Bot Definition 自動更新チェック** — アプリ起動時に更新確認
+### 5-A: BSAF対応（優先度：中）— 完了 ✅
+- [x] **BSAF マスタートグル** — 設定画面でオン/オフ
+- [x] **Bot 定義 JSON パーサー & バリデーター** — デスクトップ版 `bsaf.ts` のロジックを移植
+- [x] **Bot 登録** — URL 入力で Bot 定義を fetch・登録
+- [x] **Bot 登録解除** — 登録解除 + 自動アンフォロー
+- [x] **動的フィルタ UI** — Bot 定義に基づくフィルタ選択肢の自動生成
+- [x] **タイムライン BSAF フィルタリング** — AND 条件フィルタ
+- [x] **重複投稿検出 & 折りたたみ** — 同一イベントの折りたたみ
+- [x] **深刻度カラーボーダー表示** — BSAF 投稿の左ボーダー色
+- [x] **BSAF タグ表示** — 投稿本文下にタグバッジ表示
+- [x] **Bot Definition 自動更新チェック** — アプリ起動時に更新確認
+  - `Models/Bsaf.swift`: `BsafBotDefinition`, `BsafRegisteredBot`, `BsafParsedTags`, `BsafDuplicateInfo`, `BsafError`
+  - `Views/Common/WrappingHStack.swift`: `Layout` プロトコル準拠の折り返し水平レイアウト
+  - `Models/Post.swift`: `PostRecord` + `PostRecordCreate` に `tags: [String]?` 追加
+  - `Services/BsafService.swift`: `parseBsafTags`, `shouldShowBsafPost`, `duplicateKey`, `severityBorderColor`, `fetchBotDefinition`, `checkBotUpdates`
+  - `Services/AppSettings.swift`: `bsafEnabled` / `bsafRegisteredBots` プロパティ・Bot管理メソッド追加
+  - `ViewModels/TimelineViewModel.swift`: `filterAndProcessPosts` + 重複検出・BSAFフィルタリング
+  - `Views/Timeline/PostCardView.swift`: 左ボーダー・タグバッジ・重複インジケーター追加
+  - `Views/Timeline/TimelineView.swift`: `bsafDuplicateInfo` パラメータ追加
+  - `Views/Settings/SettingsView.swift`: BSAF セクション追加
+  - `Views/Settings/BsafBotsView.swift`: Bot管理画面（新規）
+  - `ContentView.swift`: 起動時 `.task` で Bot定義自動更新チェック
+  - `Localizable.xcstrings`: `bsaf.*` 23キー × 11言語追加
 
 ### 5-B: 投稿作成補完（優先度：中）
 - [x] **スレッドゲート** — 返信制限設定（全員/メンション/フォロワー/フォロー中/不可）

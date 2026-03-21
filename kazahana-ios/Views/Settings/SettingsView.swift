@@ -114,6 +114,22 @@ struct SettingsView: View {
                     }
                 }
 
+                // MARK: - BSAF
+                Section {
+                    Toggle(String(localized: "bsaf.enableBsaf"), isOn: $settings.bsafEnabled)
+
+                    if settings.bsafEnabled {
+                        NavigationLink {
+                            BsafBotsView(client: authVM.client)
+                                .environment(settings)
+                        } label: {
+                            Label(String(localized: "bsaf.manageBots"), systemImage: "antenna.radiowaves.left.and.right")
+                        }
+                    }
+                } header: {
+                    Text(String(localized: "bsaf.title"))
+                }
+
                 // MARK: - アカウント
                 Section(String(localized: "settings.account")) {
                     if let session = authVM.client.currentSession {

@@ -211,6 +211,22 @@ final class AppSettings {
         didSet { defaults.set(showAllFeedsInSelector, forKey: "showAllFeedsInSelector") }
     }
 
+    // MARK: - BSAF 設定
+
+    /// BSAF 機能の有効/無効
+    var bsafEnabled: Bool {
+        didSet { defaults.set(bsafEnabled, forKey: "bsafEnabled") }
+    }
+
+    /// 登録済み BSAF Bot リスト
+    var bsafRegisteredBots: [BsafRegisteredBot] {
+        didSet {
+            if let data = try? JSONEncoder().encode(bsafRegisteredBots) {
+                defaults.set(data, forKey: "bsafRegisteredBots")
+            }
+        }
+    }
+
     // MARK: - Init
 
     init() {
@@ -248,6 +264,48 @@ final class AppSettings {
             self.hiddenFeedURIs = []
         }
         self.showAllFeedsInSelector = d.object(forKey: "showAllFeedsInSelector") as? Bool ?? true
+        self.bsafEnabled = d.object(forKey: "bsafEnabled") as? Bool ?? false
+        if let data = d.data(forKey: "bsafRegisteredBots"),
+           let bots = try? JSONDecoder().decode([BsafRegisteredBot].self, from: data) {
+            self.bsafRegisteredBots = bots
+        } else {
+            self.bsafRegisteredBots = []
+        }
+    }
+
+    // MARK: - BSAF Bot 管理
+
+    /// 新しい BSAF Bot を登録する。全フィルタオプションを有効で初期化する。
+    func registerBot(_ definition: BsafBotDefinition) {
+        var filterSettings: [String: [String]] = [:]
+        for filter in definition.filters {
+            filterSettings[filter.tag] = filter.options.map { $0.value }
+        }
+        let formatter = ISO8601DateFormatter()
+        let now = formatter.string(from: Date())
+        let bot = BsafRegisteredBot(
+            definition: definition,
+            filterSettings: filterSettings,
+            registeredAt: now,
+            lastCheckedAt: now
+        )
+        bsafRegisteredBots.append(bot)
+    }
+
+    /// BSAF Bot を DID で検索して登録解除する。
+    func unregisterBot(did: String) {
+        bsafRegisteredBots.removeAll { $0.definition.bot.did == did }
+    }
+
+    /// 特定 Bot の特定フィルタタグの有効値を更新する。
+    func setFilterOptions(did: String, tag: String, values: [String]) {
+        guard let index = bsafRegisteredBots.firstIndex(where: { $0.definition.bot.did == did }) else { return }
+        bsafRegisteredBots[index].filterSettings[tag] = values
+    }
+
+    /// 投稿著者の DID から登録済み Bot を検索する。
+    func findRegisteredBot(did: String) -> BsafRegisteredBot? {
+        bsafRegisteredBots.first { $0.definition.bot.did == did }
     }
 
     // MARK: - Singleton

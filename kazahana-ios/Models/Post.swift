@@ -51,9 +51,11 @@ struct PostRecord: Codable {
     let reply: ReplyRef?
     let embed: PostEmbed?
     let via: String?
+    /// BSAF タグ（例: ["bsaf:v1", "type:earthquake", "value:5+", ...]）
+    let tags: [String]?
 
     enum CodingKeys: String, CodingKey {
-        case text, createdAt, langs, facets, reply, embed
+        case text, createdAt, langs, facets, reply, embed, tags
         case via = "$via"
     }
 }
@@ -305,14 +307,16 @@ struct PostRecordCreate: Encodable {
     let embed: PostEmbedCreate?
     /// 投稿元クライアント名（設定でオンの場合のみセット）
     let via: String?
+    /// BSAF タグ（BSAF 対応 Bot 投稿用）
+    let tags: [String]?
 
     enum CodingKeys: String, CodingKey {
         case type = "$type"
-        case text, createdAt, langs, facets, reply, embed
+        case text, createdAt, langs, facets, reply, embed, tags
         case via = "$via"
     }
 
-    init(text: String, langs: [String]? = nil, facets: [Facet]? = nil, replyRef: PostReplyRef? = nil, embed: PostEmbedCreate? = nil, via: String? = nil) {
+    init(text: String, langs: [String]? = nil, facets: [Facet]? = nil, replyRef: PostReplyRef? = nil, embed: PostEmbedCreate? = nil, via: String? = nil, tags: [String]? = nil) {
         self.type = "app.bsky.feed.post"
         self.text = text
         self.createdAt = ISO8601DateFormatter().string(from: Date())
@@ -322,6 +326,7 @@ struct PostRecordCreate: Encodable {
         self.reply = replyRef
         self.embed = embed
         self.via = via
+        self.tags = tags
     }
 }
 

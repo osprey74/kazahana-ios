@@ -171,6 +171,7 @@ struct TimelineView: View {
                 PostCardView(
                     feedPost: feedPost,
                     postService: postService,
+                    bsafDuplicateInfo: viewModel.bsafDuplicateInfo[feedPost.post.uri],
                     onTapPost: { post in selectedPost = post },
                     onTapAuthor: { did in selectedAuthorDID = IdentifiableString(did) },
                     onTapReply: { post in replyToPost = post; showCompose = true },

@@ -109,6 +109,11 @@ struct MainTabView: View {
                 handleDeepLink(url)
             }
         }
+        // アプリ起動時に BSAF Bot 定義の更新チェック
+        .task {
+            guard AppSettings.shared.bsafEnabled else { return }
+            await BsafService.checkBotUpdates(settings: AppSettings.shared)
+        }
     }
 
     /// kazahana:// ディープリンクを処理する

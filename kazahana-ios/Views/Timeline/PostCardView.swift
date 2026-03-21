@@ -24,6 +24,8 @@ struct PostCardView: View {
     var onDelete: ((PostView) -> Void)?
     /// 現在ログイン中のユーザー DID（自分の投稿かどうかの判定に使用）
     var currentUserDID: String?
+    /// BSAF 重複情報（この投稿が primary の場合にセット）
+    var bsafDuplicateInfo: BsafDuplicateInfo?
 
     // ローカル状態（楽観的 UI 更新用）
     @State private var isLiked: Bool
@@ -42,9 +44,23 @@ struct PostCardView: View {
         ModerationService().moderatePost(post)
     }
 
+    /// BSAF タグのパース結果（BSAF 対応投稿のみ）
+    private var bsafParsedTags: BsafParsedTags? {
+        guard AppSettings.shared.bsafEnabled,
+              let tags = post.record.tags else { return nil }
+        return BsafService.parseBsafTags(tags)
+    }
+
+    /// 深刻度カラー（BSAF 対応投稿のみ）
+    private var bsafBorderColor: Color? {
+        guard let parsed = bsafParsedTags else { return nil }
+        return BsafService.severityBorderColor(for: parsed.value)
+    }
+
     init(
         feedPost: FeedViewPost,
         postService: PostService? = nil,
+        bsafDuplicateInfo: BsafDuplicateInfo? = nil,
         onTapPost: ((FeedViewPost) -> Void)? = nil,
         onTapAuthor: ((String) -> Void)? = nil,
         onTapReply: ((PostView) -> Void)? = nil,
@@ -56,6 +72,7 @@ struct PostCardView: View {
     ) {
         self.feedPost = feedPost
         self.postService = postService
+        self.bsafDuplicateInfo = bsafDuplicateInfo
         self.onTapPost = onTapPost
         self.onTapAuthor = onTapAuthor
         self.onTapReply = onTapReply
@@ -131,6 +148,16 @@ struct PostCardView: View {
                                 })
                             }
 
+                            // BSAF タグバッジ
+                            if let tags = post.record.tags, bsafParsedTags != nil {
+                                bsafTagsRow(tags: tags)
+                            }
+
+                            // BSAF 重複投稿インジケーター
+                            if let dupInfo = bsafDuplicateInfo, !dupInfo.duplicateHandles.isEmpty {
+                                bsafDuplicateRow(count: dupInfo.duplicateHandles.count)
+                            }
+
                             // 埋め込みコンテンツ（メディアブラー対応）
                             if let embed = post.embed {
                                 moderatedEmbedView(embed, moderation: moderation)
@@ -156,6 +183,14 @@ struct PostCardView: View {
                 }
 
                 Divider()
+            }
+            .overlay(alignment: .leading) {
+                // BSAF 深刻度カラーボーダー（左側）
+                if let color = bsafBorderColor {
+                    Rectangle()
+                        .fill(color)
+                        .frame(width: 4)
+                }
             }
             .alert(String(localized: "post.deleteConfirm"), isPresented: $showDeleteConfirm) {
                 Button(String(localized: "post.deleteAction"), role: .destructive) {
@@ -557,6 +592,41 @@ struct PostCardView: View {
 
     private func formatCount(_ count: Int) -> String {
         count >= 1000 ? String(format: "%.1fK", Double(count) / 1000) : "\(count)"
+    }
+
+    // MARK: - BSAF ヘルパービュー
+
+    /// BSAF タグバッジ表示（WrappingHStack でモノスペースバッジ）
+    @ViewBuilder
+    private func bsafTagsRow(tags: [String]) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Divider()
+            WrappingHStack(alignment: .leading, spacing: 4) {
+                ForEach(tags, id: \.self) { tag in
+                    Text(tag)
+                        .font(.system(size: 11, design: .monospaced))
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(Color.secondary.opacity(0.1), in: RoundedRectangle(cornerRadius: 4))
+                }
+            }
+        }
+        .padding(.top, 4)
+    }
+
+    /// BSAF 重複投稿インジケーター（「他N件のBotも報告」）
+    @ViewBuilder
+    private func bsafDuplicateRow(count: Int) -> some View {
+        HStack(spacing: 4) {
+            Image(systemName: "doc.on.doc")
+                .font(.system(size: 11))
+                .foregroundStyle(.secondary)
+            Text(String(localized: "bsaf.duplicateReport \(count)"))
+                .font(.system(size: 11))
+                .foregroundStyle(.secondary)
+        }
+        .padding(.top, 4)
     }
 }
 
