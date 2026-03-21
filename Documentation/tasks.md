@@ -472,7 +472,8 @@ kazahana-ios/
 ├── SmartToy.ttf                   # Material Symbols Rounded サブセット（smart_toy グリフのみ、6.2KB）
 ├── Models/
 │   ├── Session.swift
-│   ├── Post.swift                 # PostEmbedCreate / ImageEmbedCreate / BlobRef / VideoEmbedCreate / EmbedImageView(aspectRatio) など
+│   ├── Bsaf.swift                 # BsafBotDefinition / BsafRegisteredBot / BsafParsedTags / BsafDuplicateInfo / BsafError
+│   ├── Post.swift                 # PostEmbedCreate / ImageEmbedCreate / BlobRef / VideoEmbedCreate / EmbedImageView(aspectRatio) / tags など
 │   ├── PostDraft.swift            # PostDraft: Codable, Identifiable（下書き保存用）
 │   ├── Profile.swift              # PinnedPost struct 追加
 │   ├── Notification.swift         # AppNotification, isViaRepost, reasonLabel/Icon/Color
@@ -481,7 +482,7 @@ kazahana-ios/
 │   ├── ATProtoClient.swift        # XRPC クライアント + getRecord + uploadBlob + getWithProxy/postWithProxy
 │   ├── AuthService.swift
 │   ├── SessionStore.swift
-│   ├── AppSettings.swift          # テーマ/via/言語/モデレーション/ポーリング/pinnedFeedURIs/hiddenFeedURIs/showAllFeedsInSelector（@Observable singleton）
+│   ├── AppSettings.swift          # テーマ/via/言語/モデレーション/ポーリング/pinnedFeedURIs/hiddenFeedURIs/showAllFeedsInSelector/bsafEnabled/bsafRegisteredBots（@Observable singleton）
 │   ├── ModerationService.swift    # ラベル判定（none/inform/mediaBlur/blur/filter）
 │   ├── TimelineService.swift
 │   ├── PostService.swift          # createPost / uploadImage / getLikes / getRepostedBy / reportPost / reportAccount
@@ -493,10 +494,11 @@ kazahana-ios/
 │   ├── ChatService.swift          # chat.bsky.convo.* 全 API ラッパー
 │   ├── DraftService.swift         # 下書き保存/読込/削除（Documents/drafts/ + UserDefaults JSON）
 │   ├── BackgroundRefreshService.swift # BGAppRefreshTask + UNUserNotificationCenter
+│   ├── BsafService.swift          # parseBsafTags / shouldShowBsafPost / duplicateKey / severityBorderColor / fetchBotDefinition / checkBotUpdates
 │   └── ClaudeService.swift        # ALT テキスト自動生成（Claude API）
 ├── ViewModels/
 │   ├── AuthViewModel.swift
-│   ├── TimelineViewModel.swift    # FeedSource対応 + removePost(uri:) + filterModeratedPosts + ポーリング + savedLists + visibleFeedSources
+│   ├── TimelineViewModel.swift    # FeedSource対応 + removePost(uri:) + filterAndProcessPosts + BSAF重複検出/フィルタ + ポーリング + savedLists + visibleFeedSources
 │   ├── ComposeViewModel.swift
 │   ├── ThreadViewModel.swift
 │   ├── NotificationViewModel.swift # resolvedRepostURIs キャッシュ
@@ -509,7 +511,7 @@ kazahana-ios/
 │   │   └── LoginView.swift
 │   ├── Timeline/
 │   │   ├── TimelineView.swift     # FAB・返信・引用・横スクロールタブバー（フィード2件以上で表示）
-│   │   └── PostCardView.swift     # モデレーション(blur/mediaBlur/filter) + 通報メニュー + 共有
+│   │   └── PostCardView.swift     # モデレーション(blur/mediaBlur/filter) + 通報メニュー + 共有 + BSAFボーダー/タグバッジ/重複インジケーター
 │   ├── Compose/
 │   │   ├── ComposeView.swift      # 返信・引用投稿・画像添付・動画添付・スレッドゲート・ポストゲート・下書き
 │   │   ├── ImageCropView.swift    # 画像クロップエディタ（オリジナル/正方形/自由、フルスクリーン）
@@ -528,8 +530,9 @@ kazahana-ios/
 │   ├── Search/
 │   │   └── SearchView.swift       # SearchView + ActorRowView + SearchPostRowView（スレッド遷移・著者プロフィール遷移）+ 検索履歴一覧
 │   ├── Settings/
-│   │   ├── SettingsView.swift     # テーマ/言語切替・via表示・モデレーション設定・Claude API キー管理・アカウント情報・ホームフィード管理
-│   │   └── FeedManagementView.swift # フィード/リスト表示管理（表示/非表示トグル・ドラッグ並び替え）
+│   │   ├── SettingsView.swift     # テーマ/言語切替・via表示・モデレーション設定・Claude API キー管理・アカウント情報・ホームフィード管理・BSAFセクション
+│   │   ├── FeedManagementView.swift # フィード/リスト表示管理（表示/非表示トグル・ドラッグ並び替え）
+│   │   └── BsafBotsView.swift     # BSAF Bot登録・管理（URL入力・動的フィルタチップ・自動フォロー/アンフォロー）
 │   ├── Messages/
 │   │   ├── ConversationListView.swift # 会話一覧 + ConversationRowView + スワイプアクション
 │   │   ├── ChatThreadView.swift   # メッセージバブル + 送信ボックス + コンテキストメニュー削除
@@ -542,6 +545,7 @@ kazahana-ios/
 │       ├── LinkCardView.swift
 │       ├── QuoteEmbedView.swift
 │       ├── BotBadge.swift         # Bot自動化ラベルバッジ（smart_toy グリフ + isBotAccount() ユーティリティ）
+│       ├── WrappingHStack.swift   # Layout プロトコル準拠の折り返し水平スタック（BSAFタグチップ用）
 │       ├── FeedSelectorView.swift # フィード選択シート（showAllFeedsInSelector 対応）
 │       ├── PostActorListView.swift # いいね/リポストユーザー一覧
 │       ├── PostQuoteListView.swift # 引用一覧
