@@ -1,6 +1,6 @@
 # kazahana-ios 開発タスク・進捗記録
 
-最終更新: 2026-03-21 (Phase 5-A BSAF対応 実装完了)
+最終更新: 2026-03-21 (プロフィール・スレッド遷移改善、戻るボタン統一、スワイプバック対応)
 
 ---
 
@@ -448,6 +448,9 @@
 - [x] **検索結果投稿からプロフィール遷移** — `SearchPostRowView` にアバター/ユーザー名タップ → `ProfileScreenView` 遷移を追加
 - [x] **プロフィール画面最下部余白** — 各タブ末尾に50%高余白を追加し最終行タップを容易に
 - [x] **フィード/スターターパックタブのタップ問題** — `NavigationLink` → `@State + navigationDestination` パターンに統一して遷移を修正
+- [x] **スレッド表示からプロフィール遷移** — `PostCardView` の表示名・ハンドルを `Button` でラップし `onTapAuthor` コールバックを接続。`ThreadView` に `selectedAuthorDID` state + `navigationDestination` を追加。フォーカス投稿のアバター・名前もタップ可能に
+- [x] **戻るボタンデザイン統一** — `ThreadView` も `.toolbar(.hidden, for: .navigationBar)` + カスタム戻るボタン（`chevron.left`・36×36pt・`ultraThinMaterial` 円形背景）に変更し `ProfileScreenView` と統一
+- [x] **スワイプバック対応** — `Extensions/View+InteractivePop.swift` 追加。`UIViewControllerRepresentable` で `interactivePopGestureRecognizer.isEnabled = true` を設定し、ナビバー非表示時でも画面左端スワイプで戻れるようにした。`ThreadView` / `ProfileScreenView` に適用
 
 ---
 
@@ -554,7 +557,8 @@ kazahana-ios/
 │       └── ReportView.swift        # 投稿/アカウント通報UI
 ├── Extensions/
 │   ├── IdentifiableString.swift   # Notification.Name.kazahanaDeepLink 追加
-│   └── String+DateFormatting.swift # relativeFormatted（相対時刻表示）
+│   ├── String+DateFormatting.swift # relativeFormatted（相対時刻表示）
+│   └── View+InteractivePop.swift  # .enableInteractivePop()：ナビバー非表示時もスワイプバック有効化（UIViewControllerRepresentable）
 ├── Assets.xcassets/
 │   └── AppIcon.appiconset/
 │       ├── AppIcon-1024.png       # kazahana デスクトップ icon.png から生成（1024×1024）

@@ -1,7 +1,7 @@
 # kazahana Android 版 開発ハンドオフ資料
 
 > iOS 版 kazahana の実装をもとに、Android 版開発者向けに機能仕様・技術的判断・既知の落とし穴をまとめたドキュメント。
-> 最終更新: 2026-03-21（iOS 版 Phase 5-E 完了時点）
+> 最終更新: 2026-03-21（iOS 版 プロフィール・スレッド遷移改善、スワイプバック対応 完了時点）
 
 ---
 
@@ -235,6 +235,16 @@ View ──@Environment──> ViewModel (@Observable)
 - BSAF 重複インジケーター
 - Bot ラベルバッジ
 - 三点メニュー（翻訳・コピー・共有・削除・通報）
+- 著者名タップ → プロフィール遷移（`onTapAuthor: ((String) -> Void)?` コールバック）
+
+### プロフィール・スレッド画面のナビゲーション
+
+iOS 版はナビバーを `.toolbar(.hidden, for: .navigationBar)` で非表示にしており、以下の方式で代替している:
+
+- **カスタム戻るボタン**: `chevron.left`・36×36pt・`ultraThinMaterial` 円形背景を `.overlay(alignment: .topLeading)` で表示
+- **スワイプバック復活**: `UIViewControllerRepresentable` ベースのヘルパー（`View+InteractivePop.swift`）で `interactivePopGestureRecognizer.isEnabled = true` を `viewWillAppear` で設定
+
+Android 版では `Scaffold` + `TopAppBar` の `navigationIcon` に戻るボタンを配置する方式が一般的。スワイプバックは `BackHandler` または Navigation Component の標準挙動を活用。
 
 ### DM（ダイレクトメッセージ）
 
