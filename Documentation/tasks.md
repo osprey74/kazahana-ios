@@ -349,23 +349,23 @@
 
 
 **実装タスク**
-- [ ] App Store Connect で Non-renewing subscription 商品を登録（product ID: `com.kazahana.app.supporter_badge_30d`）
-- [ ] `Services/IAPService.swift` 新規作成
+- [ ] App Store Connect で Non-renewing subscription 商品を登録（product ID: `com.kazahana.app.supporter_badge_30d`）※ユーザー作業
+- [x] `Services/IAPService.swift` 新規作成
   - `StoreKit` import、`Product.products(for:)` で商品フェッチ
   - `purchase()` — `product.purchase()` 呼び出し・トランザクション完了処理
-  - `restoreBadge()` — `Transaction.all` 走査・最新有効期限計算・返金除外
-  - `Transaction.updates` リスナー（アプリ起動中の購入完了を即時反映）
-- [ ] `AppSettings.swift` に `supporterBadgeExpiryDate: Date?` 追加（`UserDefaults` 永続化）
+  - `restorePurchases()` — `Transaction.all` 走査・最新有効期限計算・返金除外
+  - `listenForTransactions()` リスナー（アプリ起動中の購入完了を即時反映）
+- [x] `AppSettings.swift` に `supporterBadgeExpiryDate: Date?` 追加（`UserDefaults` 永続化）
   - `isSupporterBadgeActive: Bool` 計算プロパティ
-- [ ] `AvatarView.swift` に勲章オーバーレイ追加
-  - `showBadge: Bool` パラメータ（デフォルト `false`）
-  - `isSupporterBadgeActive` が `true` かつ自分のプロフィール時のみ表示
-  - SF Symbol `medal.fill`（または `star.circle.fill`）をアバター右上に `.overlay` で配置
-- [ ] `SettingsView.swift` に「サポーターバッジ」セクション追加
-  - 有効期限表示（残 N 日 / 期限切れ）
-  - 「購入する」ボタン（`ProductView` または カスタム UI）
+- [x] `AvatarView.swift` に勲章オーバーレイ追加
+  - `showSupporterBadge: Bool` パラメータ（デフォルト `false`）
+  - `isSupporterBadgeActive` が `true` かつ自分のプロフィール時のみ表示（ProfileView 側で制御）
+  - SF Symbol `medal.fill` をアバター右上に `.overlay` で配置
+- [x] `SettingsView.swift` に「サポーターバッジ」セクション追加
+  - 有効期限表示（期限切れ時は「バッジは現在有効ではありません」）
+  - 「購入する」ボタン（価格付き）
   - 「リストア」ボタン
-- [ ] `Localizable.xcstrings` に i18n キー追加（11言語）
+- [x] `Localizable.xcstrings` に i18n キー追加（8キー × 11言語）
 
 ### Bot自動化ラベルバッジ — 完了 ✅
 
@@ -495,6 +495,7 @@ kazahana-ios/
 │   ├── DraftService.swift         # 下書き保存/読込/削除（Documents/drafts/ + UserDefaults JSON）
 │   ├── BackgroundRefreshService.swift # BGAppRefreshTask + UNUserNotificationCenter
 │   ├── BsafService.swift          # parseBsafTags / shouldShowBsafPost / duplicateKey / severityBorderColor / fetchBotDefinition / checkBotUpdates
+│   ├── IAPService.swift           # StoreKit 2 / fetchProducts / purchase / restorePurchases / listenForTransactions
 │   └── ClaudeService.swift        # ALT テキスト自動生成（Claude API）
 ├── ViewModels/
 │   ├── AuthViewModel.swift

@@ -220,7 +220,11 @@ struct ProfileScreenView: View {
     /// スクロール後に固定されるコンパクトヘッダー（アバター小＋名前＋設定ボタン）
     private func compactHeader(vm: ProfileViewModel, isSelf: Bool) -> some View {
         HStack(spacing: 12) {
-            AvatarView(url: vm.profile?.avatar, size: 36)
+            AvatarView(
+                url: vm.profile?.avatar,
+                size: 36,
+                showSupporterBadge: isSelf && AppSettings.shared.isSupporterBadgeActive
+            )
 
             VStack(alignment: .leading, spacing: 1) {
                 if let profile = vm.profile {
@@ -559,11 +563,15 @@ struct ProfileHeaderView: View {
 
             // アバター + フォロー/設定ボタン（アバターと同じ高さの行）
             HStack(alignment: .bottom) {
-                AvatarView(url: vm.profile?.avatar, size: 72)
-                    .padding(4)
-                    .background(Color(.systemBackground), in: Circle())
-                    .offset(y: -36)
-                    .padding(.leading, 16)
+                AvatarView(
+                    url: vm.profile?.avatar,
+                    size: 72,
+                    showSupporterBadge: isSelf && AppSettings.shared.isSupporterBadgeActive
+                )
+                .padding(4)
+                .background(Color(.systemBackground), in: Circle())
+                .offset(y: -36)
+                .padding(.leading, 16)
 
                 Spacer()
 

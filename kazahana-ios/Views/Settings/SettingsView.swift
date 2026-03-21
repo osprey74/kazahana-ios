@@ -3,6 +3,7 @@
 // アプリ設定画面
 
 import SwiftUI
+import StoreKit
 
 struct SettingsView: View {
 
@@ -10,6 +11,7 @@ struct SettingsView: View {
     @Environment(AppSettings.self) private var settings
     @State private var showRestartAlert = false
     @State private var showRevokeApiKeyAlert = false
+    @State private var iapService = IAPService.shared
 
     var body: some View {
         @Bindable var settings = settings
@@ -128,6 +130,69 @@ struct SettingsView: View {
                     }
                 } header: {
                     Text(String(localized: "bsaf.title"))
+                }
+
+                // MARK: - サポーターバッジ
+                Section {
+                    // 有効期限表示
+                    if settings.isSupporterBadgeActive, let expiry = settings.supporterBadgeExpiryDate {
+                        LabeledContent(String(localized: "iap.expiresOn")) {
+                            Text(expiry, style: .date)
+                                .foregroundStyle(.secondary)
+                        }
+                    } else {
+                        Text(String(localized: "iap.notActive"))
+                            .foregroundStyle(.secondary)
+                    }
+
+                    // 購入ボタン
+                    if let product = iapService.product {
+                        Button {
+                            Task {
+                                do {
+                                    try await iapService.purchase(settings: settings)
+                                } catch {
+                                    iapService.purchaseError = error.localizedDescription
+                                }
+                            }
+                        } label: {
+                            if iapService.isPurchasing {
+                                ProgressView()
+                            } else {
+                                Label(
+                                    String(localized: "iap.purchase") + " (\(product.displayPrice))",
+                                    systemImage: "medal.fill"
+                                )
+                            }
+                        }
+                        .disabled(iapService.isPurchasing || iapService.isRestoring)
+                    } else {
+                        ProgressView()
+                            .task { await iapService.fetchProducts() }
+                    }
+
+                    // リストアボタン
+                    Button {
+                        Task { await iapService.restorePurchases(settings: settings) }
+                    } label: {
+                        if iapService.isRestoring {
+                            ProgressView()
+                        } else {
+                            Label(String(localized: "iap.restore"), systemImage: "arrow.clockwise")
+                        }
+                    }
+                    .disabled(iapService.isPurchasing || iapService.isRestoring)
+
+                    // エラーメッセージ
+                    if let err = iapService.purchaseError {
+                        Text(err)
+                            .font(.caption)
+                            .foregroundStyle(.red)
+                    }
+                } header: {
+                    Text(String(localized: "iap.title"))
+                } footer: {
+                    Text(String(localized: "iap.footer"))
                 }
 
                 // MARK: - アカウント

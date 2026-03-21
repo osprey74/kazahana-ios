@@ -8,6 +8,8 @@ struct AvatarView: View {
 
     let url: String?
     var size: CGFloat = 44
+    /// アバター右上にサポーターバッジ（勲章アイコン）を表示するか
+    var showSupporterBadge: Bool = false
 
     var body: some View {
         Group {
@@ -30,6 +32,15 @@ struct AvatarView: View {
         }
         .frame(width: size, height: size)
         .clipShape(Circle())
+        .overlay(alignment: .topTrailing) {
+            if showSupporterBadge {
+                Image(systemName: "medal.fill")
+                    .font(.system(size: size * 0.35))
+                    .foregroundStyle(.yellow)
+                    .shadow(color: .black.opacity(0.3), radius: 1, x: 0, y: 1)
+                    .offset(x: size * 0.1, y: -(size * 0.1))
+            }
+        }
     }
 
     private var placeholderView: some View {

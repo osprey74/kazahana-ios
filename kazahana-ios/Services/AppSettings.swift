@@ -211,6 +211,25 @@ final class AppSettings {
         didSet { defaults.set(showAllFeedsInSelector, forKey: "showAllFeedsInSelector") }
     }
 
+    // MARK: - サポーターバッジ設定
+
+    /// サポーターバッジの有効期限（nil = 未購入または期限切れ）
+    var supporterBadgeExpiryDate: Date? {
+        didSet {
+            if let date = supporterBadgeExpiryDate {
+                defaults.set(date.timeIntervalSince1970, forKey: "supporterBadgeExpiryDate")
+            } else {
+                defaults.removeObject(forKey: "supporterBadgeExpiryDate")
+            }
+        }
+    }
+
+    /// サポーターバッジが現在有効かどうか
+    var isSupporterBadgeActive: Bool {
+        guard let expiry = supporterBadgeExpiryDate else { return false }
+        return expiry > Date()
+    }
+
     // MARK: - BSAF 設定
 
     /// BSAF 機能の有効/無効
@@ -264,6 +283,8 @@ final class AppSettings {
             self.hiddenFeedURIs = []
         }
         self.showAllFeedsInSelector = d.object(forKey: "showAllFeedsInSelector") as? Bool ?? true
+        let badgeInterval = d.double(forKey: "supporterBadgeExpiryDate")
+        self.supporterBadgeExpiryDate = badgeInterval > 0 ? Date(timeIntervalSince1970: badgeInterval) : nil
         self.bsafEnabled = d.object(forKey: "bsafEnabled") as? Bool ?? false
         if let data = d.data(forKey: "bsafRegisteredBots"),
            let bots = try? JSONDecoder().decode([BsafRegisteredBot].self, from: data) {

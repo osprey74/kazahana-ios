@@ -114,6 +114,10 @@ struct MainTabView: View {
             guard AppSettings.shared.bsafEnabled else { return }
             await BsafService.checkBotUpdates(settings: AppSettings.shared)
         }
+        // App Store トランザクション更新を監視（IAP 購入完了を即時反映）
+        .task {
+            IAPService.shared.listenForTransactions(settings: AppSettings.shared)
+        }
     }
 
     /// kazahana:// ディープリンクを処理する
