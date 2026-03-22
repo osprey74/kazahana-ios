@@ -4,8 +4,7 @@
    version = "1.7">
    <BuildAction
       parallelizeBuildables = "YES"
-      buildImplicitDependencies = "YES"
-      runPostActionsOnFailure = "NO">
+      buildImplicitDependencies = "YES">
       <BuildActionEntries>
          <BuildActionEntry
             buildForTesting = "YES"
@@ -16,8 +15,8 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "C0365D4D2F6E520900700B14"
-               BuildableName = "Share&#x200B;Extension.appex"
-               BlueprintName = "Share&#x200B;Extension"
+               BuildableName = "Share&#x200b;Extension.appex"
+               BlueprintName = "Share&#x200b;Extension"
                ReferencedContainer = "container:kazahana-ios.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
@@ -29,8 +28,6 @@
       selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
       shouldUseLaunchSchemeArgsEnv = "YES"
       shouldAutocreateTestPlan = "YES">
-      <Testables>
-      </Testables>
    </TestAction>
    <LaunchAction
       buildConfiguration = "Debug"
@@ -46,8 +43,8 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "C0365D4D2F6E520900700B14"
-            BuildableName = "Share&#x200B;Extension.appex"
-            BlueprintName = "Share&#x200B;Extension"
+            BuildableName = "Share&#x200b;Extension.appex"
+            BlueprintName = "Share&#x200b;Extension"
             ReferencedContainer = "container:kazahana-ios.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
