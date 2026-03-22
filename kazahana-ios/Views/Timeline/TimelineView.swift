@@ -16,6 +16,8 @@ struct TimelineView: View {
     @State private var selectedPost: FeedViewPost? = nil
     @State private var selectedAuthorDID: IdentifiableString? = nil
     @State private var postActorListType: PostActorListType? = nil
+    /// postList の ScrollViewProxy（スクロール先頭制御用）
+    @State private var listScrollProxy: ScrollViewProxy? = nil
 
     private let postService: PostService
 
@@ -114,6 +116,15 @@ struct TimelineView: View {
         .onChange(of: settings.timelinePollingInterval) { _, newInterval in
             viewModel.startPolling(intervalSeconds: newInterval.rawValue)
         }
+        // ホームタブ再タップ通知を受信 → refresh + スクロール先頭
+        .onReceive(NotificationCenter.default.publisher(for: .timelineScrollToTop)) { _ in
+            Task {
+                await viewModel.refresh()
+                if let firstPost = viewModel.posts.first {
+                    withAnimation { listScrollProxy?.scrollTo(firstPost.id, anchor: .top) }
+                }
+            }
+        }
     }
 
     // MARK: - Subviews
@@ -130,7 +141,12 @@ struct TimelineView: View {
                             let isActive = viewModel.currentFeed == source
                             Button {
                                 if isActive {
-                                    Task { await viewModel.refresh() }
+                                    Task {
+                                        await viewModel.refresh()
+                                        if let firstPost = viewModel.posts.first {
+                                            withAnimation { listScrollProxy?.scrollTo(firstPost.id, anchor: .top) }
+                                        }
+                                    }
                                 } else {
                                     Task { await viewModel.selectFeed(source) }
                                 }
@@ -166,6 +182,7 @@ struct TimelineView: View {
     }
 
     private var postList: some View {
+        ScrollViewReader { proxy in
         List {
             ForEach(viewModel.posts) { feedPost in
                 PostCardView(
@@ -204,6 +221,8 @@ struct TimelineView: View {
         .refreshable {
             await viewModel.refresh()
         }
+        .onAppear { listScrollProxy = proxy }
+        } // ScrollViewReader
     }
 
     private func errorView(message: String) -> some View {

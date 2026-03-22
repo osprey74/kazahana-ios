@@ -25,6 +25,7 @@ struct MainTabView: View {
     let client: ATProtoClient
     @State private var selectedTab: Tab = .home
     @State private var dmUnreadCount = 0
+    private let tabBarDelegate = TabBarDelegate()
 
     // ディープリンクで開くプロフィールの actor (DID or handle)
     @State private var deepLinkProfileActor: String? = nil
@@ -118,6 +119,8 @@ struct MainTabView: View {
         .task {
             IAPService.shared.listenForTransactions(settings: AppSettings.shared)
         }
+        // ホームタブの再タップを UITabBarControllerDelegate で検出
+        .background(TabBarDelegateInjector(delegate: tabBarDelegate))
     }
 
     /// kazahana:// ディープリンクを処理する
@@ -162,6 +165,42 @@ struct MainTabView: View {
             }
         } else {
             PlaceholderView(title: String(localized: "tab.profile"), icon: "person.circle")
+        }
+    }
+}
+
+// MARK: - ホームタブ再タップ検出
+
+/// UITabBarControllerDelegate を受け取り、ホームタブ（index 0）の再タップ時に
+/// timelineScrollToTop 通知を送出する
+final class TabBarDelegate: NSObject, UITabBarControllerDelegate {
+    func tabBarController(_ tabBarController: UITabBarController, didSelect viewController: UIViewController) {
+        // index 0 = ホームタブ。selectedIndex が既に 0 の状態で再タップされたら通知を送出
+        if tabBarController.selectedIndex == 0 {
+            NotificationCenter.default.post(name: .timelineScrollToTop, object: nil)
+        }
+    }
+}
+
+/// UITabBarController に TabBarDelegate を注入するための UIViewControllerRepresentable
+private struct TabBarDelegateInjector: UIViewControllerRepresentable {
+    let delegate: TabBarDelegate
+
+    func makeUIViewController(context: Context) -> UIViewController {
+        UIViewController()
+    }
+
+    func updateUIViewController(_ uiViewController: UIViewController, context: Context) {
+        // 親階層を遡って UITabBarController を探し、delegate を設定する
+        DispatchQueue.main.async {
+            var responder: UIResponder? = uiViewController
+            while let next = responder?.next {
+                if let tabBarController = next as? UITabBarController {
+                    tabBarController.delegate = delegate
+                    break
+                }
+                responder = next
+            }
         }
     }
 }
