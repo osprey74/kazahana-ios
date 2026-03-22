@@ -10,6 +10,7 @@ struct ConversationListView: View {
     @State private var viewModel: ConversationListViewModel?
     @State private var chatService: ChatService?
     @State private var selectedConvo: ConvoView?
+    @State private var selectedAuthorDID: IdentifiableString? = nil
     @State private var showNewConversation = false
 
     var body: some View {
@@ -37,6 +38,10 @@ struct ConversationListView: View {
                     ChatThreadView(convo: convo, chatService: svc)
                         .environment(authVM)
                 }
+            }
+            .navigationDestination(item: $selectedAuthorDID) { item in
+                ProfileScreenView(actor: item.value)
+                    .environment(authVM)
             }
             .sheet(isPresented: $showNewConversation) {
                 if let svc = chatService {
@@ -69,7 +74,8 @@ struct ConversationListView: View {
             ForEach(vm.conversations) { convo in
                 ConversationRowView(
                     convo: convo,
-                    myDID: myDID
+                    myDID: myDID,
+                    onTapAvatar: { did in selectedAuthorDID = IdentifiableString(did) }
                 )
                 .contentShape(Rectangle())
                 .onTapGesture {
@@ -147,12 +153,18 @@ struct ConversationListView: View {
 struct ConversationRowView: View {
     let convo: ConvoView
     let myDID: String
+    var onTapAvatar: ((String) -> Void)? = nil
 
     private var member: ChatMember? { convo.otherMember(myDID: myDID) }
 
     var body: some View {
         HStack(spacing: 12) {
-            AvatarView(url: member?.avatar, size: 44)
+            Button {
+                if let did = member?.did { onTapAvatar?(did) }
+            } label: {
+                AvatarView(url: member?.avatar, size: 44)
+            }
+            .buttonStyle(.plain)
 
             VStack(alignment: .leading, spacing: 2) {
                 HStack {
