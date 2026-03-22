@@ -122,11 +122,7 @@ struct NotificationItemView: View {
 
             // メディア埋め込み（画像・動画・引用・リンクカード）
             if let embed = post.embed {
-                GeometryReader { geo in
-                    let availableWidth = geo.size.width
-                    notificationEmbedView(embed, availableWidth: availableWidth)
-                }
-                .fixedSize(horizontal: false, vertical: true)
+                notificationEmbedView(embed)
             }
 
             // アクションバー（返信・リポスト・いいね）
@@ -169,16 +165,13 @@ struct NotificationItemView: View {
         .padding(.leading, indentWidth)
     }
 
-    /// 通知画面用の embed 表示（幅制限あり・動画はサムネイルのみ）
-    private func notificationEmbedView(_ embed: PostEmbed, availableWidth: CGFloat) -> AnyView {
+    /// 通知画面用の embed 表示（動画はサムネイルのみ）
+    private func notificationEmbedView(_ embed: PostEmbed) -> AnyView {
         switch embed {
         case .images(let images):
-            AnyView(ImageGridView(images: images.images, maxWidth: availableWidth))
+            AnyView(ImageGridView(images: images.images))
         case .video(let video):
-            AnyView(
-                VideoPlayerView(video: video, thumbnailOnly: true)
-                    .frame(maxWidth: availableWidth)
-            )
+            AnyView(VideoPlayerView(video: video, thumbnailOnly: true))
         case .external(let ext):
             AnyView(LinkCardView(external: ext.external))
         case .record(let record):
@@ -191,7 +184,7 @@ struct NotificationItemView: View {
             AnyView(
                 VStack(spacing: 6) {
                     if let media = rwm.media {
-                        notificationEmbedView(media, availableWidth: availableWidth)
+                        notificationEmbedView(media)
                     }
                     if let rec = rwm.record.record {
                         QuoteEmbedView(record: rec)
