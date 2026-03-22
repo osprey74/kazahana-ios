@@ -105,6 +105,9 @@ struct NotificationItemView: View {
 
     // MARK: - 投稿コンテンツビュー
 
+    /// インデント幅（アバター幅 + 間隔）
+    private let indentWidth: CGFloat = 50
+
     @ViewBuilder
     private func postContentView(_ post: PostView) -> some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -115,6 +118,15 @@ struct NotificationItemView: View {
                     .foregroundStyle(.primary)
                     .lineLimit(4)
                     .fixedSize(horizontal: false, vertical: true)
+            }
+
+            // メディア埋め込み（画像・動画・引用・リンクカード）
+            if let embed = post.embed {
+                GeometryReader { geo in
+                    let availableWidth = geo.size.width
+                    notificationEmbedView(embed, availableWidth: availableWidth)
+                }
+                .fixedSize(horizontal: false, vertical: true)
             }
 
             // アクションバー（返信・リポスト・いいね）
@@ -154,7 +166,41 @@ struct NotificationItemView: View {
         }
         .padding(10)
         .background(Color.secondary.opacity(0.07), in: RoundedRectangle(cornerRadius: 10))
-        .padding(.leading, 50)
+        .padding(.leading, indentWidth)
+    }
+
+    /// 通知画面用の embed 表示（幅制限あり・動画はサムネイルのみ）
+    private func notificationEmbedView(_ embed: PostEmbed, availableWidth: CGFloat) -> AnyView {
+        switch embed {
+        case .images(let images):
+            AnyView(ImageGridView(images: images.images, maxWidth: availableWidth))
+        case .video(let video):
+            AnyView(
+                VideoPlayerView(video: video, thumbnailOnly: true)
+                    .frame(maxWidth: availableWidth)
+            )
+        case .external(let ext):
+            AnyView(LinkCardView(external: ext.external))
+        case .record(let record):
+            if let rec = record.record {
+                AnyView(QuoteEmbedView(record: rec))
+            } else {
+                AnyView(EmptyView())
+            }
+        case .recordWithMedia(let rwm):
+            AnyView(
+                VStack(spacing: 6) {
+                    if let media = rwm.media {
+                        notificationEmbedView(media, availableWidth: availableWidth)
+                    }
+                    if let rec = rwm.record.record {
+                        QuoteEmbedView(record: rec)
+                    }
+                }
+            )
+        case .unknown:
+            AnyView(EmptyView())
+        }
     }
 
     @ViewBuilder

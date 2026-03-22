@@ -1,6 +1,6 @@
 # kazahana-ios 開発タスク・進捗記録
 
-最終更新: 2026-03-21 (プロフィール・スレッド遷移改善、戻るボタン統一、スワイプバック対応)
+最終更新: 2026-03-22 (通知画面メディア表示追加)
 
 ---
 
@@ -451,6 +451,7 @@
 - [x] **スレッド表示からプロフィール遷移** — `PostCardView` の表示名・ハンドルを `Button` でラップし `onTapAuthor` コールバックを接続。`ThreadView` に `selectedAuthorDID` state + `navigationDestination` を追加。フォーカス投稿のアバター・名前もタップ可能に
 - [x] **戻るボタンデザイン統一** — `ThreadView` も `.toolbar(.hidden, for: .navigationBar)` + カスタム戻るボタン（`chevron.left`・36×36pt・`ultraThinMaterial` 円形背景）に変更し `ProfileScreenView` と統一
 - [x] **スワイプバック対応** — `Extensions/View+InteractivePop.swift` 追加。`UIViewControllerRepresentable` で `interactivePopGestureRecognizer.isEnabled = true` を設定し、ナビバー非表示時でも画面左端スワイプで戻れるようにした。`ThreadView` / `ProfileScreenView` に適用
+- [x] **通知画面メディア表示** — `NotificationItemView.postContentView()` に embed 表示を追加。`ImageGridView` に `maxWidth` パラメータを追加し左50ptインデント分を考慮した幅で画像グリッドを表示（2×2タイル対応）。`VideoPlayerView` に `thumbnailOnly` パラメータを追加し通知画面ではサムネイルのみ表示（再生はスレッド遷移後）。リンクカード・引用投稿も表示対応
 
 ---
 
