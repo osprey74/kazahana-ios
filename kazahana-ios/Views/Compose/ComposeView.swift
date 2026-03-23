@@ -131,6 +131,13 @@ struct ComposeView: View {
                 // リンクカードプレビュー（画像・動画なし かつ 引用なし の場合のみ表示）
                 linkCardSection
 
+                // リンクカード手動生成ボタン（手打ちURL検出時・Divider付き）
+                if selectedImages.isEmpty && selectedVideo == nil && quotePost == nil,
+                   detectedURL != nil, linkPreview == nil, !isLoadingLinkPreview {
+                    Divider()
+                }
+                linkCardGenerateButton
+
                 // 画像プレビュー
                 if !selectedImages.isEmpty {
                     Divider()
@@ -157,10 +164,6 @@ struct ComposeView: View {
             .navigationTitle(replyToPost != nil ? String(localized: "compose.reply") : quotePost != nil ? String(localized: "compose.quotePost") : String(localized: "compose.newPost"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                // キーボード上部にリンクカード生成ボタンを表示（URL 検出時・カードなし時）
-                ToolbarItem(placement: .keyboard) {
-                    linkCardGenerateButton
-                }
                 ToolbarItem(placement: .cancellationAction) {
                     Button(String(localized: "compose.cancel")) {
                         let hasContent = !text.isEmpty || !selectedImages.isEmpty || selectedVideo != nil
@@ -551,17 +554,18 @@ struct ComposeView: View {
                 Divider()
                 linkCardPreviewRow(preview)
             }
-            // URL が検出されているがまだカードがない → 手動生成ボタンをキーボード上部に表示
         }
     }
 
-    /// キーボード上部に表示するリンクカード生成ボタン（手打ち入力時）
+    /// 手打ちURL検出時に表示するリンクカード生成ボタン（インライン）
     @ViewBuilder
     var linkCardGenerateButton: some View {
         if selectedImages.isEmpty && selectedVideo == nil && quotePost == nil,
-           let url = detectedURL, linkPreview == nil, !isLoadingLinkPreview {
+           detectedURL != nil, linkPreview == nil, !isLoadingLinkPreview {
             Button {
-                fetchLinkCard(url: url)
+                if let url = detectedURL {
+                    fetchLinkCard(url: url)
+                }
             } label: {
                 HStack(spacing: 4) {
                     Image(systemName: "link")
@@ -572,8 +576,10 @@ struct ComposeView: View {
                 .foregroundStyle(Color.accentColor)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 6)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.bordered)
         }
     }
 
@@ -610,17 +616,20 @@ struct ComposeView: View {
     /// 指定 URL のリンクカードをフェッチして linkPreview にセットする
     private func fetchLinkCard(url: URL) {
         linkPreviewTask?.cancel()
-        linkPreviewTask = Task {
-            await MainActor.run { isLoadingLinkPreview = true }
-
-            let preview = try? await linkPreviewService.fetchPreview(url: url)
-
-            await MainActor.run {
-                isLoadingLinkPreview = false
+        isLoadingLinkPreview = true
+        let task = Task {
+            do {
+                let preview = try await linkPreviewService.fetchPreview(url: url)
                 guard !Task.isCancelled else { return }
-                linkPreview = preview
+                await MainActor.run {
+                    isLoadingLinkPreview = false
+                    linkPreview = preview
+                }
+            } catch {
+                await MainActor.run { isLoadingLinkPreview = false }
             }
         }
+        linkPreviewTask = task
     }
 
     /// プレビューカード UI
