@@ -62,8 +62,15 @@ struct ComposeView: View {
     // 解決済みメンション DID（handle → did のキャッシュ）
     @State private var resolvedMentions: [String: String] = [:]
 
+    // リンクカードプレビュー
+    @State private var detectedURL: URL? = nil          // テキスト中で検出した URL
+    @State private var linkPreview: LinkPreview? = nil  // 取得済みプレビュー
+    @State private var isLoadingLinkPreview: Bool = false
+    @State private var linkPreviewTask: Task<Void, Never>? = nil
+
     private let postService: PostService
     private let searchService: SearchService
+    private let linkPreviewService: LinkPreviewService
     private let replyToPost: PostView?
     private let replyTarget: ReplyTarget?
     private let quotePost: PostView?
@@ -71,6 +78,7 @@ struct ComposeView: View {
     init(postService: PostService, searchService: SearchService? = nil, replyTo: PostView? = nil, quotedPost: PostView? = nil, initialText: String = "") {
         self.postService = postService
         self.searchService = searchService ?? SearchService(client: postService.atProtoClient)
+        self.linkPreviewService = LinkPreviewService(client: postService.atProtoClient)
         self.replyToPost = replyTo
         self.quotePost = quotedPost
         if let replyTo {
@@ -109,8 +117,9 @@ struct ComposeView: View {
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                         .padding(.horizontal, 12)
                         .scrollContentBackground(.hidden)
-                        .onChange(of: text) { _, newValue in
+                        .onChange(of: text) { oldValue, newValue in
                             updateMentionQuery(text: newValue)
+                            updateLinkPreview(oldText: oldValue, newText: newValue)
                         }
 
                     // メンション候補リスト
@@ -118,6 +127,9 @@ struct ComposeView: View {
                         mentionSuggestionList
                     }
                 }
+
+                // リンクカードプレビュー（画像・動画なし かつ 引用なし の場合のみ表示）
+                linkCardSection
 
                 // 画像プレビュー
                 if !selectedImages.isEmpty {
@@ -145,6 +157,10 @@ struct ComposeView: View {
             .navigationTitle(replyToPost != nil ? String(localized: "compose.reply") : quotePost != nil ? String(localized: "compose.quotePost") : String(localized: "compose.newPost"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                // キーボード上部にリンクカード生成ボタンを表示（URL 検出時・カードなし時）
+                ToolbarItem(placement: .keyboard) {
+                    linkCardGenerateButton
+                }
                 ToolbarItem(placement: .cancellationAction) {
                     Button(String(localized: "compose.cancel")) {
                         let hasContent = !text.isEmpty || !selectedImages.isEmpty || selectedVideo != nil
@@ -260,6 +276,15 @@ struct ComposeView: View {
                 uploadedVideo = (blob: blob, alt: video.alt.isEmpty ? nil : video.alt, aspectRatio: aspectRatio)
             }
 
+            // リンクカード: サムネイルをアップロードして BlobRef をセット
+            var finalLinkPreview = (uploadedImages.isEmpty && uploadedVideo == nil && quotePost == nil)
+                ? linkPreview
+                : nil
+            if var preview = finalLinkPreview, let thumbImage = preview.thumbImage {
+                preview.thumbBlob = try? await linkPreviewService.uploadThumbnail(image: thumbImage)
+                finalLinkPreview = preview
+            }
+
             let detected = RichTextParser.detectFacets(in: text)
             let facets = RichTextParser.buildFacets(from: detected, resolvedMentions: resolvedMentions)
             let via = appSettings.showVia ? appSettings.viaName : nil
@@ -270,6 +295,7 @@ struct ComposeView: View {
                 quotePost: quotePost,
                 images: uploadedImages.isEmpty ? nil : uploadedImages,
                 video: uploadedVideo,
+                linkCard: finalLinkPreview,
                 via: via
             )
             // スレッドゲート（返信制限）—— 返信投稿には設定不可
@@ -503,6 +529,151 @@ struct ComposeView: View {
             i -= 1
         }
         return nil
+    }
+
+    // MARK: - リンクカードプレビュー
+
+    @ViewBuilder
+    private var linkCardSection: some View {
+        if selectedImages.isEmpty && selectedVideo == nil && quotePost == nil {
+            if isLoadingLinkPreview {
+                Divider()
+                HStack(spacing: 8) {
+                    ProgressView().scaleEffect(0.8)
+                    Text(String(localized: "compose.linkCard.loading"))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+            } else if let preview = linkPreview {
+                Divider()
+                linkCardPreviewRow(preview)
+            }
+            // URL が検出されているがまだカードがない → 手動生成ボタンをキーボード上部に表示
+        }
+    }
+
+    /// キーボード上部に表示するリンクカード生成ボタン（手打ち入力時）
+    @ViewBuilder
+    var linkCardGenerateButton: some View {
+        if selectedImages.isEmpty && selectedVideo == nil && quotePost == nil,
+           let url = detectedURL, linkPreview == nil, !isLoadingLinkPreview {
+            Button {
+                fetchLinkCard(url: url)
+            } label: {
+                HStack(spacing: 4) {
+                    Image(systemName: "link")
+                        .font(.system(size: 13))
+                    Text(String(localized: "compose.generateLinkCard"))
+                        .font(.subheadline)
+                }
+                .foregroundStyle(Color.accentColor)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    /// テキスト変更時に URL を検出し、ペースト時のみ自動フェッチする
+    private func updateLinkPreview(oldText: String, newText: String) {
+        // 画像・動画・引用があるときはリンクカード不要
+        guard selectedImages.isEmpty, selectedVideo == nil, quotePost == nil else { return }
+
+        let url = LinkPreviewService.detectFirstURL(in: newText)
+
+        // URL が変わった場合のみ処理（同じ URL のままなら何もしない）
+        if url == detectedURL { return }
+        detectedURL = url
+
+        // URL がなくなったらプレビューをリセット
+        guard let url else {
+            linkPreview = nil
+            linkPreviewTask?.cancel()
+            isLoadingLinkPreview = false
+            return
+        }
+
+        // ペースト検出：差分文字数が URL 文字列長以上 → ペーストと判断して自動フェッチ
+        // 手打ちの場合は 1 文字ずつしか増えないので URL 全体が一度に入ることはない
+        let addedLength = newText.count - oldText.count
+        let isPaste = addedLength >= url.absoluteString.count
+
+        if isPaste {
+            fetchLinkCard(url: url)
+        }
+        // 手打ちの場合は detectedURL のみ更新してボタン表示に任せる
+    }
+
+    /// 指定 URL のリンクカードをフェッチして linkPreview にセットする
+    private func fetchLinkCard(url: URL) {
+        linkPreviewTask?.cancel()
+        linkPreviewTask = Task {
+            await MainActor.run { isLoadingLinkPreview = true }
+
+            let preview = try? await linkPreviewService.fetchPreview(url: url)
+
+            await MainActor.run {
+                isLoadingLinkPreview = false
+                guard !Task.isCancelled else { return }
+                linkPreview = preview
+            }
+        }
+    }
+
+    /// プレビューカード UI
+    @ViewBuilder
+    private func linkCardPreviewRow(_ preview: LinkPreview) -> some View {
+        HStack(alignment: .top, spacing: 10) {
+            // サムネイル
+            if let thumb = preview.thumbImage {
+                Image(uiImage: thumb)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: 56, height: 56)
+                    .clipShape(RoundedRectangle(cornerRadius: 6))
+            } else {
+                RoundedRectangle(cornerRadius: 6)
+                    .fill(Color.secondary.opacity(0.15))
+                    .frame(width: 56, height: 56)
+                    .overlay {
+                        Image(systemName: "link")
+                            .foregroundStyle(.secondary)
+                    }
+            }
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(preview.url.host ?? preview.url.absoluteString)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                Text(preview.title.isEmpty ? preview.url.absoluteString : preview.title)
+                    .font(.caption.weight(.semibold))
+                    .lineLimit(2)
+                if !preview.description.isEmpty {
+                    Text(preview.description)
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                }
+            }
+
+            Spacer()
+
+            // 削除ボタン（× で閉じたら同じ URL のカードを再表示しない）
+            Button {
+                linkPreview = nil
+                detectedURL = nil   // ボタン・自動フェッチの再トリガーを抑制
+            } label: {
+                Image(systemName: "xmark.circle.fill")
+                    .font(.system(size: 18))
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
     }
 
     /// 候補を選択してテキストを補完

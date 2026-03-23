@@ -8,6 +8,8 @@ import AVKit
 struct VideoPlayerView: View {
 
     let video: EmbedVideo
+    /// true の場合はサムネイル表示のみで再生ボタンを無効化する（通知画面など）
+    var thumbnailOnly: Bool = false
     @State private var player: AVPlayer? = nil
     @State private var isPresented: Bool = false
 
@@ -16,13 +18,21 @@ struct VideoPlayerView: View {
             // サムネイル
             thumbnailView
                 .overlay(alignment: .center) {
-                    Button {
-                        isPresented = true
-                    } label: {
-                        Image(systemName: "play.circle.fill")
-                            .font(.system(size: 52))
-                            .foregroundStyle(.white.opacity(0.9))
-                            .shadow(color: .black.opacity(0.4), radius: 6)
+                    if !thumbnailOnly {
+                        Button {
+                            isPresented = true
+                        } label: {
+                            Image(systemName: "play.circle.fill")
+                                .font(.system(size: 52))
+                                .foregroundStyle(.white.opacity(0.9))
+                                .shadow(color: .black.opacity(0.4), radius: 6)
+                        }
+                    } else {
+                        // サムネイルのみモード：再生不可を示すアイコン
+                        Image(systemName: "play.circle")
+                            .font(.system(size: 40))
+                            .foregroundStyle(.white.opacity(0.6))
+                            .shadow(color: .black.opacity(0.3), radius: 4)
                     }
                 }
         }

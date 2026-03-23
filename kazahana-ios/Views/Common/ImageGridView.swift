@@ -7,9 +7,18 @@ import SwiftUI
 struct ImageGridView: View {
 
     let images: [EmbedImageView]
+    /// nil の場合は .infinity（画面幅いっぱい）。インデント分を引いた幅を渡すと縮小表示できる
+    var maxWidth: CGFloat? = nil
 
     @State private var selectedImageIndex: Int = 0
     @State private var isViewerPresented = false
+
+    private var gridHeight: CGFloat {
+        // maxWidth が指定されている場合は幅に比例して高さも縮小（基準200pt @ 幅無制限）
+        guard let w = maxWidth else { return 200 }
+        // 画面幅を概算360ptとして比率を計算（最小80ptでキャップ）
+        return max(80, 200 * (w / 360))
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
@@ -23,7 +32,7 @@ struct ImageGridView: View {
                             gridImage(images[0], index: 0)
                             gridImage(images[1], index: 1)
                         }
-                        .frame(height: 200)
+                        .frame(height: gridHeight)
                         .clipShape(RoundedRectangle(cornerRadius: 12))
 
                         multiAltTextLabels(images: Array(images.prefix(2)))
@@ -37,7 +46,7 @@ struct ImageGridView: View {
                                 gridImage(images[2], index: 2)
                             }
                         }
-                        .frame(height: 200)
+                        .frame(height: gridHeight)
                         .clipShape(RoundedRectangle(cornerRadius: 12))
 
                         multiAltTextLabels(images: Array(images.prefix(3)))
@@ -54,7 +63,7 @@ struct ImageGridView: View {
                                 gridImage(images[3], index: 3)
                             }
                         }
-                        .frame(height: 200)
+                        .frame(height: gridHeight * 2 + 2)
                         .clipShape(RoundedRectangle(cornerRadius: 12))
 
                         multiAltTextLabels(images: Array(images.prefix(4)))
@@ -64,6 +73,7 @@ struct ImageGridView: View {
                 }
             }
         }
+        .frame(maxWidth: maxWidth ?? .infinity, alignment: .leading)
         // isPresented を使うことで selectedIndex が変わっても閉じない
         .fullScreenCover(isPresented: $isViewerPresented) {
             ImageViewer(images: images, selectedIndex: $selectedImageIndex)
@@ -85,7 +95,7 @@ struct ImageGridView: View {
                         placeholderRect.aspectRatio(ratio, contentMode: .fit)
                     }
                 }
-                .frame(maxWidth: .infinity, maxHeight: 400)
+                .frame(maxWidth: maxWidth ?? .infinity, maxHeight: 400)
                 .clipShape(RoundedRectangle(cornerRadius: 12))
                 .contentShape(Rectangle())
                 .onTapGesture {

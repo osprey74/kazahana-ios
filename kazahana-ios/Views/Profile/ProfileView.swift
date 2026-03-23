@@ -11,6 +11,7 @@ struct ProfileScreenView: View {
 
     @State private var viewModel: ProfileViewModel?
     @State private var selectedPost: FeedViewPost?
+    @State private var selectedAuthorDID: IdentifiableString? = nil
     @State private var userListType: UserListType? = nil
     @State private var selectedList: GraphListView? = nil
     @State private var selectedFeed: GeneratorView? = nil
@@ -44,6 +45,10 @@ struct ProfileScreenView: View {
         }
         .navigationDestination(item: $selectedPost) { post in
             ThreadView(uri: post.post.uri, postService: PostService(client: authVM.client))
+                .environment(authVM)
+        }
+        .navigationDestination(item: $selectedAuthorDID) { item in
+            ProfileScreenView(actor: item.value)
                 .environment(authVM)
         }
         .navigationDestination(item: $userListType) { listType in
@@ -155,6 +160,7 @@ struct ProfileScreenView: View {
                                     feedPost: feedPost,
                                     postService: PostService(client: authVM.client),
                                     onTapPost: { _ in selectedPost = feedPost },
+                                    onTapAuthor: { did in selectedAuthorDID = IdentifiableString(did) },
                                     onTapReply: { post in replyToPost = post },
                                     onTapQuote: { post in quotePost = post },
                                     onDelete: { post in vm.removePost(uri: post.uri) },
@@ -299,6 +305,7 @@ struct ProfileScreenView: View {
                 feedPost: feedPost,
                 postService: PostService(client: authVM.client),
                 onTapPost: { _ in selectedPost = feedPost },
+                onTapAuthor: { did in selectedAuthorDID = IdentifiableString(did) },
                 onTapReply: { p in replyToPost = p },
                 onTapQuote: { p in quotePost = p },
                 onDelete: { p in vm.removePost(uri: p.uri) },
@@ -369,6 +376,7 @@ struct ProfileScreenView: View {
                     feedPost: feedPost,
                     postService: PostService(client: authVM.client),
                     onTapPost: { _ in selectedPost = feedPost },
+                    onTapAuthor: { did in selectedAuthorDID = IdentifiableString(did) },
                     onTapReply: { p in replyToPost = p },
                     onTapQuote: { p in quotePost = p },
                     currentUserDID: authVM.client.currentSession?.did

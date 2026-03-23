@@ -19,4 +19,6 @@ struct IdentifiableString: Identifiable, Hashable {
 extension Notification.Name {
     /// kazahana:// ディープリンク受信通知（userInfo["url"] に URL が入る）
     static let kazahanaDeepLink = Notification.Name("kazahanaDeepLink")
+    /// ホームタブの再タップ通知 — TimelineView がこれを受信してスクロール先頭 + 再読み込みする
+    static let timelineScrollToTop = Notification.Name("timelineScrollToTop")
 }

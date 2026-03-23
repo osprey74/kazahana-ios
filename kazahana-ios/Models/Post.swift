@@ -346,10 +346,30 @@ struct QuoteEmbedRecord: Codable {
     }
 }
 
-/// 投稿作成時の embed（画像/動画/引用）を統一する enum（Encodable）
+/// 外部リンク embed（app.bsky.embed.external）書き込み用
+struct ExternalEmbedCreate: Encodable {
+    let type: String = "app.bsky.embed.external"
+    let external: ExternalCardCreate
+
+    enum CodingKeys: String, CodingKey {
+        case type = "$type"
+        case external
+    }
+}
+
+/// リンクカードのペイロード（投稿作成時）
+struct ExternalCardCreate: Encodable {
+    let uri: String
+    let title: String
+    let description: String
+    let thumb: BlobRef?
+}
+
+/// 投稿作成時の embed（画像/動画/外部リンク/引用）を統一する enum（Encodable）
 enum PostEmbedCreate: Encodable {
     case images(ImageEmbedCreate)
     case video(VideoEmbedCreate)
+    case external(ExternalEmbedCreate)
     case record(QuoteEmbedRecord)
     case recordWithMedia(ImageEmbedCreate, QuoteEmbedRecord)
 
@@ -357,6 +377,7 @@ enum PostEmbedCreate: Encodable {
         switch self {
         case .images(let v): try v.encode(to: encoder)
         case .video(let v): try v.encode(to: encoder)
+        case .external(let v): try v.encode(to: encoder)
         case .record(let v): try v.encode(to: encoder)
         case .recordWithMedia(let media, let rec):
             var container = encoder.container(keyedBy: RecordWithMediaCodingKeys.self)

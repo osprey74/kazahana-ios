@@ -12,6 +12,7 @@ struct ChatThreadView: View {
     @State private var viewModel: ChatThreadViewModel?
     @State private var messageText = ""
     @State private var scrollProxy: ScrollViewProxy?
+    @State private var selectedAuthorDID: IdentifiableString? = nil
 
     private var myDID: String { authVM.client.currentSession?.did ?? "" }
     private var otherMember: ChatMember? { convo.otherMember(myDID: myDID) }
@@ -73,8 +74,25 @@ struct ChatThreadView: View {
             // 送信ボックス
             inputBar
         }
-        .navigationTitle(otherMember?.displayNameOrHandle ?? "")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .principal) {
+                Button {
+                    if let did = otherMember?.did {
+                        selectedAuthorDID = IdentifiableString(did)
+                    }
+                } label: {
+                    Text(otherMember?.displayNameOrHandle ?? "")
+                        .font(.headline)
+                        .foregroundStyle(.primary)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .navigationDestination(item: $selectedAuthorDID) { item in
+            ProfileScreenView(actor: item.value)
+                .environment(authVM)
+        }
         .task {
             let vm = ChatThreadViewModel(chatService: chatService, convoId: convo.id)
             viewModel = vm

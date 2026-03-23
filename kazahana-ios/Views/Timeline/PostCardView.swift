@@ -276,7 +276,7 @@ struct PostCardView: View {
     private var authorRow: some View {
         HStack(spacing: 4) {
             Button {
-                onTapAuthor?(author.did)
+                onTapPost?(feedPost)
             } label: {
                 HStack(spacing: 4) {
                     Text(author.displayNameOrHandle)
