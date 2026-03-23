@@ -63,10 +63,9 @@ struct ComposeView: View {
     @State private var resolvedMentions: [String: String] = [:]
 
     // リンクカードプレビュー
-    @State private var detectedURL: URL? = nil
-    @State private var linkPreview: LinkPreview? = nil
+    @State private var detectedURL: URL? = nil          // テキスト中で検出した URL
+    @State private var linkPreview: LinkPreview? = nil  // 取得済みプレビュー
     @State private var isLoadingLinkPreview: Bool = false
-    @State private var linkPreviewDismissed: Bool = false   // ユーザーが×で閉じた
     @State private var linkPreviewTask: Task<Void, Never>? = nil
 
     private let postService: PostService
@@ -118,9 +117,9 @@ struct ComposeView: View {
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                         .padding(.horizontal, 12)
                         .scrollContentBackground(.hidden)
-                        .onChange(of: text) { _, newValue in
+                        .onChange(of: text) { oldValue, newValue in
                             updateMentionQuery(text: newValue)
-                            updateLinkPreview(text: newValue)
+                            updateLinkPreview(oldText: oldValue, newText: newValue)
                         }
 
                     // メンション候補リスト
@@ -158,6 +157,10 @@ struct ComposeView: View {
             .navigationTitle(replyToPost != nil ? String(localized: "compose.reply") : quotePost != nil ? String(localized: "compose.quotePost") : String(localized: "compose.newPost"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                // キーボード上部にリンクカード生成ボタンを表示（URL 検出時・カードなし時）
+                ToolbarItem(placement: .keyboard) {
+                    linkCardGenerateButton
+                }
                 ToolbarItem(placement: .cancellationAction) {
                     Button(String(localized: "compose.cancel")) {
                         let hasContent = !text.isEmpty || !selectedImages.isEmpty || selectedVideo != nil
@@ -548,38 +551,66 @@ struct ComposeView: View {
                 Divider()
                 linkCardPreviewRow(preview)
             }
+            // URL が検出されているがまだカードがない → 手動生成ボタンをキーボード上部に表示
         }
     }
 
-    /// テキスト変更時に URL を検出してプレビューを取得
-    private func updateLinkPreview(text: String) {
+    /// キーボード上部に表示するリンクカード生成ボタン（手打ち入力時）
+    @ViewBuilder
+    var linkCardGenerateButton: some View {
+        if selectedImages.isEmpty && selectedVideo == nil && quotePost == nil,
+           let url = detectedURL, linkPreview == nil, !isLoadingLinkPreview {
+            Button {
+                fetchLinkCard(url: url)
+            } label: {
+                HStack(spacing: 4) {
+                    Image(systemName: "link")
+                        .font(.system(size: 13))
+                    Text(String(localized: "compose.generateLinkCard"))
+                        .font(.subheadline)
+                }
+                .foregroundStyle(Color.accentColor)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    /// テキスト変更時に URL を検出し、ペースト時のみ自動フェッチする
+    private func updateLinkPreview(oldText: String, newText: String) {
         // 画像・動画・引用があるときはリンクカード不要
         guard selectedImages.isEmpty, selectedVideo == nil, quotePost == nil else { return }
 
-        let url = LinkPreviewService.detectFirstURL(in: text)
+        let url = LinkPreviewService.detectFirstURL(in: newText)
 
-        // 同じ URL なら何もしない（ユーザーが閉じた場合も含む）
+        // URL が変わった場合のみ処理（同じ URL のままなら何もしない）
         if url == detectedURL { return }
         detectedURL = url
 
         // URL がなくなったらプレビューをリセット
         guard let url else {
             linkPreview = nil
-            linkPreviewDismissed = false
             linkPreviewTask?.cancel()
             isLoadingLinkPreview = false
             return
         }
 
-        // ユーザーが × で閉じた URL と同じなら再表示しない
-        if linkPreviewDismissed { return }
+        // ペースト検出：差分文字数が URL 文字列長以上 → ペーストと判断して自動フェッチ
+        // 手打ちの場合は 1 文字ずつしか増えないので URL 全体が一度に入ることはない
+        let addedLength = newText.count - oldText.count
+        let isPaste = addedLength >= url.absoluteString.count
 
+        if isPaste {
+            fetchLinkCard(url: url)
+        }
+        // 手打ちの場合は detectedURL のみ更新してボタン表示に任せる
+    }
+
+    /// 指定 URL のリンクカードをフェッチして linkPreview にセットする
+    private func fetchLinkCard(url: URL) {
         linkPreviewTask?.cancel()
         linkPreviewTask = Task {
-            // 800ms デバウンス（テキスト入力中の連続呼び出しを抑制）
-            try? await Task.sleep(for: .milliseconds(800))
-            guard !Task.isCancelled else { return }
-
             await MainActor.run { isLoadingLinkPreview = true }
 
             let preview = try? await linkPreviewService.fetchPreview(url: url)
@@ -631,10 +662,10 @@ struct ComposeView: View {
 
             Spacer()
 
-            // 削除ボタン
+            // 削除ボタン（× で閉じたら同じ URL のカードを再表示しない）
             Button {
                 linkPreview = nil
-                linkPreviewDismissed = true
+                detectedURL = nil   // ボタン・自動フェッチの再トリガーを抑制
             } label: {
                 Image(systemName: "xmark.circle.fill")
                     .font(.system(size: 18))
