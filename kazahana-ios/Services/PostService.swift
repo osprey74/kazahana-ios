@@ -24,6 +24,7 @@ final class PostService {
         quotePost: PostView? = nil,
         images: [(blob: BlobRef, alt: String)]? = nil,
         video: (blob: BlobRef, alt: String?, aspectRatio: AspectRatioCreate?)? = nil,
+        linkCard: LinkPreview? = nil,
         via: String? = nil
     ) async throws -> CreateRecordResponse {
         guard let did = client.currentSession?.did else { throw ATProtoError.unauthorized }
@@ -36,7 +37,7 @@ final class PostService {
             )
         }
 
-        // embed の組み立て（画像 / 動画 / 引用 / 画像+引用）
+        // embed の組み立て（画像 / 動画 / 外部リンク / 引用 / 画像+引用）
         let embed: PostEmbedCreate?
         if let images, !images.isEmpty {
             let imageEmbed = ImageEmbedCreate(images: images.map { ImageEmbedItem(image: $0.blob, alt: $0.alt, aspectRatio: nil) })
@@ -47,6 +48,14 @@ final class PostService {
             }
         } else if let video {
             embed = .video(VideoEmbedCreate(video: video.blob, alt: video.alt, aspectRatio: video.aspectRatio))
+        } else if let linkCard {
+            let card = ExternalCardCreate(
+                uri: linkCard.url.absoluteString,
+                title: linkCard.title,
+                description: linkCard.description,
+                thumb: linkCard.thumbBlob
+            )
+            embed = .external(ExternalEmbedCreate(external: card))
         } else if let quotePost {
             embed = .record(QuoteEmbedRecord(uri: quotePost.uri, cid: quotePost.cid))
         } else {
