@@ -476,7 +476,7 @@ struct ThreadView: View {
         } else {
             isBookmarked = true
             do {
-                _ = try await postService.bookmark(uri: post.uri, cid: post.cid)
+                try await postService.bookmark(uri: post.uri, cid: post.cid)
             } catch {
                 isBookmarked = false
             }

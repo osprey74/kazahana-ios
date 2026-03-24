@@ -173,9 +173,9 @@ final class PostService {
 
     // MARK: - ブックマーク
 
-    func bookmark(uri: String, cid: String) async throws -> BookmarkResponse {
+    func bookmark(uri: String, cid: String) async throws {
         let body = BookmarkRequest(uri: uri, cid: cid)
-        return try await client.post(nsid: "app.bsky.bookmark.createBookmark", body: body)
+        let _: EmptyResponse = try await client.post(nsid: "app.bsky.bookmark.createBookmark", body: body)
     }
 
     func unbookmark(uri: String) async throws {
@@ -410,10 +410,6 @@ struct BookmarkRequest: Encodable {
 }
 
 struct UnbookmarkRequest: Encodable {
-    let uri: String
-}
-
-struct BookmarkResponse: Codable {
     let uri: String
 }
 
