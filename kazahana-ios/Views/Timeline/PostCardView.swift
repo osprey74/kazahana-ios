@@ -22,6 +22,8 @@ struct PostCardView: View {
     var onTapQuote: ((PostView) -> Void)?
     /// 投稿削除後の通知
     var onDelete: ((PostView) -> Void)?
+    /// ブックマーク解除後の通知
+    var onUnbookmark: ((PostView) -> Void)?
     /// 現在ログイン中のユーザー DID（自分の投稿かどうかの判定に使用）
     var currentUserDID: String?
     /// BSAF 重複情報（この投稿が primary の場合にセット）
@@ -69,6 +71,7 @@ struct PostCardView: View {
         onTapRepostCount: ((PostView) -> Void)? = nil,
         onTapQuote: ((PostView) -> Void)? = nil,
         onDelete: ((PostView) -> Void)? = nil,
+        onUnbookmark: ((PostView) -> Void)? = nil,
         currentUserDID: String? = nil
     ) {
         self.feedPost = feedPost
@@ -81,6 +84,7 @@ struct PostCardView: View {
         self.onTapRepostCount = onTapRepostCount
         self.onTapQuote = onTapQuote
         self.onDelete = onDelete
+        self.onUnbookmark = onUnbookmark
         self.currentUserDID = currentUserDID
         _isLiked      = State(initialValue: feedPost.post.viewer?.like != nil)
         _likeCount    = State(initialValue: feedPost.post.likeCount ?? 0)
@@ -579,6 +583,7 @@ struct PostCardView: View {
         if isBookmarked {
             isBookmarked = false
             try? await postService.unbookmark(uri: post.uri)
+            onUnbookmark?(post)
         } else {
             isBookmarked = true
             do {

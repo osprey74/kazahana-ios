@@ -273,7 +273,8 @@ final class ATProtoClient {
         switch httpResponse.statusCode {
         case 200...299:
             do {
-                return try decoder.decode(T.self, from: data)
+                let decodeData = data.isEmpty ? Data("{}".utf8) : data
+                return try decoder.decode(T.self, from: decodeData)
             } catch {
                 // デバッグ用: どのフィールドで失敗したかを出力
                 print("[ATProto] Decode error for \(T.self): \(error)")

@@ -206,13 +206,21 @@ final class ProfileViewModel {
 
     @MainActor
     func loadBookmarks() async {
-        guard let postService else { return }
+        guard let postService else {
+            print("[ProfileViewModel] loadBookmarks: postService is nil")
+            return
+        }
         guard !isLoadingBookmarks else { return }
         isLoadingBookmarks = true
         do {
             let response = try await postService.getBookmarks()
-            bookmarkedPosts = response.feed.map { FeedViewPost(post: $0.post, reply: nil, reason: nil) }
+            print("[ProfileViewModel] loadBookmarks: got \(response.bookmarks.count) bookmarks")
+            bookmarkedPosts = response.bookmarks.compactMap { bookmark -> FeedViewPost? in
+                guard let post = bookmark.item else { return nil }
+                return FeedViewPost(post: post, reply: nil, reason: nil)
+            }
         } catch {
+            print("[ProfileViewModel] loadBookmarks error: \(error)")
             errorMessage = error.localizedDescription
         }
         isLoadingBookmarks = false
@@ -264,12 +272,24 @@ final class ProfileViewModel {
 
     private func refreshCurrentTab() async {
         let tab = selectedTab
-        if let response = try? await fetchFeed(tab: tab, cursor: nil) {
-            await MainActor.run {
-                tabFeeds[tab] = response.feed
-                tabCursors[tab] = response.cursor
-                tabHasMore[tab] = response.cursor != nil
-                if tab == .posts { posts = response.feed; cursor = response.cursor; hasMore = response.cursor != nil }
+        switch tab {
+        case .bookmarks:
+            await MainActor.run { isLoadingBookmarks = false }
+            await loadBookmarks()
+        case .feeds:
+            await loadActorFeeds()
+        case .lists:
+            await loadActorLists()
+        case .starterPacks:
+            break
+        default:
+            if let response = try? await fetchFeed(tab: tab, cursor: nil) {
+                await MainActor.run {
+                    tabFeeds[tab] = response.feed
+                    tabCursors[tab] = response.cursor
+                    tabHasMore[tab] = response.cursor != nil
+                    if tab == .posts { posts = response.feed; cursor = response.cursor; hasMore = response.cursor != nil }
+                }
             }
         }
     }

@@ -414,12 +414,25 @@ struct UnbookmarkRequest: Encodable {
 }
 
 struct BookmarksResponse: Codable {
-    let feed: [BookmarkedFeedPost]
+    let bookmarks: [BookmarkView]
     let cursor: String?
 }
 
-struct BookmarkedFeedPost: Codable {
-    let post: PostView
+/// app.bsky.bookmark.defs#bookmarkView
+struct BookmarkView: Codable {
+    /// item は postView / blockedPost / notFoundPost のユニオン型。
+    /// postView の場合のみ PostView として保持し、それ以外は nil。
+    let item: PostView?
+
+    enum CodingKeys: String, CodingKey {
+        case item
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        // item のデコードが失敗しても nil として扱い、BookmarksResponse 全体は維持する
+        item = try? container.decode(PostView.self, forKey: .item)
+    }
 }
 
 // MARK: - 通報関連型

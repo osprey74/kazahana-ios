@@ -479,6 +479,9 @@ struct ProfileScreenView: View {
                     onTapAuthor: { did in selectedAuthorDID = IdentifiableString(did) },
                     onTapReply: { post in replyToPost = post },
                     onTapQuote: { post in quotePost = post },
+                    onUnbookmark: { _ in
+                        vm.bookmarkedPosts.removeAll { $0.post.uri == feedPost.post.uri }
+                    },
                     currentUserDID: authVM.client.currentSession?.did
                 )
                 Divider().padding(.leading, 16)
