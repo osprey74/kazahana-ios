@@ -1,6 +1,6 @@
 # kazahana-ios 開発タスク・進捗記録
 
-最終更新: 2026-03-22 (ホームタブ再タップでスクロール先頭＋再読み込み)
+最終更新: 2026-03-24 (リンクカード生成ボタン UI 修正・タップ動作修正)
 
 ---
 
@@ -454,6 +454,7 @@
 - [x] **通知画面メディア表示** — `NotificationItemView.postContentView()` に embed 表示を追加。`ImageGridView` に `maxWidth` パラメータを追加し左50ptインデント分を考慮した幅で画像グリッドを表示（2×2タイル対応）。`VideoPlayerView` に `thumbnailOnly` パラメータを追加し通知画面ではサムネイルのみ表示（再生はスレッド遷移後）。リンクカード・引用投稿も表示対応
 - [x] **全画面タップ挙動統一** — アバタータップ→プロフィール遷移、表示名/ハンドルタップ→スレッド遷移に統一。`PostCardView.authorRow`・`ProfileView`（3箇所）・`ConversationListView`・`ChatThreadView`（ナビタイトルタップ）に対応
 - [x] **ホームタブ再タップでスクロール先頭＋再読み込み** — `UITabBarControllerDelegate` を `TabBarDelegateInjector`（`UIViewControllerRepresentable`）で注入し、ホームタブ再タップを検出。`NotificationCenter` 経由で `TimelineView` に通知し、`refresh()` + `ScrollViewProxy` でリスト先頭にスクロール。フィードタブバーの再タップ時も同様に対応
+- [x] **投稿エリアへのURL入力でリンクカード生成** — ペースト時は自動生成、手打ち時はインラインボタン表示（アイコン＋「リンクカード生成」テキスト）。`LinkPreviewService`（OGP取得・サムネイル取得）/ `PostEmbedCreate.external` / `fetchLinkCard` do/catch 修正・`.bordered` ボタンスタイルでタップ確実受信
 
 ---
 
