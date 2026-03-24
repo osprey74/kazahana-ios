@@ -16,11 +16,12 @@ struct ThreadView: View {
     @State private var quotePost: PostView? = nil
     @State private var selectedAuthorDID: IdentifiableString? = nil
 
-    // フォーカス投稿のいいね/リポスト状態（楽観的UI）
+    // フォーカス投稿のいいね/リポスト/ブックマーク状態（楽観的UI）
     @State private var isLiked = false
     @State private var likeCount = 0
     @State private var isReposted = false
     @State private var repostCount = 0
+    @State private var isBookmarked = false
     @State private var likeUri: String? = nil
     @State private var repostUri: String? = nil
     @State private var showFocusedDeleteConfirm = false
@@ -96,6 +97,7 @@ struct ThreadView: View {
                 likeCount = post.likeCount ?? 0
                 isReposted = post.viewer?.repost != nil
                 repostCount = post.repostCount ?? 0
+                isBookmarked = post.viewer?.bookmarked == true
                 likeUri = post.viewer?.like
                 repostUri = post.viewer?.repost
             }
@@ -324,6 +326,13 @@ struct ThreadView: View {
 
                 Spacer()
 
+                // ブックマーク
+                actionButton(icon: isBookmarked ? "bookmark.fill" : "bookmark", color: isBookmarked ? .orange : .secondary) {
+                    Task { await toggleBookmark(post: post) }
+                }
+
+                Spacer()
+
                 // 共有
                 actionButton(icon: "square.and.arrow.up", color: .secondary) {
                     let url = "https://bsky.app/profile/\(post.author.handle)/post/\(post.uri.components(separatedBy: "/").last ?? "")"
@@ -457,6 +466,20 @@ struct ThreadView: View {
                 let response = try await postService.repost(uri: post.uri, cid: post.cid)
                 repostUri = response.uri
             } catch { isReposted = prev.0; repostCount = prev.1; repostUri = prev.2 }
+        }
+    }
+
+    private func toggleBookmark(post: PostView) async {
+        if isBookmarked {
+            isBookmarked = false
+            try? await postService.unbookmark(uri: post.uri)
+        } else {
+            isBookmarked = true
+            do {
+                _ = try await postService.bookmark(uri: post.uri, cid: post.cid)
+            } catch {
+                isBookmarked = false
+            }
         }
     }
 

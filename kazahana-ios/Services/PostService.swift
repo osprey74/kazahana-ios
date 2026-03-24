@@ -171,6 +171,24 @@ final class PostService {
         let _: EmptyResponse = try await client.post(nsid: "com.atproto.repo.deleteRecord", body: body)
     }
 
+    // MARK: - ブックマーク
+
+    func bookmark(uri: String, cid: String) async throws -> BookmarkResponse {
+        let body = BookmarkRequest(uri: uri, cid: cid)
+        return try await client.post(nsid: "app.bsky.bookmark.createBookmark", body: body)
+    }
+
+    func unbookmark(uri: String) async throws {
+        let body = UnbookmarkRequest(uri: uri)
+        let _: EmptyResponse = try await client.post(nsid: "app.bsky.bookmark.deleteBookmark", body: body)
+    }
+
+    func getBookmarks(limit: Int = 50, cursor: String? = nil) async throws -> BookmarksResponse {
+        var params: [String: String] = ["limit": "\(limit)"]
+        if let cursor = cursor { params["cursor"] = cursor }
+        return try await client.get(nsid: "app.bsky.bookmark.getBookmarks", params: params)
+    }
+
     // MARK: - スレッド取得
 
     func getThread(uri: String, depth: Int = 6) async throws -> ThreadResponse {
@@ -382,6 +400,30 @@ final class ThreadViewPost: Codable {
         case type = "$type"
         case post, parent, replies
     }
+}
+
+// MARK: - ブックマーク関連型
+
+struct BookmarkRequest: Encodable {
+    let uri: String
+    let cid: String
+}
+
+struct UnbookmarkRequest: Encodable {
+    let uri: String
+}
+
+struct BookmarkResponse: Codable {
+    let uri: String
+}
+
+struct BookmarksResponse: Codable {
+    let feed: [BookmarkedFeedPost]
+    let cursor: String?
+}
+
+struct BookmarkedFeedPost: Codable {
+    let post: PostView
 }
 
 // MARK: - 通報関連型

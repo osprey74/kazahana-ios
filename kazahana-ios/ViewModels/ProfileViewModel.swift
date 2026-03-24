@@ -11,6 +11,7 @@ enum ProfileTab: String, CaseIterable {
     case replies      = "replies"
     case media        = "media"
     case likes        = "likes"
+    case bookmarks    = "bookmarks"
     case feeds        = "feeds"
     case lists        = "lists"
     case starterPacks = "starterPacks"
@@ -21,6 +22,7 @@ enum ProfileTab: String, CaseIterable {
         case .replies:      return String(localized: "profile.replies")
         case .media:        return String(localized: "profile.media")
         case .likes:        return String(localized: "profile.likes")
+        case .bookmarks:    return String(localized: "profile.bookmarks")
         case .feeds:        return String(localized: "profile.feeds")
         case .lists:        return String(localized: "profile.lists")
         case .starterPacks: return String(localized: "profile.starterPacks")
@@ -71,13 +73,15 @@ final class ProfileViewModel {
     private let graphService: GraphService
     private var searchService: SearchService?
     private var feedService: FeedService?
+    private var postService: PostService?
 
-    init(actor: String, graphService: GraphService, searchService: SearchService? = nil, feedService: FeedService? = nil) {
+    init(actor: String, graphService: GraphService, searchService: SearchService? = nil, feedService: FeedService? = nil, postService: PostService? = nil) {
         self.actor = actor
         self.graphService = graphService
         self.searchService = searchService
         self.feedService = feedService
-        // feeds/lists タブはフィードポストを持たないので tabFeeds から除外
+        self.postService = postService
+        // feeds/lists/bookmarks タブはフィードポストを持たないので tabFeeds から除外
         let postTabs: [ProfileTab] = [.posts, .replies, .media, .likes]
         for tab in postTabs {
             tabFeeds[tab] = []
@@ -122,7 +126,7 @@ final class ProfileViewModel {
 
     @MainActor
     func loadTab(_ tab: ProfileTab) async {
-        // feeds / lists / starterPacks タブは専用メソッドで処理
+        // feeds / lists / starterPacks / bookmarks タブは専用メソッドで処理
         if tab == .feeds {
             await loadActorFeeds()
             return
@@ -133,6 +137,10 @@ final class ProfileViewModel {
         }
         if tab == .starterPacks {
             // StarterPackListTabView が自前でロードするため何もしない
+            return
+        }
+        if tab == .bookmarks {
+            await loadBookmarks()
             return
         }
 
@@ -156,8 +164,8 @@ final class ProfileViewModel {
 
     @MainActor
     func loadMoreTab(_ tab: ProfileTab) async {
-        // feeds / lists / starterPacks タブはページネーションなし
-        guard tab != .feeds, tab != .lists, tab != .starterPacks else { return }
+        // feeds / lists / starterPacks / bookmarks タブはページネーションなし
+        guard tab != .feeds, tab != .lists, tab != .starterPacks, tab != .bookmarks else { return }
         guard !(tabIsLoading[tab] ?? false),
               tabHasMore[tab] ?? false,
               let currentCursor = tabCursors[tab] ?? nil else { return }
@@ -185,10 +193,29 @@ final class ProfileViewModel {
             return try await graphService.getAuthorFeed(actor: actor, limit: 30, cursor: cursor, filter: "posts_with_media")
         case .likes:
             return try await graphService.getActorLikes(actor: actor, limit: 30, cursor: cursor)
-        case .feeds, .lists, .starterPacks:
+        case .feeds, .lists, .starterPacks, .bookmarks:
             // これらのタブは loadTab で分岐済みのため到達しない
             return TimelineResponse(feed: [], cursor: nil)
         }
+    }
+
+    // MARK: - ブックマーク一覧読み込み
+
+    var bookmarkedPosts: [FeedViewPost] = []
+    var isLoadingBookmarks = false
+
+    @MainActor
+    func loadBookmarks() async {
+        guard let postService else { return }
+        guard !isLoadingBookmarks else { return }
+        isLoadingBookmarks = true
+        do {
+            let response = try await postService.getBookmarks()
+            bookmarkedPosts = response.feed.map { FeedViewPost(post: $0.post, reply: nil, reason: nil) }
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+        isLoadingBookmarks = false
     }
 
     // MARK: - フィード / リスト一覧読み込み

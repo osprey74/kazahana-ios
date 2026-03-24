@@ -32,6 +32,7 @@ struct PostCardView: View {
     @State private var likeCount: Int
     @State private var isReposted: Bool
     @State private var repostCount: Int
+    @State private var isBookmarked: Bool
     @State private var likeUri: String?
     @State private var repostUri: String?
     @State private var showDeleteConfirm = false
@@ -81,12 +82,13 @@ struct PostCardView: View {
         self.onTapQuote = onTapQuote
         self.onDelete = onDelete
         self.currentUserDID = currentUserDID
-        _isLiked     = State(initialValue: feedPost.post.viewer?.like != nil)
-        _likeCount   = State(initialValue: feedPost.post.likeCount ?? 0)
-        _isReposted  = State(initialValue: feedPost.post.viewer?.repost != nil)
-        _repostCount = State(initialValue: feedPost.post.repostCount ?? 0)
-        _likeUri     = State(initialValue: feedPost.post.viewer?.like)
-        _repostUri   = State(initialValue: feedPost.post.viewer?.repost)
+        _isLiked      = State(initialValue: feedPost.post.viewer?.like != nil)
+        _likeCount    = State(initialValue: feedPost.post.likeCount ?? 0)
+        _isReposted   = State(initialValue: feedPost.post.viewer?.repost != nil)
+        _repostCount  = State(initialValue: feedPost.post.repostCount ?? 0)
+        _isBookmarked = State(initialValue: feedPost.post.viewer?.bookmarked == true)
+        _likeUri      = State(initialValue: feedPost.post.viewer?.like)
+        _repostUri    = State(initialValue: feedPost.post.viewer?.repost)
     }
 
     var body: some View {
@@ -467,6 +469,18 @@ struct PostCardView: View {
             }
 
             Spacer()
+
+            // ブックマーク
+            Button {
+                Task { await toggleBookmark() }
+            } label: {
+                Image(systemName: isBookmarked ? "bookmark.fill" : "bookmark")
+                    .font(.system(size: 15))
+                    .foregroundStyle(isBookmarked ? Color.orange : .secondary)
+            }
+            .buttonStyle(.plain)
+
+            Spacer()
         }
         .padding(.top, 6)
     }
@@ -556,6 +570,21 @@ struct PostCardView: View {
             } catch {
                 isReposted = false
                 repostCount = max(0, repostCount - 1)
+            }
+        }
+    }
+
+    private func toggleBookmark() async {
+        guard let postService else { return }
+        if isBookmarked {
+            isBookmarked = false
+            try? await postService.unbookmark(uri: post.uri)
+        } else {
+            isBookmarked = true
+            do {
+                _ = try await postService.bookmark(uri: post.uri, cid: post.cid)
+            } catch {
+                isBookmarked = false
             }
         }
     }

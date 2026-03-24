@@ -266,6 +266,7 @@ struct FeedReason: Codable {
 struct ViewerState: Codable {
     let repost: String?
     let like: String?
+    let bookmarked: Bool?
     let threadMuted: Bool?
     let replyDisabled: Bool?
     let embeddingDisabled: Bool?

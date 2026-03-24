@@ -93,7 +93,8 @@ struct ProfileScreenView: View {
         let graphService = GraphService(client: authVM.client)
         let searchService = SearchService(client: authVM.client)
         let feedService = FeedService(client: authVM.client)
-        viewModel = ProfileViewModel(actor: actor, graphService: graphService, searchService: searchService, feedService: feedService)
+        let postService = PostService(client: authVM.client)
+        viewModel = ProfileViewModel(actor: actor, graphService: graphService, searchService: searchService, feedService: feedService, postService: postService)
     }
 
     @ViewBuilder
@@ -136,6 +137,8 @@ struct ProfileScreenView: View {
                             selectedStarterPack = pack
                         })
                         .environment(authVM)
+                    } else if vm.selectedTab == .bookmarks {
+                        bookmarksTab(vm: vm)
                     } else {
                         // ピン留め投稿（投稿タブのみ）
                         if vm.selectedTab == .posts, let pinned = vm.pinnedPost {
@@ -458,6 +461,32 @@ struct ProfileScreenView: View {
     }
 
     @ViewBuilder
+    private func bookmarksTab(vm: ProfileViewModel) -> some View {
+        if vm.isLoadingBookmarks && vm.bookmarkedPosts.isEmpty {
+            ProgressView().padding(.top, 32)
+        } else if vm.bookmarkedPosts.isEmpty {
+            Text(String(localized: "profile.noBookmarks"))
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .padding(.top, 40)
+                .frame(maxWidth: .infinity)
+        } else {
+            ForEach(vm.bookmarkedPosts) { feedPost in
+                PostCardView(
+                    feedPost: feedPost,
+                    postService: PostService(client: authVM.client),
+                    onTapPost: { _ in selectedPost = feedPost },
+                    onTapAuthor: { did in selectedAuthorDID = IdentifiableString(did) },
+                    onTapReply: { post in replyToPost = post },
+                    onTapQuote: { post in quotePost = post },
+                    currentUserDID: authVM.client.currentSession?.did
+                )
+                Divider().padding(.leading, 16)
+            }
+        }
+    }
+
+    @ViewBuilder
     private func profileListsTab(vm: ProfileViewModel) -> some View {
         if vm.isLoadingLists && vm.actorLists.isEmpty {
             ProgressView().padding(.top, 32)
@@ -521,9 +550,11 @@ struct ProfileScreenView: View {
     }
 
     private func profileTabBar(vm: ProfileViewModel) -> some View {
-        ScrollView(.horizontal, showsIndicators: false) {
+        let isSelf = authVM.client.currentSession?.did == actor
+        let visibleTabs = ProfileTab.allCases.filter { $0 != .bookmarks || isSelf }
+        return ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 0) {
-                ForEach(ProfileTab.allCases, id: \.self) { tab in
+                ForEach(visibleTabs, id: \.self) { tab in
                     Button {
                         if vm.selectedTab != tab {
                             vm.selectedTab = tab
@@ -533,6 +564,7 @@ struct ProfileScreenView: View {
                                 case .feeds:        return vm.actorFeeds.isEmpty && !vm.isLoadingFeeds
                                 case .lists:        return vm.actorLists.isEmpty && !vm.isLoadingLists
                                 case .starterPacks: return false  // StarterPackListTabView が自前でロード
+                                case .bookmarks:    return vm.bookmarkedPosts.isEmpty && !vm.isLoadingBookmarks
                                 default:            return vm.tabFeeds[tab]?.isEmpty ?? true
                                 }
                             }()

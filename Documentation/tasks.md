@@ -1,6 +1,6 @@
 # kazahana-ios 開発タスク・進捗記録
 
-最終更新: 2026-03-24 (リンクカード生成ボタン UI 修正・タップ動作修正)
+最終更新: 2026-03-24 (ブックマーク機能実装)
 
 ---
 
@@ -460,7 +460,7 @@
 
 ## 既知の課題・TODO
 
-- [ ] **ブックマーク**: AT Protocol にネイティブブックマーク API がないため設計要検討
+- [x] **ブックマーク**: `app.bsky.bookmark.*` API で実装済み（PostCardView / ThreadView ボタン + プロフィールタブ）
 - [ ] **画像読み込み**: 現在 `AsyncImage` を使用。Kingfisher or Nuke の導入を検討
 - [ ] **Unit Tests**: テストは空のまま。モデル・サービス層のテストを追加予定
 - [ ] **Bundle ID**: 現在 Xcode デフォルト。`com.kazahana.app` への変更が必要（App Store 配布前）
