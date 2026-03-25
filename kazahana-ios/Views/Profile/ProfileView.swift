@@ -18,6 +18,7 @@ struct ProfileScreenView: View {
     @State private var selectedStarterPack: StarterPackViewBasic? = nil
     @State private var showSettings = false
     @State private var showCompose = false
+    @State private var mentionInitialText: IdentifiableString? = nil
     @State private var quotePost: PostView? = nil
     @State private var replyToPost: PostView? = nil
     /// コンパクトヘッダー表示フラグ（スクロール開始後に true）
@@ -74,6 +75,11 @@ struct ProfileScreenView: View {
         }
         .sheet(isPresented: $showCompose) {
             ComposeView(postService: PostService(client: authVM.client))
+                .environment(AppSettings.shared)
+        }
+        .sheet(item: $mentionInitialText) { item in
+            // 他人のプロフィール画面から @mention 付きで投稿
+            ComposeView(postService: PostService(client: authVM.client), initialText: item.value)
                 .environment(AppSettings.shared)
         }
         .sheet(item: $quotePost) { quoted in
@@ -214,7 +220,12 @@ struct ProfileScreenView: View {
         }
         .overlay(alignment: .bottomTrailing) {
             Button {
-                showCompose = true
+                // 他人のプロフィール画面では @handle を初期テキストとして挿入
+                if !isSelf, let handle = vm.profile?.handle {
+                    mentionInitialText = IdentifiableString("@\(handle) ")
+                } else {
+                    showCompose = true
+                }
             } label: {
                 Image(systemName: "pencil")
                     .font(.system(size: 22, weight: .semibold))
