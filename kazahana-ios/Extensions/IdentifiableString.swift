@@ -21,4 +21,6 @@ extension Notification.Name {
     static let kazahanaDeepLink = Notification.Name("kazahanaDeepLink")
     /// ホームタブの再タップ通知 — TimelineView がこれを受信してスクロール先頭 + 再読み込みする
     static let timelineScrollToTop = Notification.Name("timelineScrollToTop")
+    /// ハッシュタグ検索通知 — userInfo["tag"] にタグ文字列（# なし）が入る
+    static let searchHashtag = Notification.Name("searchHashtag")
 }

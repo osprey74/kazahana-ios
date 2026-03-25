@@ -13,6 +13,8 @@ struct SearchView: View {
     @State private var viewModel: SearchViewModel?
     @State private var selectedActor: IdentifiableActor?
     @State private var selectedPostURI: IdentifiableString?
+    /// タブ切り替え直後に通知が届いた場合に備えて保持するハッシュタグ
+    @State private var pendingHashtag: String? = nil
 
     var body: some View {
         NavigationStack {
@@ -39,6 +41,24 @@ struct SearchView: View {
             if viewModel == nil {
                 let searchService = SearchService(client: authVM.client)
                 viewModel = SearchViewModel(searchService: searchService)
+            }
+            // タブ切り替え前に受信した pendingHashtag があれば検索実行
+            if let tag = pendingHashtag, let vm = viewModel {
+                pendingHashtag = nil
+                vm.query = "#\(tag)"
+                vm.selectedTab = .posts
+                Task { await vm.search() }
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .searchHashtag)) { note in
+            guard let tag = note.userInfo?["tag"] as? String, !tag.isEmpty else { return }
+            if let vm = viewModel {
+                vm.query = "#\(tag)"
+                vm.selectedTab = .posts  // ハッシュタグは投稿タブで検索
+                Task { await vm.search() }
+            } else {
+                // viewModel 未初期化の場合は onAppear で処理
+                pendingHashtag = tag
             }
         }
     }

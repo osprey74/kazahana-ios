@@ -144,8 +144,15 @@ struct MainTabView: View {
                 deepLinkPostURI = IdentifiableString(value: decoded)
             }
         case "hashtag":
-            // ハッシュタグは検索タブに切り替え（将来的に検索クエリを渡す実装で拡張）
-            selectedTab = .search
+            // ハッシュタグは検索タブに切り替え、タグ文字列を SearchView に通知
+            if let tag = path.first, !tag.isEmpty {
+                selectedTab = .search
+                NotificationCenter.default.post(
+                    name: .searchHashtag,
+                    object: nil,
+                    userInfo: ["tag": tag]
+                )
+            }
         case "compose":
             // Share Extension から起動: ?text= クエリパラメータを投稿エリアに渡す
             let components = URLComponents(url: url, resolvingAgainstBaseURL: false)
