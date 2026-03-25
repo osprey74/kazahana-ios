@@ -35,6 +35,7 @@ struct PostCardView: View {
     @State private var isReposted: Bool
     @State private var repostCount: Int
     @State private var isBookmarked: Bool
+    @State private var isThreadMuted: Bool
     @State private var likeUri: String?
     @State private var repostUri: String?
     @State private var showDeleteConfirm = false
@@ -90,9 +91,10 @@ struct PostCardView: View {
         _likeCount    = State(initialValue: feedPost.post.likeCount ?? 0)
         _isReposted   = State(initialValue: feedPost.post.viewer?.repost != nil)
         _repostCount  = State(initialValue: feedPost.post.repostCount ?? 0)
-        _isBookmarked = State(initialValue: feedPost.post.viewer?.bookmarked == true)
-        _likeUri      = State(initialValue: feedPost.post.viewer?.like)
-        _repostUri    = State(initialValue: feedPost.post.viewer?.repost)
+        _isBookmarked   = State(initialValue: feedPost.post.viewer?.bookmarked == true)
+        _isThreadMuted  = State(initialValue: feedPost.post.viewer?.threadMuted == true)
+        _likeUri        = State(initialValue: feedPost.post.viewer?.like)
+        _repostUri      = State(initialValue: feedPost.post.viewer?.repost)
     }
 
     var body: some View {
@@ -336,17 +338,35 @@ struct PostCardView: View {
                 Label(String(localized: "post.translate"), systemImage: "character.bubble")
             }
 
-            // 通報
+            // 他人の投稿のみ：非表示・通報
+            if let currentUserDID, currentUserDID != author.did {
+                Divider()
+                Button {
+                    Task { await toggleHidePost() }
+                } label: {
+                    Label(String(localized: "post.hidePost"), systemImage: "eye.slash")
+                }
+                Button {
+                    reportTarget = .post(uri: post.uri, cid: post.cid)
+                } label: {
+                    Label(String(localized: "post.reportPost"), systemImage: "flag")
+                }
+                Button {
+                    reportTarget = .account(did: author.did)
+                } label: {
+                    Label(String(localized: "post.reportAccount"), systemImage: "person.badge.minus")
+                }
+            }
+
+            // 全投稿：スレッドミュート
             Divider()
             Button {
-                reportTarget = .post(uri: post.uri, cid: post.cid)
+                Task { await toggleMuteThread() }
             } label: {
-                Label(String(localized: "post.reportPost"), systemImage: "flag")
-            }
-            Button {
-                reportTarget = .account(did: author.did)
-            } label: {
-                Label(String(localized: "post.reportAccount"), systemImage: "person.badge.minus")
+                Label(
+                    String(localized: isThreadMuted ? "post.unmuteThread" : "post.muteThread"),
+                    systemImage: isThreadMuted ? "bell" : "bell.slash"
+                )
             }
 
             // 自分の投稿の場合のみ削除ボタンを表示
@@ -591,6 +611,27 @@ struct PostCardView: View {
                 try await postService.bookmark(uri: post.uri, cid: post.cid)
             } catch {
                 isBookmarked = false
+            }
+        }
+    }
+
+    private func toggleHidePost() async {
+        guard let postService else { return }
+        try? await postService.hidePost(uri: post.uri)
+        onDelete?(post)
+    }
+
+    private func toggleMuteThread() async {
+        guard let postService else { return }
+        if isThreadMuted {
+            isThreadMuted = false
+            try? await postService.unmuteThread(root: post.uri)
+        } else {
+            isThreadMuted = true
+            do {
+                try await postService.muteThread(root: post.uri)
+            } catch {
+                isThreadMuted = false
             }
         }
     }

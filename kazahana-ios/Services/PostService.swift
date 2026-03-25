@@ -189,6 +189,30 @@ final class PostService {
         return try await client.get(nsid: "app.bsky.bookmark.getBookmarks", params: params)
     }
 
+    // MARK: - 投稿非表示
+
+    func hidePost(uri: String) async throws {
+        let body = HidePostRequest(uri: uri)
+        let _: EmptyResponse = try await client.post(nsid: "app.bsky.feed.hidePost", body: body)
+    }
+
+    func unhidePost(uri: String) async throws {
+        let body = HidePostRequest(uri: uri)
+        let _: EmptyResponse = try await client.post(nsid: "app.bsky.feed.unhidePost", body: body)
+    }
+
+    // MARK: - スレッドミュート
+
+    func muteThread(root: String) async throws {
+        let body = MuteThreadRequest(root: root)
+        let _: EmptyResponse = try await client.post(nsid: "app.bsky.graph.muteThread", body: body)
+    }
+
+    func unmuteThread(root: String) async throws {
+        let body = MuteThreadRequest(root: root)
+        let _: EmptyResponse = try await client.post(nsid: "app.bsky.graph.unmuteThread", body: body)
+    }
+
     // MARK: - スレッド取得
 
     func getThread(uri: String, depth: Int = 6) async throws -> ThreadResponse {
@@ -433,6 +457,16 @@ struct BookmarkView: Codable {
         // item のデコードが失敗しても nil として扱い、BookmarksResponse 全体は維持する
         item = try? container.decode(PostView.self, forKey: .item)
     }
+}
+
+// MARK: - 投稿非表示・スレッドミュート関連型
+
+struct HidePostRequest: Encodable {
+    let uri: String
+}
+
+struct MuteThreadRequest: Encodable {
+    let root: String
 }
 
 // MARK: - 通報関連型

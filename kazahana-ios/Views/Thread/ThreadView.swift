@@ -22,6 +22,7 @@ struct ThreadView: View {
     @State private var isReposted = false
     @State private var repostCount = 0
     @State private var isBookmarked = false
+    @State private var isThreadMuted = false
     @State private var likeUri: String? = nil
     @State private var repostUri: String? = nil
     @State private var showFocusedDeleteConfirm = false
@@ -97,9 +98,10 @@ struct ThreadView: View {
                 likeCount = post.likeCount ?? 0
                 isReposted = post.viewer?.repost != nil
                 repostCount = post.repostCount ?? 0
-                isBookmarked = post.viewer?.bookmarked == true
-                likeUri = post.viewer?.like
-                repostUri = post.viewer?.repost
+                isBookmarked   = post.viewer?.bookmarked == true
+                isThreadMuted  = post.viewer?.threadMuted == true
+                likeUri        = post.viewer?.like
+                repostUri      = post.viewer?.repost
             }
         }
     }
@@ -390,17 +392,35 @@ struct ThreadView: View {
                 Label(String(localized: "post.translate"), systemImage: "character.bubble")
             }
 
-            // 通報
+            // 他人の投稿のみ：非表示・通報
+            if let currentDID, currentDID != post.author.did {
+                Divider()
+                Button {
+                    Task { try? await postService.hidePost(uri: post.uri) }
+                } label: {
+                    Label(String(localized: "post.hidePost"), systemImage: "eye.slash")
+                }
+                Button {
+                    reportTarget = .post(uri: post.uri, cid: post.cid)
+                } label: {
+                    Label(String(localized: "post.reportPost"), systemImage: "flag")
+                }
+                Button {
+                    reportTarget = .account(did: post.author.did)
+                } label: {
+                    Label(String(localized: "post.reportAccount"), systemImage: "person.badge.minus")
+                }
+            }
+
+            // 全投稿：スレッドミュート
             Divider()
             Button {
-                reportTarget = .post(uri: post.uri, cid: post.cid)
+                Task { await toggleMuteThread(post: post) }
             } label: {
-                Label(String(localized: "post.reportPost"), systemImage: "flag")
-            }
-            Button {
-                reportTarget = .account(did: post.author.did)
-            } label: {
-                Label(String(localized: "post.reportAccount"), systemImage: "person.badge.minus")
+                Label(
+                    String(localized: isThreadMuted ? "post.unmuteThread" : "post.muteThread"),
+                    systemImage: isThreadMuted ? "bell" : "bell.slash"
+                )
             }
 
             // 自分の投稿のみ削除
@@ -480,6 +500,20 @@ struct ThreadView: View {
                 try await postService.bookmark(uri: post.uri, cid: post.cid)
             } catch {
                 isBookmarked = false
+            }
+        }
+    }
+
+    private func toggleMuteThread(post: PostView) async {
+        if isThreadMuted {
+            isThreadMuted = false
+            try? await postService.unmuteThread(root: post.uri)
+        } else {
+            isThreadMuted = true
+            do {
+                try await postService.muteThread(root: post.uri)
+            } catch {
+                isThreadMuted = false
             }
         }
     }
