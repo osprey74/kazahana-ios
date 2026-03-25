@@ -211,11 +211,23 @@ struct MessageBubbleView: View {
         switch message {
         case .message(let m):
             VStack(alignment: isMine ? .trailing : .leading, spacing: 4) {
-                Text(m.text)
+                Text(richText(for: m))
                     .padding(.horizontal, 12)
                     .padding(.vertical, 8)
                     .background(isMine ? Color.blue : Color(.systemGray5))
                     .foregroundStyle(isMine ? .white : .primary)
+                    .tint(isMine ? .white : .accentColor)
+                    .environment(\.openURL, OpenURLAction { url in
+                        if url.scheme == "kazahana" {
+                            NotificationCenter.default.post(
+                                name: .kazahanaDeepLink,
+                                object: nil,
+                                userInfo: ["url": url]
+                            )
+                            return .handled
+                        }
+                        return .systemAction
+                    })
                     .clipShape(RoundedRectangle(cornerRadius: 16))
 
                 // リアクション表示
@@ -246,6 +258,21 @@ struct MessageBubbleView: View {
                 .background(Color(.systemGray6))
                 .clipShape(RoundedRectangle(cornerRadius: 16))
         }
+    }
+
+    /// facets がある場合はリッチテキスト、なければ URL/ハッシュタグを自動検出してリッチテキスト化
+    private func richText(for m: ChatMessageView) -> AttributedString {
+        if let facets = m.facets, !facets.isEmpty {
+            return RichTextParser.attributedString(text: m.text, facets: facets)
+        }
+        // サーバーが facets を返さない場合はクライアント側で自動検出
+        let detected = RichTextParser.detectFacets(in: m.text)
+        if detected.isEmpty { return AttributedString(m.text) }
+        let builtFacets = RichTextParser.buildFacets(from: detected.filter {
+            if case .mention = $0.kind { return false } // DID 未解決メンションは除外
+            return true
+        })
+        return RichTextParser.attributedString(text: m.text, facets: builtFacets.isEmpty ? nil : builtFacets)
     }
 }
 

@@ -182,6 +182,7 @@ struct SendMessageBody: Encodable {
 
     struct MessageInput: Encodable {
         let text: String
+        let facets: [Facet]?
     }
 }
 

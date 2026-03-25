@@ -74,7 +74,13 @@ final class ChatThreadViewModel {
         sendError = nil
 
         do {
-            let response = try await chatService.sendMessage(convoId: convoId, text: text)
+            // URL・ハッシュタグの facets を自動生成（DID 未解決のメンションは除外）
+            let detected = RichTextParser.detectFacets(in: text)
+            let facets = RichTextParser.buildFacets(from: detected.filter {
+                if case .mention = $0.kind { return false }
+                return true
+            })
+            let response = try await chatService.sendMessage(convoId: convoId, text: text, facets: facets.isEmpty ? nil : facets)
             // レスポンスを ChatMessageView に変換してリストに追加
             let newMessage = ChatMessageView(
                 id: response.id,
