@@ -328,7 +328,8 @@ struct PostCardView: View {
             // 翻訳（外部ブラウザ）
             Button {
                 let text = post.record.text.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
-                if let url = URL(string: "https://translate.google.com/?text=\(text)&sl=auto&tl=ja") {
+                let langCode = Locale.current.language.languageCode?.identifier ?? "en"
+                if let url = URL(string: "https://translate.google.com/?text=\(text)&sl=auto&tl=\(langCode)") {
                     UIApplication.shared.open(url)
                 }
             } label: {
