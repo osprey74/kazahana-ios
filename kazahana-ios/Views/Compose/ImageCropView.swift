@@ -52,6 +52,9 @@ struct ImageCropView: View {
     @State private var cropRect: CGRect = .zero
     @State private var aspectMode: CropAspectMode = .freeform
 
+    // 回転（0 / 90 / 180 / 270 度）
+    @State private var rotationDegrees: Int = 0
+
     // ジェスチャー状態
     @State private var activeHandle: CropHandle? = nil
     @State private var dragStartLocation: CGPoint = .zero
@@ -62,6 +65,14 @@ struct ImageCropView: View {
 
     private let minCropSize: CGFloat = 50  // 最小クロップサイズ（ポイント）
     private let handleHitRadius: CGFloat = 22  // ハンドルのタッチ半径
+
+    /// 回転後の画像論理サイズ（90°/270° では幅と高さを入れ替え）
+    private var rotatedImageSize: CGSize {
+        let isTransposed = rotationDegrees == 90 || rotationDegrees == 270
+        return isTransposed
+            ? CGSize(width: image.size.height, height: image.size.width)
+            : image.size
+    }
 
     var body: some View {
         ZStack {
@@ -79,13 +90,16 @@ struct ImageCropView: View {
 
                 Spacer(minLength: 0)
 
+                // 回転ボタン
+                rotationBar
+
                 // 下部アスペクト比セレクター
                 aspectSelector
             }
         }
         .onAppear {
             // 初期クロップ矩形 = 画像全体
-            cropRect = CGRect(origin: .zero, size: image.size)
+            cropRect = CGRect(origin: .zero, size: rotatedImageSize)
         }
     }
 
@@ -119,18 +133,20 @@ struct ImageCropView: View {
     private var cropEditor: some View {
         GeometryReader { geo in
             let (scale, origin) = imageLayoutMetrics(in: geo.size)
+            let imgSize = rotatedImageSize
             let imgRect = CGRect(
                 x: origin.x, y: origin.y,
-                width: image.size.width * scale,
-                height: image.size.height * scale
+                width: imgSize.width * scale,
+                height: imgSize.height * scale
             )
 
             ZStack {
-                // 画像本体
+                // 画像本体（回転を適用）
                 Image(uiImage: image)
                     .resizable()
                     .scaledToFit()
                     .frame(width: imgRect.width, height: imgRect.height)
+                    .rotationEffect(.degrees(Double(rotationDegrees)))
                     .position(x: imgRect.midX, y: imgRect.midY)
 
                 // クロップオーバーレイ（画像表示領域のみ）
@@ -151,10 +167,11 @@ struct ImageCropView: View {
             }
             .onChange(of: geo.size) { _, newSize in
                 let (s, o) = imageLayoutMetrics(in: newSize)
+                let sz = rotatedImageSize
                 imageDisplayRect = CGRect(
                     x: o.x, y: o.y,
-                    width: image.size.width * s,
-                    height: image.size.height * s
+                    width: sz.width * s,
+                    height: sz.height * s
                 )
             }
         }
@@ -219,6 +236,58 @@ struct ImageCropView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .allowsHitTesting(false)  // ジェスチャーは親の ZStack で受け取る
+    }
+
+    // MARK: - 回転バー
+
+    private var rotationBar: some View {
+        HStack(spacing: 0) {
+            Button {
+                rotate(by: -90)
+            } label: {
+                VStack(spacing: 4) {
+                    Image(systemName: "rotate.left")
+                        .font(.system(size: 22))
+                    Text(String(localized: "crop.rotateLeft"))
+                        .font(.caption2)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 12)
+                .foregroundStyle(.white.opacity(0.8))
+            }
+
+            Spacer()
+
+            Text("\(rotationDegrees)°")
+                .font(.caption)
+                .monospacedDigit()
+                .foregroundStyle(.white.opacity(0.5))
+                .frame(minWidth: 44)
+
+            Spacer()
+
+            Button {
+                rotate(by: 90)
+            } label: {
+                VStack(spacing: 4) {
+                    Image(systemName: "rotate.right")
+                        .font(.system(size: 22))
+                    Text(String(localized: "crop.rotateRight"))
+                        .font(.caption2)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 12)
+                .foregroundStyle(.white.opacity(0.8))
+            }
+        }
+        .padding(.horizontal, 40)
+        .frame(height: 64)
+    }
+
+    private func rotate(by delta: Int) {
+        rotationDegrees = ((rotationDegrees + delta) % 360 + 360) % 360
+        // 回転後は cropRect を新しい画像サイズ全体にリセット
+        cropRect = CGRect(origin: .zero, size: rotatedImageSize)
     }
 
     // MARK: - 下部アスペクト比セレクター
@@ -444,14 +513,15 @@ struct ImageCropView: View {
         )
     }
 
-    /// ジオメトリサイズから画像の表示スケールと左上原点を計算
+    /// ジオメトリサイズから画像の表示スケールと左上原点を計算（回転後サイズ基準）
     private func imageLayoutMetrics(in size: CGSize) -> (scale: CGFloat, origin: CGPoint) {
-        let scaleX = size.width  / image.size.width
-        let scaleY = size.height / image.size.height
+        let imgSize = rotatedImageSize
+        let scaleX = size.width  / imgSize.width
+        let scaleY = size.height / imgSize.height
         let scale  = min(scaleX, scaleY)
         let origin = CGPoint(
-            x: (size.width  - image.size.width  * scale) / 2,
-            y: (size.height - image.size.height * scale) / 2
+            x: (size.width  - imgSize.width  * scale) / 2,
+            y: (size.height - imgSize.height * scale) / 2
         )
         return (scale, origin)
     }
@@ -474,11 +544,13 @@ struct ImageCropView: View {
     // MARK: - クロップ実行
 
     private func applyCrop() -> UIImage? {
-        guard let cgImage = image.cgImage else { return nil }
+        // 1. 回転を画像に焼き込む
+        let rotated = rotationDegrees == 0 ? image : applyRotation(to: image, degrees: rotationDegrees)
+        guard let cgImage = rotated.cgImage else { return nil }
 
-        // UIImage.size はポイント単位、CGImage は実ピクセル単位
-        let scaleX = CGFloat(cgImage.width)  / image.size.width
-        let scaleY = CGFloat(cgImage.height) / image.size.height
+        // 2. UIImage.size はポイント単位、CGImage は実ピクセル単位
+        let scaleX = CGFloat(cgImage.width)  / rotated.size.width
+        let scaleY = CGFloat(cgImage.height) / rotated.size.height
 
         let pixelRect = CGRect(
             x:      cropRect.origin.x * scaleX,
@@ -488,6 +560,37 @@ struct ImageCropView: View {
         )
 
         guard let cropped = cgImage.cropping(to: pixelRect) else { return nil }
-        return UIImage(cgImage: cropped, scale: image.scale, orientation: image.imageOrientation)
+        return UIImage(cgImage: cropped, scale: rotated.scale, orientation: .up)
+    }
+
+    /// UIImage を指定角度（90の倍数）だけ回転させて新しい UIImage を返す
+    private func applyRotation(to image: UIImage, degrees: Int) -> UIImage {
+        guard let cgImage = image.cgImage else { return image }
+        let normalized = ((degrees % 360) + 360) % 360
+
+        let isTransposed = normalized == 90 || normalized == 270
+        let origW = CGFloat(cgImage.width)
+        let origH = CGFloat(cgImage.height)
+        let newW = isTransposed ? origH : origW
+        let newH = isTransposed ? origW : origH
+
+        let colorSpace = cgImage.colorSpace ?? CGColorSpaceCreateDeviceRGB()
+        guard let ctx = CGContext(
+            data: nil,
+            width:  Int(newW),
+            height: Int(newH),
+            bitsPerComponent: cgImage.bitsPerComponent,
+            bytesPerRow: 0,
+            space: colorSpace,
+            bitmapInfo: cgImage.bitmapInfo.rawValue
+        ) else { return image }
+
+        ctx.translateBy(x: newW / 2, y: newH / 2)
+        ctx.rotate(by: CGFloat(normalized) * .pi / 180)
+        ctx.translateBy(x: -origW / 2, y: -origH / 2)
+        ctx.draw(cgImage, in: CGRect(x: 0, y: 0, width: origW, height: origH))
+
+        guard let rotatedCG = ctx.makeImage() else { return image }
+        return UIImage(cgImage: rotatedCG, scale: image.scale, orientation: .up)
     }
 }
