@@ -27,6 +27,8 @@ struct ThreadView: View {
     @State private var repostUri: String? = nil
     @State private var showFocusedDeleteConfirm = false
     @State private var reportTarget: ReportTarget? = nil
+    @State private var muteTargetPost: PostView? = nil
+    @State private var blockTargetPost: PostView? = nil
 
     let postService: PostService
 
@@ -48,21 +50,22 @@ struct ThreadView: View {
         }
         .navigationBarTitleDisplayMode(.inline)
         .navigationTitle(String(localized: "thread.title"))
-        .toolbar(.hidden, for: .navigationBar)
-        .enableInteractivePop()
-        .overlay(alignment: .topLeading) {
-            Button {
-                dismiss()
-            } label: {
-                Image(systemName: "chevron.left")
-                    .font(.system(size: 17, weight: .semibold))
+        .toolbar {
+            ToolbarItem(placement: .navigationBarLeading) {
+                Button {
+                    dismiss()
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 17, weight: .semibold))
+                        Text(String(localized: "thread.title"))
+                            .font(.body)
+                    }
                     .foregroundStyle(.primary)
-                    .frame(width: 36, height: 36)
-                    .background(.ultraThinMaterial, in: Circle())
+                }
             }
-            .padding(.leading, 16)
-            .padding(.top, 8)
         }
+        .enableInteractivePop()
         .navigationDestination(item: $selectedPost) { feedPost in
             ThreadView(uri: feedPost.post.uri, postService: postService)
                 .environment(authVM)
@@ -90,6 +93,60 @@ struct ThreadView: View {
         }
         .sheet(item: $reportTarget) { target in
             ReportView(target: target, postService: postService)
+        }
+        // ミュート確認ダイアログ
+        .confirmationDialog(
+            muteTargetPost?.author.viewer?.muted == true
+                ? String(localized: "profile.unmuteConfirmTitle")
+                : String(localized: "profile.muteConfirmTitle"),
+            isPresented: Binding(get: { muteTargetPost != nil }, set: { if !$0 { muteTargetPost = nil } }),
+            titleVisibility: .visible
+        ) {
+            if let post = muteTargetPost {
+                let isMuted = post.author.viewer?.muted == true
+                Button(
+                    String(localized: isMuted ? "profile.unmute" : "profile.mute"),
+                    role: isMuted ? .none : .destructive
+                ) {
+                    Task {
+                        let graphService = GraphService(client: authVM.client)
+                        if isMuted {
+                            try? await graphService.unmuteActor(did: post.author.did)
+                        } else {
+                            try? await graphService.muteActor(did: post.author.did)
+                        }
+                        muteTargetPost = nil
+                    }
+                }
+                Button(String(localized: "common.cancel"), role: .cancel) { muteTargetPost = nil }
+            }
+        }
+        // ブロック確認ダイアログ
+        .confirmationDialog(
+            blockTargetPost?.author.viewer?.blocking != nil
+                ? String(localized: "profile.unblockConfirmTitle")
+                : String(localized: "profile.blockConfirmTitle"),
+            isPresented: Binding(get: { blockTargetPost != nil }, set: { if !$0 { blockTargetPost = nil } }),
+            titleVisibility: .visible
+        ) {
+            if let post = blockTargetPost {
+                let isBlocked = post.author.viewer?.blocking != nil
+                Button(
+                    String(localized: isBlocked ? "profile.unblock" : "profile.block"),
+                    role: isBlocked ? .none : .destructive
+                ) {
+                    Task {
+                        let graphService = GraphService(client: authVM.client)
+                        if isBlocked, let blockUri = post.author.viewer?.blocking {
+                            try? await graphService.unblockActor(blockUri: blockUri)
+                        } else {
+                            _ = try? await graphService.blockActor(did: post.author.did)
+                        }
+                        blockTargetPost = nil
+                    }
+                }
+                Button(String(localized: "common.cancel"), role: .cancel) { blockTargetPost = nil }
+            }
         }
         .task {
             await viewModel.load()
@@ -134,6 +191,8 @@ struct ThreadView: View {
                                 onTapAuthor: { did in selectedAuthorDID = IdentifiableString(did) },
                                 onTapReply: { post in replyToPost = post },
                                 onDelete: { post in viewModel.removeReply(uri: post.uri) },
+                                onTapMuteUser: { post in muteTargetPost = post },
+                                onTapBlockUser: { post in blockTargetPost = post },
                                 currentUserDID: authVM.client.currentSession?.did
                             )
                             Divider().padding(.leading, 16)
@@ -158,6 +217,8 @@ struct ThreadView: View {
                     onTapPost: { p in selectedPost = p },
                     onTapAuthor: { did in selectedAuthorDID = IdentifiableString(did) },
                     onTapReply: { post in replyToPost = post },
+                    onTapMuteUser: { post in muteTargetPost = post },
+                    onTapBlockUser: { post in blockTargetPost = post },
                     currentUserDID: authVM.client.currentSession?.did
                 )
                 HStack {

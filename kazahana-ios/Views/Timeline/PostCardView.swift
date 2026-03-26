@@ -24,6 +24,10 @@ struct PostCardView: View {
     var onDelete: ((PostView) -> Void)?
     /// ブックマーク解除後の通知
     var onUnbookmark: ((PostView) -> Void)?
+    /// 投稿著者をミュート/アンミュート（他人の投稿のみ）
+    var onTapMuteUser: ((PostView) -> Void)?
+    /// 投稿著者をブロック/アンブロック（他人の投稿のみ）
+    var onTapBlockUser: ((PostView) -> Void)?
     /// 現在ログイン中のユーザー DID（自分の投稿かどうかの判定に使用）
     var currentUserDID: String?
     /// BSAF 重複情報（この投稿が primary の場合にセット）
@@ -73,6 +77,8 @@ struct PostCardView: View {
         onTapQuote: ((PostView) -> Void)? = nil,
         onDelete: ((PostView) -> Void)? = nil,
         onUnbookmark: ((PostView) -> Void)? = nil,
+        onTapMuteUser: ((PostView) -> Void)? = nil,
+        onTapBlockUser: ((PostView) -> Void)? = nil,
         currentUserDID: String? = nil
     ) {
         self.feedPost = feedPost
@@ -86,6 +92,8 @@ struct PostCardView: View {
         self.onTapQuote = onTapQuote
         self.onDelete = onDelete
         self.onUnbookmark = onUnbookmark
+        self.onTapMuteUser = onTapMuteUser
+        self.onTapBlockUser = onTapBlockUser
         self.currentUserDID = currentUserDID
         _isLiked      = State(initialValue: feedPost.post.viewer?.like != nil)
         _likeCount    = State(initialValue: feedPost.post.likeCount ?? 0)
@@ -338,7 +346,7 @@ struct PostCardView: View {
                 Label(String(localized: "post.translate"), systemImage: "character.bubble")
             }
 
-            // 他人の投稿のみ：非表示・通報
+            // 他人の投稿のみ：非表示・通報・ミュート・ブロック
             if let currentUserDID, currentUserDID != author.did {
                 Divider()
                 Button {
@@ -355,6 +363,25 @@ struct PostCardView: View {
                     reportTarget = .account(did: author.did)
                 } label: {
                     Label(String(localized: "post.reportAccount"), systemImage: "person.badge.minus")
+                }
+                Divider()
+                Button {
+                    onTapMuteUser?(post)
+                } label: {
+                    let isMuted = post.author.viewer?.muted == true
+                    Label(
+                        String(localized: isMuted ? "profile.unmute" : "profile.mute"),
+                        systemImage: isMuted ? "speaker.wave.2" : "speaker.slash"
+                    )
+                }
+                Button(role: post.author.viewer?.blocking != nil ? .none : .destructive) {
+                    onTapBlockUser?(post)
+                } label: {
+                    let isBlocked = post.author.viewer?.blocking != nil
+                    Label(
+                        String(localized: isBlocked ? "profile.unblock" : "profile.block"),
+                        systemImage: isBlocked ? "hand.raised.slash" : "hand.raised"
+                    )
                 }
             }
 

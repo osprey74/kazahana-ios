@@ -18,6 +18,9 @@ struct TimelineView: View {
     @State private var postActorListType: PostActorListType? = nil
     /// postList の ScrollViewProxy（スクロール先頭制御用）
     @State private var listScrollProxy: ScrollViewProxy? = nil
+    /// ミュート/ブロック対象の投稿（確認ダイアログ用）
+    @State private var muteTargetPost: PostView? = nil
+    @State private var blockTargetPost: PostView? = nil
 
     private let postService: PostService
 
@@ -108,6 +111,60 @@ struct TimelineView: View {
                     .environment(AppSettings.shared)
             }
         }
+        // ミュート確認ダイアログ
+        .confirmationDialog(
+            muteTargetPost?.author.viewer?.muted == true
+                ? String(localized: "profile.unmuteConfirmTitle")
+                : String(localized: "profile.muteConfirmTitle"),
+            isPresented: Binding(get: { muteTargetPost != nil }, set: { if !$0 { muteTargetPost = nil } }),
+            titleVisibility: .visible
+        ) {
+            if let post = muteTargetPost {
+                let isMuted = post.author.viewer?.muted == true
+                Button(
+                    String(localized: isMuted ? "profile.unmute" : "profile.mute"),
+                    role: isMuted ? .none : .destructive
+                ) {
+                    Task {
+                        let graphService = GraphService(client: authVM.client)
+                        if isMuted {
+                            try? await graphService.unmuteActor(did: post.author.did)
+                        } else {
+                            try? await graphService.muteActor(did: post.author.did)
+                        }
+                        muteTargetPost = nil
+                    }
+                }
+                Button(String(localized: "common.cancel"), role: .cancel) { muteTargetPost = nil }
+            }
+        }
+        // ブロック確認ダイアログ
+        .confirmationDialog(
+            blockTargetPost?.author.viewer?.blocking != nil
+                ? String(localized: "profile.unblockConfirmTitle")
+                : String(localized: "profile.blockConfirmTitle"),
+            isPresented: Binding(get: { blockTargetPost != nil }, set: { if !$0 { blockTargetPost = nil } }),
+            titleVisibility: .visible
+        ) {
+            if let post = blockTargetPost {
+                let isBlocked = post.author.viewer?.blocking != nil
+                Button(
+                    String(localized: isBlocked ? "profile.unblock" : "profile.block"),
+                    role: isBlocked ? .none : .destructive
+                ) {
+                    Task {
+                        let graphService = GraphService(client: authVM.client)
+                        if isBlocked, let blockUri = post.author.viewer?.blocking {
+                            try? await graphService.unblockActor(blockUri: blockUri)
+                        } else {
+                            _ = try? await graphService.blockActor(did: post.author.did)
+                        }
+                        blockTargetPost = nil
+                    }
+                }
+                Button(String(localized: "common.cancel"), role: .cancel) { blockTargetPost = nil }
+            }
+        }
         .task {
             await viewModel.loadInitial()
             await viewModel.loadSavedFeeds()
@@ -196,6 +253,8 @@ struct TimelineView: View {
                     onTapRepostCount: { post in postActorListType = .reposts(postURI: post.uri) },
                     onTapQuote: { post in quotePost = post; showCompose = true },
                     onDelete: { post in viewModel.removePost(uri: post.uri) },
+                    onTapMuteUser: { post in muteTargetPost = post },
+                    onTapBlockUser: { post in blockTargetPost = post },
                     currentUserDID: authVM.client.currentSession?.did
                 )
                 .listRowInsets(EdgeInsets())

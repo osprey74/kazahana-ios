@@ -22,6 +22,7 @@ struct ProfileScreenView: View {
     @State private var showAddToList = false
     @State private var showMuteConfirm = false
     @State private var showBlockConfirm = false
+    @State private var reportTarget: ReportTarget? = nil
     /// コンパクトヘッダー表示フラグ（スクロール開始後に true）
     @State private var showCompact: Bool = false
 
@@ -93,6 +94,9 @@ struct ProfileScreenView: View {
                 .environment(authVM)
             }
         }
+        .sheet(item: $reportTarget) { target in
+            ReportView(target: target, postService: PostService(client: authVM.client))
+        }
         .confirmationDialog(
             viewModel?.profile?.viewer?.muted == true
                 ? String(localized: "profile.unmuteConfirmTitle")
@@ -157,7 +161,8 @@ struct ProfileScreenView: View {
                         onTapSettings: { showSettings = true },
                         onTapMute: { showMuteConfirm = true },
                         onTapBlock: { showBlockConfirm = true },
-                        onTapAddToList: { showAddToList = true }
+                        onTapAddToList: { showAddToList = true },
+                        onTapReport: { reportTarget = .account(did: actor) }
                     )
 
                     // タブバー（ScrollView内・スクロールで流れる位置に配置）
@@ -525,6 +530,7 @@ struct ProfileHeaderView: View {
     var onTapMute: (() -> Void)? = nil
     var onTapBlock: (() -> Void)? = nil
     var onTapAddToList: (() -> Void)? = nil
+    var onTapReport: (() -> Void)? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -696,6 +702,14 @@ struct ProfileHeaderView: View {
                     onTapAddToList?()
                 } label: {
                     Label(String(localized: "profile.addToList"), systemImage: "list.bullet.rectangle.portrait")
+                }
+
+                Divider()
+
+                Button(role: .destructive) {
+                    onTapReport?()
+                } label: {
+                    Label(String(localized: "profile.reportUser"), systemImage: "flag")
                 }
             } label: {
                 Image(systemName: "ellipsis")
