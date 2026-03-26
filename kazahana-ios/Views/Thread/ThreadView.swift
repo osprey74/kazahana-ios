@@ -50,21 +50,6 @@ struct ThreadView: View {
         }
         .navigationBarTitleDisplayMode(.inline)
         .navigationTitle(String(localized: "thread.title"))
-        .toolbar {
-            ToolbarItem(placement: .navigationBarLeading) {
-                Button {
-                    dismiss()
-                } label: {
-                    HStack(spacing: 4) {
-                        Image(systemName: "chevron.left")
-                            .font(.system(size: 17, weight: .semibold))
-                        Text(String(localized: "thread.title"))
-                            .font(.body)
-                    }
-                    .foregroundStyle(.primary)
-                }
-            }
-        }
         .enableInteractivePop()
         .navigationDestination(item: $selectedPost) { feedPost in
             ThreadView(uri: feedPost.post.uri, postService: postService)
