@@ -1,6 +1,6 @@
 # kazahana-ios 開発タスク・進捗記録
 
-最終更新: 2026-03-24 (ブックマーク機能実装)
+最終更新: 2026-03-26 (ユーザーミュート・ブロック・リスト管理実装)
 
 ---
 
@@ -12,6 +12,7 @@
 - Phase 3.5 (UX改善・バグ修正): 12/12 ✅ 完了
 - Phase 4 (DM・モデレーション・設定): 28/28 ✅ 完了
 - Phase 5 (BSAF・高度な機能): 5-A 完了（BSAF対応）、5-B 完了（スレッド投稿ペンディング）、5-C 完了（送受信共有）、5-F/Bot Badge 完了、5-D 完了、5-E 未着手
+- Phase 6 (UX補完・モデレーション強化): 自動メンション・DM リンク化・ハッシュタグ検索・ミュート/ブロック/リスト管理 完了
 
 ---
 
@@ -458,6 +459,44 @@
 
 ---
 
+## Phase 6: UX補完・モデレーション強化（2026-03-26）— 完了 ✅
+
+### 6-A: 投稿・プロフィールの UX 補完
+- [x] **他人プロフィールからの自動メンション挿入** — 他人のプロフィール画面で FAB タップ時に `@handle ` を初期テキストとして ComposeView を開く
+  - `ProfileView.swift`: `mentionInitialText: IdentifiableString?` state 追加
+  - FAB ボタン: `!isSelf` かつ handle 取得できる場合に `IdentifiableString("@handle ")` をセット
+  - `.sheet(item: $mentionInitialText)` で `ComposeView(initialText:)` を表示
+- [x] **DM URL・ハッシュタグのリンク化** — チャット画面のメッセージに含まれる URL・ハッシュタグをリッチテキスト化
+  - `ChatThreadView.swift`: `Text(m.text)` → `Text(richText(for:))` に変更、`.tint()` + `.environment(\.openURL)` でリンク色・遷移ハンドリング
+  - `MessageBubbleView.richText(for:)`: facets があればそれを使用、なければ URL/ハッシュタグを自動検出
+  - `Conversation.swift`: `SendMessageBody.MessageInput` に `facets: [Facet]?` 追加
+  - `ChatService.swift`: `sendMessage` に `facets` パラメータ追加
+  - `ChatThreadViewModel.swift`: 送信前に `RichTextParser.detectFacets` で URL/ハッシュタグ facets を自動生成
+- [x] **ハッシュタグタップ → 検索タブへ遷移＋結果表示** — ハッシュタグタップで検索タブを開くだけでなく、そのタグの投稿検索結果を即表示
+  - `IdentifiableString.swift`: `Notification.Name.searchHashtag` を追加
+  - `ContentView.swift`: `handleDeepLink` の `case "hashtag":` で `.searchHashtag` 通知を発火（`userInfo["tag"]`）
+  - `SearchView.swift`: `.onReceive(.searchHashtag)` で `vm.query = "#tag"`・`vm.selectedTab = .posts`・`vm.search()` を実行、`pendingHashtag` State で viewModel nil 時の通知を保持
+
+### 6-B: ユーザーミュート・ブロック・リスト管理
+- [x] **ユーザーミュート / ミュート解除** — `app.bsky.graph.muteActor` / `unmuteActor`
+  - `GraphService.swift`: `muteActor(did:)` / `unmuteActor(did:)` 追加
+  - `ProfileViewModel.swift`: `toggleMute()` + `updateViewerMuted(to:)` 追加（楽観的 UI 更新）
+  - `ProfileView.swift`: `...` メニューから「ミュート」/ 「ミュート解除」+ 確認ダイアログ
+- [x] **ユーザーブロック / ブロック解除** — `com.atproto.repo.createRecord` (collection: `app.bsky.graph.block`) / `deleteRecord`
+  - `GraphService.swift`: `blockActor(did:) -> String` / `unblockActor(blockUri:)` 追加
+  - `ProfileViewModel.swift`: `toggleBlock()` + `updateViewerBlocking(to:)` 追加（楽観的 UI 更新）
+  - `ProfileView.swift`: `...` メニューから「ブロック」/ 「ブロック解除」+ 確認ダイアログ
+- [x] **リスト管理（追加/削除）** — `app.bsky.graph.listitem` レコードの作成/削除
+  - `GraphService.swift`: `getMyLists()` / `getListMemberships(targetDid:) -> [String: String]` / `addToList(targetDid:listUri:)` / `removeFromList(listitemUri:)` 追加
+  - `Views/Profile/AddToListView.swift`: 新規作成。自分のリスト一覧をチェックリスト表示し、タップで対象ユーザーのメンバーシップをトグル
+  - `ProfileView.swift`: `...` メニューから「リストに追加/削除」→ `AddToListView` シート
+- [x] **3点メニュー UI** — 他人プロフィールのフォローボタン横に `...` メニューを追加
+  - `ProfileHeaderView`: `onTapMute` / `onTapBlock` / `onTapAddToList` コールバック追加
+  - ミュート中は「ミュート解除」、ブロック中は「ブロック解除」にラベル変化
+- [x] **Localizable.xcstrings**: 11キー × 11言語追加（mute/unmute/block/unblock/addToList/confirmTitles/listMemberCount）
+
+---
+
 ## 既知の課題・TODO
 
 - [x] **ブックマーク**: `app.bsky.bookmark.*` API で実装済み（PostCardView / ThreadView ボタン + プロフィールタブ）
@@ -468,7 +507,7 @@
 
 ---
 
-## ファイル構成（2026-03-21 棚卸し時点）
+## ファイル構成（2026-03-26 棚卸し時点）
 
 ```
 kazahana-ios/
@@ -495,7 +534,7 @@ kazahana-ios/
 │   ├── PostService.swift          # createPost / uploadImage / getLikes / getRepostedBy / reportPost / reportAccount
 │   ├── RichTextParser.swift       # Facet 解析・AttributedString 変換・自動検出
 │   ├── NotificationService.swift  # listNotifications / getUnreadCount / updateSeen
-│   ├── GraphService.swift         # follow / unfollow / getFollowers / getFollows / getAuthorFeed(filter) / getActorLikes
+│   ├── GraphService.swift         # follow / unfollow / muteActor / unmuteActor / blockActor / unblockActor / getMyLists / getListMemberships / addToList / removeFromList / getFollowers / getFollows / getAuthorFeed(filter) / getActorLikes
 │   ├── SearchService.swift        # searchActors / searchPosts / searchPostsByAuthor
 │   ├── FeedService.swift          # getSavedFeeds / getFeed / getTimeline / GraphListView / GraphListViewBasic / FeedSource enum / StarterPack モデル群
 │   ├── ChatService.swift          # chat.bsky.convo.* 全 API ラッパー
@@ -510,7 +549,7 @@ kazahana-ios/
 │   ├── ComposeViewModel.swift
 │   ├── ThreadViewModel.swift
 │   ├── NotificationViewModel.swift # resolvedRepostURIs キャッシュ
-│   ├── ProfileViewModel.swift     # フォロー楽観的 UI + ProfileTab enum（7タブ）+ actorFeeds/actorLists + タブ別フィード管理 + ピン留め投稿 + プロフィール内検索
+│   ├── ProfileViewModel.swift     # フォロー/ミュート/ブロック 楽観的 UI + ProfileTab enum（7タブ）+ actorFeeds/actorLists + タブ別フィード管理 + ピン留め投稿 + プロフィール内検索
 │   ├── SearchViewModel.swift      # タブ切り替え・Task キャンセルデバウンス + filterModeratedPosts + 検索履歴
 │   ├── ConversationListViewModel.swift # 会話一覧 + 30秒ポーリング + ミュート/退出
 │   └── ChatThreadViewModel.swift  # メッセージ一覧 + 送信 + 削除 + 15秒ポーリング + 既読
@@ -530,7 +569,8 @@ kazahana-ios/
 │   │   ├── NotificationListView.swift
 │   │   └── NotificationItemView.swift
 │   ├── Profile/
-│   │   ├── ProfileView.swift      # ProfileScreenView + ProfileHeaderView + 横スクロールタブバー（7タブ：投稿/返信/メディア/いいね/フィード/リスト/スターターパック）+ コンパクトヘッダー + ピン留め表示 + 内部検索バー
+│   │   ├── ProfileView.swift      # ProfileScreenView + ProfileHeaderView（3点メニュー付き）+ 横スクロールタブバー（7タブ）+ コンパクトヘッダー + ピン留め表示 + 内部検索バー + ミュート/ブロック確認ダイアログ
+│   │   ├── AddToListView.swift    # リスト管理シート（自分のリスト一覧・メンバーシップトグル）
 │   │   ├── UserListView.swift     # フォロワー/フォロー中一覧 + フォロー/解除ボタン
 │   │   ├── ListFeedView.swift     # リストフィード表示（getListFeed・無限スクロール）
 │   │   ├── FeedGeneratorFeedView.swift # カスタムフィード投稿一覧（getFeed・無限スクロール）
@@ -560,7 +600,7 @@ kazahana-ios/
 │       ├── ContentWarningView.swift # PostBlurOverlay / MediaBlurOverlay
 │       └── ReportView.swift        # 投稿/アカウント通報UI
 ├── Extensions/
-│   ├── IdentifiableString.swift   # Notification.Name.kazahanaDeepLink 追加
+│   ├── IdentifiableString.swift   # Notification.Name.kazahanaDeepLink / searchHashtag 追加
 │   ├── String+DateFormatting.swift # relativeFormatted（相対時刻表示）
 │   └── View+InteractivePop.swift  # .enableInteractivePop()：ナビバー非表示時もスワイプバック有効化（UIViewControllerRepresentable）
 ├── Assets.xcassets/
