@@ -197,7 +197,7 @@ struct PostCardView: View {
                 if let color = bsafBorderColor {
                     Rectangle()
                         .fill(color)
-                        .frame(width: 4)
+                        .frame(width: 8)
                 }
             }
             .alert(String(localized: "post.deleteConfirm"), isPresented: $showDeleteConfirm) {

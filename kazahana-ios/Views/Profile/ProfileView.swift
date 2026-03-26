@@ -13,8 +13,6 @@ struct ProfileScreenView: View {
     @State private var selectedPost: FeedViewPost?
     @State private var selectedAuthorDID: IdentifiableString? = nil
     @State private var userListType: UserListType? = nil
-    @State private var selectedList: GraphListView? = nil
-    @State private var selectedFeed: GeneratorView? = nil
     @State private var selectedStarterPack: StarterPackViewBasic? = nil
     @State private var showSettings = false
     @State private var showCompose = false
@@ -59,14 +57,7 @@ struct ProfileScreenView: View {
             UserListView(listType: listType)
                 .environment(authVM)
         }
-        .navigationDestination(item: $selectedList) { list in
-            ListFeedView(list: list)
-                .environment(authVM)
-        }
-        .navigationDestination(item: $selectedFeed) { feed in
-            FeedGeneratorFeedView(feed: feed)
-                .environment(authVM)
-        }
+
         .navigationDestination(item: $selectedStarterPack) { pack in
             StarterPackDetailView(uri: pack.uri)
                 .environment(authVM)
@@ -183,10 +174,6 @@ struct ProfileScreenView: View {
                     // 検索中は検索結果を表示、それ以外はタブフィード
                     if !vm.profileSearchQuery.isEmpty {
                         profileSearchResults(vm: vm)
-                    } else if vm.selectedTab == .feeds {
-                        profileFeedsTab(vm: vm)
-                    } else if vm.selectedTab == .lists {
-                        profileListsTab(vm: vm)
                     } else if vm.selectedTab == .starterPacks {
                         StarterPackListTabView(actor: actor, onSelect: { pack in
                             selectedStarterPack = pack
@@ -458,69 +445,6 @@ struct ProfileScreenView: View {
     }
 
     @ViewBuilder
-    private func profileFeedsTab(vm: ProfileViewModel) -> some View {
-        if vm.isLoadingFeeds && vm.actorFeeds.isEmpty {
-            ProgressView().padding(.top, 32)
-        } else if vm.actorFeeds.isEmpty {
-            Text(String(localized: "profile.noFeeds"))
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .padding(.top, 40)
-                .frame(maxWidth: .infinity)
-        } else {
-            ForEach(vm.actorFeeds) { feed in
-                Button {
-                    selectedFeed = feed
-                } label: {
-                    HStack(spacing: 12) {
-                        if let avatarURL = feed.avatar, let url = URL(string: avatarURL) {
-                            AsyncImage(url: url) { image in
-                                image.resizable().scaledToFill()
-                            } placeholder: {
-                                Color.gray.opacity(0.3)
-                            }
-                            .frame(width: 44, height: 44)
-                            .clipShape(RoundedRectangle(cornerRadius: 8))
-                        } else {
-                            Image(systemName: "list.star")
-                                .font(.title3)
-                                .foregroundStyle(.secondary)
-                                .frame(width: 44, height: 44)
-                                .background(Color(.systemGray5), in: RoundedRectangle(cornerRadius: 8))
-                        }
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(feed.displayName)
-                                .font(.subheadline)
-                                .fontWeight(.semibold)
-                                .foregroundStyle(.primary)
-                                .lineLimit(1)
-                            if let desc = feed.description, !desc.isEmpty {
-                                Text(desc)
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                                    .lineLimit(2)
-                            }
-                            if let likes = feed.likeCount {
-                                Label("\(likes)", systemImage: "heart")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
-                        }
-                        Spacer()
-                        Image(systemName: "chevron.right")
-                            .font(.caption)
-                            .foregroundStyle(.tertiary)
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 10)
-                }
-                .buttonStyle(.plain)
-                Divider().padding(.leading, 16)
-            }
-        }
-    }
-
-    @ViewBuilder
     private func bookmarksTab(vm: ProfileViewModel) -> some View {
         if vm.isLoadingBookmarks && vm.bookmarkedPosts.isEmpty {
             ProgressView().padding(.top, 32)
@@ -549,69 +473,6 @@ struct ProfileScreenView: View {
         }
     }
 
-    @ViewBuilder
-    private func profileListsTab(vm: ProfileViewModel) -> some View {
-        if vm.isLoadingLists && vm.actorLists.isEmpty {
-            ProgressView().padding(.top, 32)
-        } else if vm.actorLists.isEmpty {
-            Text(String(localized: "profile.noLists"))
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .padding(.top, 40)
-                .frame(maxWidth: .infinity)
-        } else {
-            ForEach(vm.actorLists) { list in
-                Button {
-                    selectedList = list
-                } label: {
-                    HStack(spacing: 12) {
-                        if let avatarURL = list.avatar, let url = URL(string: avatarURL) {
-                            AsyncImage(url: url) { image in
-                                image.resizable().scaledToFill()
-                            } placeholder: {
-                                Color.gray.opacity(0.3)
-                            }
-                            .frame(width: 44, height: 44)
-                            .clipShape(Circle())
-                        } else {
-                            Image(systemName: "list.bullet.rectangle")
-                                .font(.title3)
-                                .foregroundStyle(.secondary)
-                                .frame(width: 44, height: 44)
-                                .background(Color(.systemGray5), in: Circle())
-                        }
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(list.name)
-                                .font(.subheadline)
-                                .fontWeight(.semibold)
-                                .foregroundStyle(.primary)
-                                .lineLimit(1)
-                            if let desc = list.description, !desc.isEmpty {
-                                Text(desc)
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                                    .lineLimit(2)
-                            }
-                            if let count = list.listItemCount {
-                                Label("\(count)", systemImage: "person.2")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
-                        }
-                        Spacer()
-                        Image(systemName: "chevron.right")
-                            .font(.caption)
-                            .foregroundStyle(.tertiary)
-                    }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 10)
-                }
-                .buttonStyle(.plain)
-                Divider().padding(.leading, 16)
-            }
-        }
-    }
-
     private func profileTabBar(vm: ProfileViewModel) -> some View {
         let isSelf = authVM.client.currentSession?.did == actor
         let visibleTabs = ProfileTab.allCases.filter { $0 != .bookmarks || isSelf }
@@ -621,11 +482,8 @@ struct ProfileScreenView: View {
                     Button {
                         if vm.selectedTab != tab {
                             vm.selectedTab = tab
-                            // feeds/lists タブは専用フラグ、それ以外は tabFeeds で判断
                             let needsLoad: Bool = {
                                 switch tab {
-                                case .feeds:        return vm.actorFeeds.isEmpty && !vm.isLoadingFeeds
-                                case .lists:        return vm.actorLists.isEmpty && !vm.isLoadingLists
                                 case .starterPacks: return false  // StarterPackListTabView が自前でロード
                                 case .bookmarks:    return vm.bookmarkedPosts.isEmpty && !vm.isLoadingBookmarks
                                 default:            return vm.tabFeeds[tab]?.isEmpty ?? true

@@ -12,8 +12,6 @@ enum ProfileTab: String, CaseIterable {
     case media        = "media"
     case likes        = "likes"
     case bookmarks    = "bookmarks"
-    case feeds        = "feeds"
-    case lists        = "lists"
     case starterPacks = "starterPacks"
 
     var displayName: String {
@@ -23,8 +21,6 @@ enum ProfileTab: String, CaseIterable {
         case .media:        return String(localized: "profile.media")
         case .likes:        return String(localized: "profile.likes")
         case .bookmarks:    return String(localized: "profile.bookmarks")
-        case .feeds:        return String(localized: "profile.feeds")
-        case .lists:        return String(localized: "profile.lists")
         case .starterPacks: return String(localized: "profile.starterPacks")
         }
     }
@@ -61,12 +57,6 @@ final class ProfileViewModel {
     var profileSearchCursor: String? = nil
     var profileSearchHasMore = false
     private var profileSearchTask: Task<Void, Never>?
-
-    // カスタムフィード / リスト一覧（feedsタブ・listsタブ用）
-    var actorFeeds: [GeneratorView] = []
-    var actorLists: [GraphListView] = []
-    var isLoadingFeeds = false
-    var isLoadingLists = false
 
     private var cursor: String?
     private var hasMore = true
@@ -128,15 +118,7 @@ final class ProfileViewModel {
 
     @MainActor
     func loadTab(_ tab: ProfileTab) async {
-        // feeds / lists / starterPacks / bookmarks タブは専用メソッドで処理
-        if tab == .feeds {
-            await loadActorFeeds()
-            return
-        }
-        if tab == .lists {
-            await loadActorLists()
-            return
-        }
+        // starterPacks / bookmarks タブは専用メソッドで処理
         if tab == .starterPacks {
             // StarterPackListTabView が自前でロードするため何もしない
             return
@@ -166,8 +148,8 @@ final class ProfileViewModel {
 
     @MainActor
     func loadMoreTab(_ tab: ProfileTab) async {
-        // feeds / lists / starterPacks / bookmarks タブはページネーションなし
-        guard tab != .feeds, tab != .lists, tab != .starterPacks, tab != .bookmarks else { return }
+        // starterPacks / bookmarks タブはページネーションなし
+        guard tab != .starterPacks, tab != .bookmarks else { return }
         guard !(tabIsLoading[tab] ?? false),
               tabHasMore[tab] ?? false,
               let currentCursor = tabCursors[tab] ?? nil else { return }
@@ -195,7 +177,7 @@ final class ProfileViewModel {
             return try await graphService.getAuthorFeed(actor: actor, limit: 30, cursor: cursor, filter: "posts_with_media")
         case .likes:
             return try await graphService.getActorLikes(actor: actor, limit: 30, cursor: cursor)
-        case .feeds, .lists, .starterPacks, .bookmarks:
+        case .starterPacks, .bookmarks:
             // これらのタブは loadTab で分岐済みのため到達しない
             return TimelineResponse(feed: [], cursor: nil)
         }
@@ -228,34 +210,6 @@ final class ProfileViewModel {
         isLoadingBookmarks = false
     }
 
-    // MARK: - フィード / リスト一覧読み込み
-
-    @MainActor
-    func loadActorFeeds() async {
-        guard !isLoadingFeeds, let feedService else { return }
-        isLoadingFeeds = true
-        do {
-            let response = try await feedService.getActorFeeds(actor: actor)
-            actorFeeds = response.feeds
-        } catch {
-            errorMessage = error.localizedDescription
-        }
-        isLoadingFeeds = false
-    }
-
-    @MainActor
-    func loadActorLists() async {
-        guard !isLoadingLists, let feedService else { return }
-        isLoadingLists = true
-        do {
-            let response = try await feedService.getLists(actor: actor)
-            actorLists = response.lists
-        } catch {
-            errorMessage = error.localizedDescription
-        }
-        isLoadingLists = false
-    }
-
     @MainActor
     func refresh() async {
         guard !isRefreshing else { return }
@@ -278,10 +232,6 @@ final class ProfileViewModel {
         case .bookmarks:
             await MainActor.run { isLoadingBookmarks = false }
             await loadBookmarks()
-        case .feeds:
-            await loadActorFeeds()
-        case .lists:
-            await loadActorLists()
         case .starterPacks:
             break
         default:
