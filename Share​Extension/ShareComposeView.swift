@@ -201,34 +201,30 @@ struct ShareComposeView: View {
 
         guard let items = extensionContext?.inputItems as? [NSExtensionItem] else { return }
 
-        var texts: [String] = []
         var images: [UIImage] = []
         var url: URL? = nil
         var pageTitle: String? = nil
 
         for item in items {
-            // NSExtensionItem.attributedTitle にページタイトルが入る（Safari等）
+            // attributedTitle / attributedContentText からページタイトルを取得（Safari等）
             if let title = item.attributedTitle?.string, !title.isEmpty {
                 pageTitle = title
+            } else if let title = item.attributedContentText?.string, !title.isEmpty {
+                pageTitle = title
             }
+
             guard let attachments = item.attachments else { continue }
             for provider in attachments {
-                // URL
+                // URL（else if を使わず独立して処理）
                 if provider.hasItemConformingToTypeIdentifier(UTType.url.identifier) {
                     if let loaded = try? await provider.loadItem(forTypeIdentifier: UTType.url.identifier),
-                       let loadedURL = loaded as? URL {
+                       let loadedURL = loaded as? URL,
+                       loadedURL.scheme?.hasPrefix("http") == true {
                         url = loadedURL
                     }
                 }
-                // テキスト
-                else if provider.hasItemConformingToTypeIdentifier(UTType.plainText.identifier) {
-                    if let loaded = try? await provider.loadItem(forTypeIdentifier: UTType.plainText.identifier),
-                       let str = loaded as? String {
-                        texts.append(str)
-                    }
-                }
                 // 画像（最大4枚）
-                else if provider.hasItemConformingToTypeIdentifier(UTType.image.identifier), images.count < 4 {
+                if provider.hasItemConformingToTypeIdentifier(UTType.image.identifier), images.count < 4 {
                     if let loaded = try? await provider.loadItem(forTypeIdentifier: UTType.image.identifier) {
                         if let img = loaded as? UIImage {
                             images.append(img)
@@ -243,22 +239,15 @@ struct ShareComposeView: View {
         }
 
         await MainActor.run {
-            // ページタイトル + URL の形で結合
-            var combined = texts.joined(separator: "\n")
             if let u = url {
                 // ページタイトルがあれば「タイトル\nURL」、なければ URL のみ
-                if combined.isEmpty {
-                    if let title = pageTitle {
-                        combined = title + "\n" + u.absoluteString
-                    } else {
-                        combined = u.absoluteString
-                    }
+                if let title = pageTitle {
+                    text = title + "\n" + u.absoluteString
                 } else {
-                    combined += "\n" + u.absoluteString
+                    text = u.absoluteString
                 }
                 sharedURL = u
             }
-            text = combined
             sharedImages = images
         }
 
