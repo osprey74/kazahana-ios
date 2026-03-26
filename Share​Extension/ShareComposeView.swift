@@ -204,8 +204,13 @@ struct ShareComposeView: View {
         var texts: [String] = []
         var images: [UIImage] = []
         var url: URL? = nil
+        var pageTitle: String? = nil
 
         for item in items {
+            // NSExtensionItem.attributedTitle にページタイトルが入る（Safari等）
+            if let title = item.attributedTitle?.string, !title.isEmpty {
+                pageTitle = title
+            }
             guard let attachments = item.attachments else { continue }
             for provider in attachments {
                 // URL
@@ -238,11 +243,19 @@ struct ShareComposeView: View {
         }
 
         await MainActor.run {
-            // テキストと URL を結合
+            // ページタイトル + URL の形で結合
             var combined = texts.joined(separator: "\n")
             if let u = url {
-                if !combined.isEmpty { combined += "\n" }
-                combined += u.absoluteString
+                // ページタイトルがあれば「タイトル\nURL」、なければ URL のみ
+                if combined.isEmpty {
+                    if let title = pageTitle {
+                        combined = title + "\n" + u.absoluteString
+                    } else {
+                        combined = u.absoluteString
+                    }
+                } else {
+                    combined += "\n" + u.absoluteString
+                }
                 sharedURL = u
             }
             text = combined
