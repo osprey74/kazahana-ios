@@ -21,6 +21,9 @@ struct ProfileScreenView: View {
     @State private var mentionInitialText: IdentifiableString? = nil
     @State private var quotePost: PostView? = nil
     @State private var replyToPost: PostView? = nil
+    @State private var showAddToList = false
+    @State private var showMuteConfirm = false
+    @State private var showBlockConfirm = false
     /// コンパクトヘッダー表示フラグ（スクロール開始後に true）
     @State private var showCompact: Bool = false
 
@@ -90,6 +93,49 @@ struct ProfileScreenView: View {
             ComposeView(postService: PostService(client: authVM.client), replyTo: replyTo)
                 .environment(AppSettings.shared)
         }
+        .sheet(isPresented: $showAddToList) {
+            if viewModel != nil {
+                AddToListView(
+                    targetDid: actor,
+                    graphService: GraphService(client: authVM.client)
+                )
+                .environment(authVM)
+            }
+        }
+        .confirmationDialog(
+            viewModel?.profile?.viewer?.muted == true
+                ? String(localized: "profile.unmuteConfirmTitle")
+                : String(localized: "profile.muteConfirmTitle"),
+            isPresented: $showMuteConfirm,
+            titleVisibility: .visible
+        ) {
+            Button(
+                viewModel?.profile?.viewer?.muted == true
+                    ? String(localized: "profile.unmute")
+                    : String(localized: "profile.mute"),
+                role: viewModel?.profile?.viewer?.muted == true ? .none : .destructive
+            ) {
+                Task { await viewModel?.toggleMute() }
+            }
+            Button(String(localized: "common.cancel"), role: .cancel) {}
+        }
+        .confirmationDialog(
+            viewModel?.profile?.viewer?.blocking != nil
+                ? String(localized: "profile.unblockConfirmTitle")
+                : String(localized: "profile.blockConfirmTitle"),
+            isPresented: $showBlockConfirm,
+            titleVisibility: .visible
+        ) {
+            Button(
+                viewModel?.profile?.viewer?.blocking != nil
+                    ? String(localized: "profile.unblock")
+                    : String(localized: "profile.block"),
+                role: viewModel?.profile?.viewer?.blocking != nil ? .none : .destructive
+            ) {
+                Task { await viewModel?.toggleBlock() }
+            }
+            Button(String(localized: "common.cancel"), role: .cancel) {}
+        }
         .toolbar(.hidden, for: .navigationBar)
         .enableInteractivePop()
     }
@@ -117,7 +163,10 @@ struct ProfileScreenView: View {
                         isSelf: isSelf,
                         onTapFollowers: { userListType = .followers(actor: actor) },
                         onTapFollowing: { userListType = .following(actor: actor) },
-                        onTapSettings: { showSettings = true }
+                        onTapSettings: { showSettings = true },
+                        onTapMute: { showMuteConfirm = true },
+                        onTapBlock: { showBlockConfirm = true },
+                        onTapAddToList: { showAddToList = true }
                     )
 
                     // タブバー（ScrollView内・スクロールで流れる位置に配置）
@@ -615,6 +664,9 @@ struct ProfileHeaderView: View {
     var onTapFollowers: (() -> Void)? = nil
     var onTapFollowing: (() -> Void)? = nil
     var onTapSettings: (() -> Void)? = nil
+    var onTapMute: (() -> Void)? = nil
+    var onTapBlock: (() -> Void)? = nil
+    var onTapAddToList: (() -> Void)? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -659,9 +711,12 @@ struct ProfileHeaderView: View {
                     .padding(.trailing, 16)
                     .padding(.top, 8)
                 } else {
-                    followButton
-                        .padding(.trailing, 16)
-                        .padding(.top, 8)
+                    HStack(spacing: 8) {
+                        followButton
+                        moreMenu
+                    }
+                    .padding(.trailing, 16)
+                    .padding(.top, 8)
                 }
             }
             .padding(.bottom, -24)
@@ -741,6 +796,56 @@ struct ProfileHeaderView: View {
                 }
             }
             .disabled(vm.isFollowLoading)
+        }
+    }
+
+    @ViewBuilder
+    private var moreMenu: some View {
+        if let profile = vm.profile {
+            let isMuted = profile.viewer?.muted == true
+            let isBlocked = profile.viewer?.blocking != nil
+
+            Menu {
+                Button {
+                    onTapMute?()
+                } label: {
+                    if vm.isMuteLoading {
+                        Label(String(localized: "profile.mute"), systemImage: "ellipsis")
+                    } else if isMuted {
+                        Label(String(localized: "profile.unmute"), systemImage: "speaker.wave.2")
+                    } else {
+                        Label(String(localized: "profile.mute"), systemImage: "speaker.slash")
+                    }
+                }
+                .disabled(vm.isMuteLoading)
+
+                Button(role: isBlocked ? .none : .destructive) {
+                    onTapBlock?()
+                } label: {
+                    if vm.isBlockLoading {
+                        Label(String(localized: "profile.block"), systemImage: "ellipsis")
+                    } else if isBlocked {
+                        Label(String(localized: "profile.unblock"), systemImage: "hand.raised.slash")
+                    } else {
+                        Label(String(localized: "profile.block"), systemImage: "hand.raised")
+                    }
+                }
+                .disabled(vm.isBlockLoading)
+
+                Divider()
+
+                Button {
+                    onTapAddToList?()
+                } label: {
+                    Label(String(localized: "profile.addToList"), systemImage: "list.bullet.rectangle.portrait")
+                }
+            } label: {
+                Image(systemName: "ellipsis")
+                    .font(.system(size: 16))
+                    .foregroundStyle(.primary)
+                    .frame(width: 36, height: 36)
+                    .background(Color(.systemGray5), in: Circle())
+            }
         }
     }
 

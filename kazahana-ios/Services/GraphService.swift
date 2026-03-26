@@ -91,6 +91,143 @@ struct GraphService {
         return try await client.get(nsid: "app.bsky.graph.getFollows", params: params)
     }
 
+    // MARK: - ミュート
+
+    /// ユーザーをミュートする
+    func muteActor(did: String) async throws {
+        struct MuteRequest: Encodable { let actor: String }
+        let _: EmptyResponse = try await client.post(nsid: "app.bsky.graph.muteActor", body: MuteRequest(actor: did))
+    }
+
+    /// ユーザーのミュートを解除する
+    func unmuteActor(did: String) async throws {
+        struct UnmuteRequest: Encodable { let actor: String }
+        let _: EmptyResponse = try await client.post(nsid: "app.bsky.graph.unmuteActor", body: UnmuteRequest(actor: did))
+    }
+
+    // MARK: - ブロック
+
+    /// ユーザーをブロックする
+    /// - Returns: 作成されたブロックレコードの URI
+    func blockActor(did: String) async throws -> String {
+        guard let session = client.currentSession else {
+            throw ATProtoError.unauthorized
+        }
+        let record = BlockRecord(subject: did, createdAt: ISO8601DateFormatter().string(from: Date()))
+        let request = CreateRecordRequest(
+            repo: session.did,
+            collection: "app.bsky.graph.block",
+            record: record
+        )
+        let response: CreateRecordResponse = try await client.post(
+            nsid: "com.atproto.repo.createRecord",
+            body: request
+        )
+        return response.uri
+    }
+
+    /// ブロックを解除する
+    /// - Parameter blockUri: ブロックレコードの URI (viewer.blocking の値)
+    func unblockActor(blockUri: String) async throws {
+        guard let session = client.currentSession else {
+            throw ATProtoError.unauthorized
+        }
+        let parts = blockUri.components(separatedBy: "/")
+        guard parts.count >= 5 else {
+            throw ATProtoError.invalidResponse
+        }
+        let rkey = parts[parts.count - 1]
+        let request = DeleteRecordRequest(
+            repo: session.did,
+            collection: "app.bsky.graph.block",
+            rkey: rkey
+        )
+        let _: EmptyResponse = try await client.post(nsid: "com.atproto.repo.deleteRecord", body: request)
+    }
+
+    // MARK: - リスト管理
+
+    /// 自分のリスト一覧を取得する
+    func getMyLists(limit: Int = 100) async throws -> [GraphListView] {
+        guard let session = client.currentSession else {
+            throw ATProtoError.unauthorized
+        }
+        let response: GetListsResponse = try await client.get(
+            nsid: "app.bsky.graph.getLists",
+            params: ["actor": session.did, "limit": "\(limit)"]
+        )
+        return response.lists
+    }
+
+    /// ユーザーがどのリストのメンバーかを取得する（subject DID のリストitem URI 辞書）
+    /// - Returns: [listUri: listitemUri]
+    func getListMemberships(targetDid: String) async throws -> [String: String] {
+        guard let session = client.currentSession else {
+            throw ATProtoError.unauthorized
+        }
+        var result: [String: String] = [:]
+        var cursor: String? = nil
+        repeat {
+            var params: [String: String] = [
+                "repo": session.did,
+                "collection": "app.bsky.graph.listitem",
+                "limit": "100"
+            ]
+            if let c = cursor { params["cursor"] = c }
+            let response: ListRecordsResponse<ListItemRecord> = try await client.get(
+                nsid: "com.atproto.repo.listRecords",
+                params: params
+            )
+            for record in response.records where record.value.subject == targetDid {
+                result[record.value.list] = record.uri
+            }
+            cursor = response.cursor
+        } while cursor != nil
+        return result
+    }
+
+    /// ユーザーをリストに追加する
+    /// - Returns: 作成された listitem レコードの URI
+    func addToList(targetDid: String, listUri: String) async throws -> String {
+        guard let session = client.currentSession else {
+            throw ATProtoError.unauthorized
+        }
+        let record = ListItemRecord(
+            list: listUri,
+            subject: targetDid,
+            createdAt: ISO8601DateFormatter().string(from: Date())
+        )
+        let request = CreateRecordRequest(
+            repo: session.did,
+            collection: "app.bsky.graph.listitem",
+            record: record
+        )
+        let response: CreateRecordResponse = try await client.post(
+            nsid: "com.atproto.repo.createRecord",
+            body: request
+        )
+        return response.uri
+    }
+
+    /// ユーザーをリストから削除する
+    /// - Parameter listitemUri: listitem レコードの URI
+    func removeFromList(listitemUri: String) async throws {
+        guard let session = client.currentSession else {
+            throw ATProtoError.unauthorized
+        }
+        let parts = listitemUri.components(separatedBy: "/")
+        guard parts.count >= 5 else {
+            throw ATProtoError.invalidResponse
+        }
+        let rkey = parts[parts.count - 1]
+        let request = DeleteRecordRequest(
+            repo: session.did,
+            collection: "app.bsky.graph.listitem",
+            rkey: rkey
+        )
+        let _: EmptyResponse = try await client.post(nsid: "com.atproto.repo.deleteRecord", body: request)
+    }
+
     // MARK: - ユーザープリファレンス
 
     /// Bluesky のユーザープリファレンスから投稿言語設定を取得する
@@ -132,3 +269,40 @@ private struct FollowRecord: Encodable {
         case createdAt
     }
 }
+
+private struct BlockRecord: Encodable {
+    let type = "app.bsky.graph.block"
+    let subject: String
+    let createdAt: String
+
+    enum CodingKeys: String, CodingKey {
+        case type = "$type"
+        case subject
+        case createdAt
+    }
+}
+
+struct ListItemRecord: Codable {
+    let list: String
+    let subject: String
+    let createdAt: String
+
+    enum CodingKeys: String, CodingKey {
+        case list
+        case subject
+        case createdAt
+    }
+}
+
+// com.atproto.repo.listRecords のレスポンス
+struct ListRecordsResponse<V: Codable>: Codable {
+    struct Record: Codable {
+        let uri: String
+        let cid: String
+        let value: V
+    }
+    let records: [Record]
+    let cursor: String?
+}
+
+

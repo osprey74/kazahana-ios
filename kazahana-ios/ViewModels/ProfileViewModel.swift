@@ -38,6 +38,8 @@ final class ProfileViewModel {
     var isLoadingPosts = false
     var isRefreshing = false
     var isFollowLoading = false
+    var isMuteLoading = false
+    var isBlockLoading = false
     var errorMessage: String?
 
     // タブ管理
@@ -434,6 +436,92 @@ final class ProfileViewModel {
             viewer: newViewer,
             labels: current.labels,
             createdAt: current.createdAt,
+            pinnedPost: current.pinnedPost
+        )
+    }
+
+    // MARK: - ミュート
+
+    @MainActor
+    func toggleMute() async {
+        guard !isMuteLoading, let profile = profile else { return }
+        isMuteLoading = true
+        let isMuted = profile.viewer?.muted == true
+        do {
+            if isMuted {
+                try await graphService.unmuteActor(did: profile.did)
+                updateViewerMuted(to: false)
+            } else {
+                try await graphService.muteActor(did: profile.did)
+                updateViewerMuted(to: true)
+            }
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+        isMuteLoading = false
+    }
+
+    @MainActor
+    private func updateViewerMuted(to muted: Bool) {
+        guard let current = profile else { return }
+        let oldViewer = current.viewer
+        let newViewer = ActorViewerState(
+            muted: muted,
+            blockedBy: oldViewer?.blockedBy,
+            blocking: oldViewer?.blocking,
+            following: oldViewer?.following,
+            followedBy: oldViewer?.followedBy
+        )
+        profile = ProfileView(
+            did: current.did, handle: current.handle,
+            displayName: current.displayName, description: current.description,
+            avatar: current.avatar, banner: current.banner,
+            followersCount: current.followersCount, followsCount: current.followsCount,
+            postsCount: current.postsCount, viewer: newViewer,
+            labels: current.labels, createdAt: current.createdAt,
+            pinnedPost: current.pinnedPost
+        )
+    }
+
+    // MARK: - ブロック
+
+    @MainActor
+    func toggleBlock() async {
+        guard !isBlockLoading, let profile = profile else { return }
+        isBlockLoading = true
+        let blockUri = profile.viewer?.blocking
+        do {
+            if let blockUri {
+                try await graphService.unblockActor(blockUri: blockUri)
+                updateViewerBlocking(to: nil)
+            } else {
+                let uri = try await graphService.blockActor(did: profile.did)
+                updateViewerBlocking(to: uri)
+            }
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+        isBlockLoading = false
+    }
+
+    @MainActor
+    private func updateViewerBlocking(to blockUri: String?) {
+        guard let current = profile else { return }
+        let oldViewer = current.viewer
+        let newViewer = ActorViewerState(
+            muted: oldViewer?.muted,
+            blockedBy: oldViewer?.blockedBy,
+            blocking: blockUri,
+            following: oldViewer?.following,
+            followedBy: oldViewer?.followedBy
+        )
+        profile = ProfileView(
+            did: current.did, handle: current.handle,
+            displayName: current.displayName, description: current.description,
+            avatar: current.avatar, banner: current.banner,
+            followersCount: current.followersCount, followsCount: current.followsCount,
+            postsCount: current.postsCount, viewer: newViewer,
+            labels: current.labels, createdAt: current.createdAt,
             pinnedPost: current.pinnedPost
         )
     }
