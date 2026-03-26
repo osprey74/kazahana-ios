@@ -1,6 +1,6 @@
 # kazahana-ios 開発タスク・進捗記録
 
-最終更新: 2026-03-26 (ユーザーミュート・ブロック・リスト管理実装)
+最終更新: 2026-03-26 (プロフィール画面フィード/リストタブ削除・BSAFボーダー幅2倍化)
 
 ---
 
@@ -11,7 +11,7 @@
 - Phase 3 (通知・プロフィール・検索): 6/6 ✅ 完了
 - Phase 3.5 (UX改善・バグ修正): 12/12 ✅ 完了
 - Phase 4 (DM・モデレーション・設定): 28/28 ✅ 完了
-- Phase 5 (BSAF・高度な機能): 5-A 完了（BSAF対応）、5-B 完了（スレッド投稿ペンディング）、5-C 完了（送受信共有）、5-F/Bot Badge 完了、5-D 完了、5-E 未着手
+- Phase 5 (BSAF・高度な機能): 5-A 完了（BSAF対応）、5-B 完了（スレッド投稿ペンディング）、5-C 完了（送受信共有）、5-F/Bot Badge 完了、5-D 一部削除（フィード/リストタブを削除）、5-E 未着手
 - Phase 6 (UX補完・モデレーション強化): 自動メンション・DM リンク化・ハッシュタグ検索・ミュート/ブロック/リスト管理 完了
 
 ---
@@ -382,17 +382,18 @@
 - [x] **ActorRowView（SearchView / UserListView）** — 表示名横に BotBadge 追加（14pt）
 - [x] **Localizable.xcstrings** — `bot.label` キーを11言語で追加
 
-### 5-D: プロフィール追加機能（優先度：低）— 完了 ✅
-- [x] **カスタムフィード一覧** — `app.bsky.feed.getActorFeeds`（プロフィール「フィード」タブ）
-  - `FeedService.getActorFeeds()` / `GetActorFeedsResponse` 追加
-  - `ProfileTab` に `.feeds` ケース追加
-  - `ProfileViewModel` に `actorFeeds: [GeneratorView]` / `loadActorFeeds()` 追加
-  - `ProfileView` に `profileFeedsTab()` ビュー追加（アバター・名前・説明・いいね数）
-- [x] **リスト一覧** — `app.bsky.graph.getLists`（プロフィール「リスト」タブ）
-  - `FeedService.getLists()` 追加
-  - `ProfileTab` に `.lists` ケース追加
-  - `ProfileViewModel` に `actorLists: [GraphListView]` / `loadActorLists()` 追加
-  - `ProfileView` に `profileListsTab()` ビュー追加（アバター・名前・説明・メンバー数）
+### 5-D: プロフィール追加機能（優先度：低）— 一部削除あり ⚠️
+- ~~[x] **カスタムフィード一覧** — `app.bsky.feed.getActorFeeds`（プロフィール「フィード」タブ）~~ **→ 削除済み（2026-03-26）**
+  - ~~`FeedService.getActorFeeds()` / `GetActorFeedsResponse` 追加~~
+  - ~~`ProfileTab` に `.feeds` ケース追加~~
+  - ~~`ProfileViewModel` に `actorFeeds: [GeneratorView]` / `loadActorFeeds()` 追加~~
+  - ~~`ProfileView` に `profileFeedsTab()` ビュー追加~~
+- ~~[x] **リスト一覧** — `app.bsky.graph.getLists`（プロフィール「リスト」タブ）~~ **→ 削除済み（2026-03-26）**
+  - ~~`FeedService.getLists()` 追加~~
+  - ~~`ProfileTab` に `.lists` ケース追加~~
+  - ~~`ProfileViewModel` に `actorLists: [GraphListView]` / `loadActorLists()` 追加~~
+  - ~~`ProfileView` に `profileListsTab()` ビュー追加~~
+  - **理由**: プロフィール画面のフィード/リストタブを削除。`ListFeedView.swift` / `FeedGeneratorFeedView.swift` はホームフィード管理（5-F）経由でのみ使用。
 - [x] **タブバー横スクロール対応** — `ScrollView(.horizontal)` ラップでタブが多くてもはみ出さない
 - [x] **設定ボタン移動** — バナー右上 → アバターと同じ高さの行の右端（`HStack(alignment: .bottom)` 右側）
 - [x] **Localizable.xcstrings** — `profile.feeds` / `profile.lists` / `profile.noFeeds` / `profile.noLists` を11言語追加
@@ -549,7 +550,7 @@ kazahana-ios/
 │   ├── ComposeViewModel.swift
 │   ├── ThreadViewModel.swift
 │   ├── NotificationViewModel.swift # resolvedRepostURIs キャッシュ
-│   ├── ProfileViewModel.swift     # フォロー/ミュート/ブロック 楽観的 UI + ProfileTab enum（7タブ）+ actorFeeds/actorLists + タブ別フィード管理 + ピン留め投稿 + プロフィール内検索
+│   ├── ProfileViewModel.swift     # フォロー/ミュート/ブロック 楽観的 UI + ProfileTab enum（6タブ）+ タブ別フィード管理 + ピン留め投稿 + プロフィール内検索
 │   ├── SearchViewModel.swift      # タブ切り替え・Task キャンセルデバウンス + filterModeratedPosts + 検索履歴
 │   ├── ConversationListViewModel.swift # 会話一覧 + 30秒ポーリング + ミュート/退出
 │   └── ChatThreadViewModel.swift  # メッセージ一覧 + 送信 + 削除 + 15秒ポーリング + 既読
@@ -569,11 +570,11 @@ kazahana-ios/
 │   │   ├── NotificationListView.swift
 │   │   └── NotificationItemView.swift
 │   ├── Profile/
-│   │   ├── ProfileView.swift      # ProfileScreenView + ProfileHeaderView（3点メニュー付き）+ 横スクロールタブバー（7タブ）+ コンパクトヘッダー + ピン留め表示 + 内部検索バー + ミュート/ブロック確認ダイアログ
+│   │   ├── ProfileView.swift      # ProfileScreenView + ProfileHeaderView（3点メニュー付き）+ 横スクロールタブバー（6タブ: posts/replies/media/likes/bookmarks/starterPacks）+ コンパクトヘッダー + ピン留め表示 + 内部検索バー + ミュート/ブロック確認ダイアログ
 │   │   ├── AddToListView.swift    # リスト管理シート（自分のリスト一覧・メンバーシップトグル）
 │   │   ├── UserListView.swift     # フォロワー/フォロー中一覧 + フォロー/解除ボタン
-│   │   ├── ListFeedView.swift     # リストフィード表示（getListFeed・無限スクロール）
-│   │   ├── FeedGeneratorFeedView.swift # カスタムフィード投稿一覧（getFeed・無限スクロール）
+│   │   ├── ListFeedView.swift     # リストフィード表示（getListFeed・無限スクロール）※ホームフィード管理経由でのみ使用
+│   │   ├── FeedGeneratorFeedView.swift # カスタムフィード投稿一覧（getFeed・無限スクロール）※ホームフィード管理経由でのみ使用
 │   │   └── StarterPackView.swift  # スターターパック一覧（StarterPackListTabView）+ 詳細（StarterPackDetailView）
 │   ├── Search/
 │   │   └── SearchView.swift       # SearchView + ActorRowView + SearchPostRowView（スレッド遷移・著者プロフィール遷移）+ 検索履歴一覧
