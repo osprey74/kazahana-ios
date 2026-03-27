@@ -10,7 +10,7 @@ final class IAPService {
 
     // MARK: - Constants
 
-    static let productID = "com.kazahana.app.supporter_badge_30d"
+    static let productID = "com.osprey74.kazahana-ios.supporter_badge_30d"
     static let badgeDuration: TimeInterval = 30 * 24 * 60 * 60  // 30日
 
     // MARK: - State

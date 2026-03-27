@@ -8,7 +8,7 @@ import UserNotifications
 
 /// バックグラウンドリフレッシュのタスク識別子
 enum BGTaskIdentifier {
-    static let notificationRefresh = "com.kazahana.app.notificationRefresh"
+    static let notificationRefresh = "com.osprey74.kazahana-ios.notificationRefresh"
 }
 
 /// バックグラウンドリフレッシュを管理するサービス

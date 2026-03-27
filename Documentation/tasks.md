@@ -350,7 +350,7 @@
 
 
 **実装タスク**
-- [ ] App Store Connect で Non-renewing subscription 商品を登録（product ID: `com.kazahana.app.supporter_badge_30d`）※ユーザー作業
+- [ ] App Store Connect で Non-renewing subscription 商品を登録（product ID: `com.osprey74.kazahana-ios.supporter_badge_30d`）※ユーザー作業
 - [x] `Services/IAPService.swift` 新規作成
   - `StoreKit` import、`Product.products(for:)` で商品フェッチ
   - `purchase()` — `product.purchase()` 呼び出し・トランザクション完了処理

@@ -9,7 +9,7 @@ import Security
 final class SessionStore {
 
     private enum Keys {
-        static let service = "com.kazahana.app"
+        static let service = "com.osprey74.kazahana-ios"
         static let account = "session"
         /// Share Extension と Keychain を共有するための Access Group
         /// Team ID (9L6A9KDH5P) + Bundle ID (com.osprey74.kazahana-ios)

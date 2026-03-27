@@ -28,7 +28,7 @@ struct Session: Codable, Equatable {
 final class SessionStore {
 
     private enum Keys {
-        static let service = "com.kazahana.app"
+        static let service = "com.osprey74.kazahana-ios"
         static let account = "session"
         static let accessGroup = "9L6A9KDH5P.com.osprey74.kazahana-ios"
     }
