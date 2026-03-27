@@ -18,8 +18,10 @@ struct PostCardView: View {
     var onTapLikeCount: ((PostView) -> Void)?
     /// リポスト数タップ（リポストしたユーザー一覧）
     var onTapRepostCount: ((PostView) -> Void)?
-    /// 引用投稿ボタンタップ
+    /// 引用して投稿ボタンタップ
     var onTapQuote: ((PostView) -> Void)?
+    /// 引用一覧を見るボタンタップ
+    var onTapViewQuotes: ((PostView) -> Void)?
     /// 投稿削除後の通知
     var onDelete: ((PostView) -> Void)?
     /// ブックマーク解除後の通知
@@ -75,6 +77,7 @@ struct PostCardView: View {
         onTapLikeCount: ((PostView) -> Void)? = nil,
         onTapRepostCount: ((PostView) -> Void)? = nil,
         onTapQuote: ((PostView) -> Void)? = nil,
+        onTapViewQuotes: ((PostView) -> Void)? = nil,
         onDelete: ((PostView) -> Void)? = nil,
         onUnbookmark: ((PostView) -> Void)? = nil,
         onTapMuteUser: ((PostView) -> Void)? = nil,
@@ -90,6 +93,7 @@ struct PostCardView: View {
         self.onTapLikeCount = onTapLikeCount
         self.onTapRepostCount = onTapRepostCount
         self.onTapQuote = onTapQuote
+        self.onTapViewQuotes = onTapViewQuotes
         self.onDelete = onDelete
         self.onUnbookmark = onUnbookmark
         self.onTapMuteUser = onTapMuteUser
@@ -335,7 +339,7 @@ struct PostCardView: View {
                 Label(String(localized: "post.copyLink"), systemImage: "link")
             }
 
-            // 翻訳（外部ブラウザ）
+            // 翻訳する（外部ブラウザ）
             Button {
                 let text = post.record.text.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
                 let langCode = Locale.current.language.languageCode?.identifier ?? "en"
@@ -346,7 +350,7 @@ struct PostCardView: View {
                 Label(String(localized: "post.translate"), systemImage: "character.bubble")
             }
 
-            // 他人の投稿のみ：非表示・通報・ミュート・ブロック
+            // 他人の投稿のみ：非表示・通報・スレッドミュート・ミュート・ブロック・通報
             if let currentUserDID, currentUserDID != author.did {
                 Divider()
                 Button {
@@ -360,9 +364,12 @@ struct PostCardView: View {
                     Label(String(localized: "post.reportPost"), systemImage: "flag")
                 }
                 Button {
-                    reportTarget = .account(did: author.did)
+                    Task { await toggleMuteThread() }
                 } label: {
-                    Label(String(localized: "post.reportAccount"), systemImage: "person.badge.minus")
+                    Label(
+                        String(localized: isThreadMuted ? "post.unmuteThread" : "post.muteThread"),
+                        systemImage: isThreadMuted ? "bell" : "bell.slash"
+                    )
                 }
                 Divider()
                 Button {
@@ -370,7 +377,7 @@ struct PostCardView: View {
                 } label: {
                     let isMuted = post.author.viewer?.muted == true
                     Label(
-                        String(localized: isMuted ? "profile.unmute" : "profile.mute"),
+                        String(localized: isMuted ? "post.unmuteUser" : "post.muteUser"),
                         systemImage: isMuted ? "speaker.wave.2" : "speaker.slash"
                     )
                 }
@@ -379,25 +386,28 @@ struct PostCardView: View {
                 } label: {
                     let isBlocked = post.author.viewer?.blocking != nil
                     Label(
-                        String(localized: isBlocked ? "profile.unblock" : "profile.block"),
+                        String(localized: isBlocked ? "post.unblockUser" : "post.blockUser"),
                         systemImage: isBlocked ? "hand.raised.slash" : "hand.raised"
                     )
                 }
+                Button(role: .destructive) {
+                    reportTarget = .account(did: author.did)
+                } label: {
+                    Label(String(localized: "post.reportUser"), systemImage: "person.badge.minus")
+                }
             }
 
-            // 全投稿：スレッドミュート
-            Divider()
-            Button {
-                Task { await toggleMuteThread() }
-            } label: {
-                Label(
-                    String(localized: isThreadMuted ? "post.unmuteThread" : "post.muteThread"),
-                    systemImage: isThreadMuted ? "bell" : "bell.slash"
-                )
-            }
-
-            // 自分の投稿の場合のみ削除ボタンを表示
+            // 自分の投稿の場合のみ：スレッドミュート・削除
             if let currentUserDID, currentUserDID == author.did {
+                Divider()
+                Button {
+                    Task { await toggleMuteThread() }
+                } label: {
+                    Label(
+                        String(localized: isThreadMuted ? "post.unmuteThread" : "post.muteThread"),
+                        systemImage: isThreadMuted ? "bell" : "bell.slash"
+                    )
+                }
                 Divider()
                 Button(role: .destructive) {
                     showDeleteConfirm = true
@@ -508,14 +518,35 @@ struct PostCardView: View {
 
             Spacer()
 
-            // 引用投稿
-            if let onTapQuote {
-                Button {
-                    onTapQuote(post)
+            // 引用（メニュー：引用して投稿 / 引用一覧を見る）
+            if onTapQuote != nil || onTapViewQuotes != nil {
+                Menu {
+                    if let onTapQuote {
+                        Button {
+                            onTapQuote(post)
+                        } label: {
+                            Label(String(localized: "post.quotePost"), systemImage: "quote.bubble")
+                        }
+                    }
+                    if let onTapViewQuotes {
+                        Button {
+                            onTapViewQuotes(post)
+                        } label: {
+                            Label(String(localized: "post.viewQuotes"), systemImage: "list.bullet")
+                        }
+                    }
                 } label: {
-                    Image(systemName: "quote.bubble")
-                        .font(.system(size: 15))
-                        .foregroundStyle(.secondary)
+                    HStack(spacing: 4) {
+                        Image(systemName: "quote.bubble")
+                            .font(.system(size: 15))
+                            .foregroundStyle(.secondary)
+                        let count = post.quoteCount ?? 0
+                        if count > 0 {
+                            Text(formatCount(count))
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
                 }
                 .buttonStyle(.plain)
             }

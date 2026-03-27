@@ -671,14 +671,22 @@ struct ProfileHeaderView: View {
 
             Menu {
                 Button {
+                    onTapAddToList?()
+                } label: {
+                    Label(String(localized: "profile.addToList"), systemImage: "list.bullet.rectangle.portrait")
+                }
+
+                Divider()
+
+                Button {
                     onTapMute?()
                 } label: {
                     if vm.isMuteLoading {
-                        Label(String(localized: "profile.mute"), systemImage: "ellipsis")
+                        Label(String(localized: "profile.muteUser"), systemImage: "ellipsis")
                     } else if isMuted {
-                        Label(String(localized: "profile.unmute"), systemImage: "speaker.wave.2")
+                        Label(String(localized: "profile.unmuteUser"), systemImage: "speaker.wave.2")
                     } else {
-                        Label(String(localized: "profile.mute"), systemImage: "speaker.slash")
+                        Label(String(localized: "profile.muteUser"), systemImage: "speaker.slash")
                     }
                 }
                 .disabled(vm.isMuteLoading)
@@ -687,24 +695,14 @@ struct ProfileHeaderView: View {
                     onTapBlock?()
                 } label: {
                     if vm.isBlockLoading {
-                        Label(String(localized: "profile.block"), systemImage: "ellipsis")
+                        Label(String(localized: "profile.blockUser"), systemImage: "ellipsis")
                     } else if isBlocked {
-                        Label(String(localized: "profile.unblock"), systemImage: "hand.raised.slash")
+                        Label(String(localized: "profile.unblockUser"), systemImage: "hand.raised.slash")
                     } else {
-                        Label(String(localized: "profile.block"), systemImage: "hand.raised")
+                        Label(String(localized: "profile.blockUser"), systemImage: "hand.raised")
                     }
                 }
                 .disabled(vm.isBlockLoading)
-
-                Divider()
-
-                Button {
-                    onTapAddToList?()
-                } label: {
-                    Label(String(localized: "profile.addToList"), systemImage: "list.bullet.rectangle.portrait")
-                }
-
-                Divider()
 
                 Button(role: .destructive) {
                     onTapReport?()

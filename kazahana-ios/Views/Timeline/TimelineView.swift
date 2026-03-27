@@ -18,6 +18,8 @@ struct TimelineView: View {
     @State private var postActorListType: PostActorListType? = nil
     /// postList の ScrollViewProxy（スクロール先頭制御用）
     @State private var listScrollProxy: ScrollViewProxy? = nil
+    /// 引用一覧遷移先 URI
+    @State private var quotesPostURI: IdentifiableString? = nil
     /// ミュート/ブロック対象の投稿（確認ダイアログ用）
     @State private var muteTargetPost: PostView? = nil
     @State private var blockTargetPost: PostView? = nil
@@ -103,6 +105,11 @@ struct TimelineView: View {
             // いいね/リポストユーザー一覧遷移
             .navigationDestination(item: $postActorListType) { listType in
                 PostActorListView(listType: listType)
+                    .environment(authVM)
+            }
+            // 引用一覧遷移
+            .navigationDestination(item: $quotesPostURI) { item in
+                PostQuoteListView(postURI: item.value)
                     .environment(authVM)
             }
             // 投稿作成シート（新規投稿 or 返信 or 引用投稿）
@@ -252,6 +259,7 @@ struct TimelineView: View {
                     onTapLikeCount: { post in postActorListType = .likes(postURI: post.uri) },
                     onTapRepostCount: { post in postActorListType = .reposts(postURI: post.uri) },
                     onTapQuote: { post in quotePost = post; showCompose = true },
+                    onTapViewQuotes: { post in quotesPostURI = IdentifiableString(post.uri) },
                     onDelete: { post in viewModel.removePost(uri: post.uri) },
                     onTapMuteUser: { post in muteTargetPost = post },
                     onTapBlockUser: { post in blockTargetPost = post },

@@ -175,6 +175,7 @@ struct ThreadView: View {
                                 onTapPost: { post in selectedPost = post },
                                 onTapAuthor: { did in selectedAuthorDID = IdentifiableString(did) },
                                 onTapReply: { post in replyToPost = post },
+                                onTapViewQuotes: { post in quotesPostURI = IdentifiableString(post.uri) },
                                 onDelete: { post in viewModel.removeReply(uri: post.uri) },
                                 onTapMuteUser: { post in muteTargetPost = post },
                                 onTapBlockUser: { post in blockTargetPost = post },
@@ -202,6 +203,7 @@ struct ThreadView: View {
                     onTapPost: { p in selectedPost = p },
                     onTapAuthor: { did in selectedAuthorDID = IdentifiableString(did) },
                     onTapReply: { post in replyToPost = post },
+                    onTapViewQuotes: { post in quotesPostURI = IdentifiableString(post.uri) },
                     onTapMuteUser: { post in muteTargetPost = post },
                     onTapBlockUser: { post in blockTargetPost = post },
                     currentUserDID: authVM.client.currentSession?.did
