@@ -503,7 +503,7 @@
 - [x] **ブックマーク**: `app.bsky.bookmark.*` API で実装済み（PostCardView / ThreadView ボタン + プロフィールタブ）
 - [ ] **画像読み込み**: 現在 `AsyncImage` を使用。Kingfisher or Nuke の導入を検討
 - [ ] **Unit Tests**: テストは空のまま。モデル・サービス層のテストを追加予定
-- [ ] **Bundle ID**: 現在 Xcode デフォルト。`com.kazahana.app` への変更が必要（App Store 配布前）
+- [x] **Bundle ID**: `com.osprey74.kazahana-ios` のまま使用（変更しない方針に決定）
 - [ ] **検索デバウンス**: SearchViewModel は Task キャンセルで対応しているが、厳密なデバウンス実装は未対応
 
 ---
