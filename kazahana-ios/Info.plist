@@ -6,7 +6,7 @@
 	<string>kazahana</string>
 	<key>BGTaskSchedulerPermittedIdentifiers</key>
 	<array>
-		<string>com.osprey74.kazahana-ios.notificationRefresh</string>
+		<string>com.osprey74.kazahana.notificationRefresh</string>
 	</array>
 	<key>UIAppFonts</key>
 	<array>
@@ -18,7 +18,7 @@
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
 			<key>CFBundleURLName</key>
-			<string>com.osprey74.kazahana-ios</string>
+			<string>com.osprey74.kazahana</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
 				<string>kazahana</string>

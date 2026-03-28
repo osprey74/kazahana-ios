@@ -4,11 +4,11 @@
 <dict>
 	<key>keychain-access-groups</key>
 	<array>
-		<string>$(AppIdentifierPrefix)com.osprey74.kazahana-ios</string>
+		<string>$(AppIdentifierPrefix)com.osprey74.kazahana</string>
 	</array>
 	<key>com.apple.security.application-groups</key>
 	<array>
-		<string>group.com.osprey74.kazahana-ios</string>
+		<string>group.com.osprey74.kazahana</string>
 	</array>
 </dict>
 </plist>

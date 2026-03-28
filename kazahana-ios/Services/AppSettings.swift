@@ -11,7 +11,7 @@ final class AppSettings {
     // MARK: - App Group UserDefaults
 
     /// メインアプリと Share Extension で設定を共有するための UserDefaults
-    static let suiteName = "group.com.osprey74.kazahana-ios"
+    static let suiteName = "group.com.osprey74.kazahana"
     private static var defaults: UserDefaults {
         UserDefaults(suiteName: suiteName) ?? .standard
     }
