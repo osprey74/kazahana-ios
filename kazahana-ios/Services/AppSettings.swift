@@ -45,6 +45,7 @@ final class AppSettings {
 
     /// タイムライン自動更新の間隔（秒）
     enum PollingInterval: Int, CaseIterable {
+        case never  = 0
         case sec30  = 30
         case sec60  = 60
         case sec90  = 90
@@ -52,6 +53,7 @@ final class AppSettings {
 
         var displayName: String {
             switch self {
+            case .never:  return String(localized: "settings.polling.never")
             case .sec30:  return String(localized: "settings.polling.30s")
             case .sec60:  return String(localized: "settings.polling.60s")
             case .sec90:  return String(localized: "settings.polling.90s")

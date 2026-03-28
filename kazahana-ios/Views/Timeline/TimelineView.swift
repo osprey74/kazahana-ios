@@ -175,10 +175,19 @@ struct TimelineView: View {
         .task {
             await viewModel.loadInitial()
             await viewModel.loadSavedFeeds()
-            viewModel.startPolling(intervalSeconds: settings.timelinePollingInterval.rawValue)
+            let interval = settings.timelinePollingInterval
+            if interval == .never {
+                viewModel.stopPolling()
+            } else {
+                viewModel.startPolling(intervalSeconds: interval.rawValue)
+            }
         }
         .onChange(of: settings.timelinePollingInterval) { _, newInterval in
-            viewModel.startPolling(intervalSeconds: newInterval.rawValue)
+            if newInterval == .never {
+                viewModel.stopPolling()
+            } else {
+                viewModel.startPolling(intervalSeconds: newInterval.rawValue)
+            }
         }
         // ホームタブ再タップ通知を受信 → refresh + スクロール先頭
         .onReceive(NotificationCenter.default.publisher(for: .timelineScrollToTop)) { _ in

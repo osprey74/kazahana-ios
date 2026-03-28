@@ -1,6 +1,6 @@
 # kazahana-ios 開発タスク・進捗記録
 
-最終更新: 2026-03-26 (プロフィール画面フィード/リストタブ削除・BSAFボーダー幅2倍化)
+最終更新: 2026-03-28 (引用ボタンメニュー化・三点メニュー並び順変更・識別子統一・バージョン1.0.0)
 
 ---
 
@@ -13,6 +13,7 @@
 - Phase 4 (DM・モデレーション・設定): 28/28 ✅ 完了
 - Phase 5 (BSAF・高度な機能): 5-A 完了（BSAF対応）、5-B 完了（スレッド投稿ペンディング）、5-C 完了（送受信共有）、5-F/Bot Badge 完了、5-D 一部削除（フィード/リストタブを削除）、5-E 未着手
 - Phase 6 (UX補完・モデレーション強化): 自動メンション・DM リンク化・ハッシュタグ検索・ミュート/ブロック/リスト管理 完了
+- App Store 準備: バージョン 1.0.0・Bundle ID 統一（Keychain/IAP/BGTask/CFBundleURLName）・プライバシーポリシー公開・審査用アカウント作成
 
 ---
 
@@ -457,6 +458,34 @@
 - [x] **全画面タップ挙動統一** — アバタータップ→プロフィール遷移、表示名/ハンドルタップ→スレッド遷移に統一。`PostCardView.authorRow`・`ProfileView`（3箇所）・`ConversationListView`・`ChatThreadView`（ナビタイトルタップ）に対応
 - [x] **ホームタブ再タップでスクロール先頭＋再読み込み** — `UITabBarControllerDelegate` を `TabBarDelegateInjector`（`UIViewControllerRepresentable`）で注入し、ホームタブ再タップを検出。`NotificationCenter` 経由で `TimelineView` に通知し、`refresh()` + `ScrollViewProxy` でリスト先頭にスクロール。フィードタブバーの再タップ時も同様に対応
 - [x] **投稿エリアへのURL入力でリンクカード生成** — ペースト時は自動生成、手打ち時はインラインボタン表示（アイコン＋「リンクカード生成」テキスト）。`LinkPreviewService`（OGP取得・サムネイル取得）/ `PostEmbedCreate.external` / `fetchLinkCard` do/catch 修正・`.bordered` ボタンスタイルでタップ確実受信
+
+---
+
+## UX改善・メニュー整理（2026-03-28）— 完了 ✅
+
+- [x] **引用ボタンのメニュー化** — PostCardView / ThreadView の引用ボタンを「引用して投稿」「引用一覧を見る」の2択メニューに変更
+  - `PostCardView.swift`: `onTapViewQuotes: ((PostView) -> Void)?` コールバック追加、引用ボタンを `Menu` に変更（quoteCount 表示も追加）
+  - `TimelineView.swift`: `quotesPostURI: IdentifiableString?` state + `navigationDestination` 追加
+  - `ThreadView.swift`: 2箇所の PostCardView に `onTapViewQuotes` 追加
+  - `Localizable.xcstrings`: `post.quotePost` / `post.viewQuotes` キーを11言語で追加
+- [x] **ポスト三点メニューの並び順・テキスト変更** — 共有→リンクをコピー→翻訳→[区切り]→非表示→通報→スレッドミュート→[区切り]→ユーザーミュート→ブロック→通報 の順に変更
+  - `Localizable.xcstrings`: `post.muteUser` / `post.unmuteUser` / `post.blockUser` / `post.unblockUser` / `post.reportUser` キーを11言語で追加
+- [x] **プロフィール三点メニューの並び順変更** — リストに追加/削除→[区切り]→ミュート→ブロック→通報 の順に変更
+  - `Localizable.xcstrings`: `profile.muteUser` / `profile.unmuteUser` / `profile.blockUser` / `profile.unblockUser` キーを11言語で追加
+- [x] **スレッドナビバーの「← スレッド」除去** — ナビバーに「← スレッド」テキスト表示を削除し、標準の戻るボタンのみに統一
+
+---
+
+## App Store 準備（2026-03-28）— 完了 ✅
+
+- [x] **バージョン番号を 1.0.0 に変更** — `MARKETING_VERSION` を `1.0` → `1.0.0` に変更
+- [x] **Bundle ID 統一** — Keychain service / IAP Product ID / BGTask ID / CFBundleURLName をすべて `com.osprey74.kazahana-ios` ベースに統一
+  - `SessionStore.swift` / `ShareModels.swift`: Keychain service を `com.osprey74.kazahana-ios` に変更
+  - `IAPService.swift`: productID を `com.osprey74.kazahana-ios.supporter_badge_30d` に変更
+  - `BackgroundRefreshService.swift` / `Info.plist`: BGTask ID を `com.osprey74.kazahana-ios.notificationRefresh` に変更
+  - `Info.plist`: CFBundleURLName を `com.osprey74.kazahana-ios` に変更
+- [x] **プライバシーポリシー公開** — `https://osprey74.github.io/kazahana/privacy.html`（日英バイリンガル）
+- [x] **審査用アカウント作成** — `@test-app-kazahana.bsky.social`（アプリパスワードで審査対応）
 
 ---
 
