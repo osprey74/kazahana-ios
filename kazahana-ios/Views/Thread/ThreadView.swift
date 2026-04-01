@@ -29,6 +29,8 @@ struct ThreadView: View {
     @State private var reportTarget: ReportTarget? = nil
     @State private var muteTargetPost: PostView? = nil
     @State private var blockTargetPost: PostView? = nil
+    @State private var isSavingMedia = false
+    @State private var saveToastMessage: String? = nil
 
     let postService: PostService
 
@@ -392,6 +394,19 @@ struct ThreadView: View {
             .padding(.vertical, 4)
         }
         .padding(16)
+        .overlay(alignment: .bottom) {
+            if let msg = saveToastMessage {
+                Text(msg)
+                    .font(.caption.weight(.medium))
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(.regularMaterial, in: Capsule())
+                    .padding(.bottom, 8)
+                    .transition(.opacity.combined(with: .move(edge: .bottom)))
+                    .allowsHitTesting(false)
+            }
+        }
+        .animation(.easeInOut(duration: 0.2), value: saveToastMessage)
         .alert(String(localized: "post.deleteConfirm"), isPresented: $showFocusedDeleteConfirm) {
             Button(String(localized: "post.deleteAction"), role: .destructive) {
                 Task {
@@ -438,6 +453,16 @@ struct ThreadView: View {
                 }
             } label: {
                 Label(String(localized: "post.translate"), systemImage: "character.bubble")
+            }
+
+            // 画像・動画を保存
+            if MediaSaveHelper.hasMedia(in: post.embed) {
+                Button {
+                    Task { await saveFocusedMedia(post: post) }
+                } label: {
+                    Label(String(localized: "post.saveMedia"), systemImage: "square.and.arrow.down")
+                }
+                .disabled(isSavingMedia)
             }
 
             // 他人の投稿のみ：非表示・通報
@@ -564,6 +589,20 @@ struct ThreadView: View {
                 isThreadMuted = false
             }
         }
+    }
+
+    // MARK: - メディア保存
+
+    private func saveFocusedMedia(post: PostView) async {
+        isSavingMedia = true
+        let count = await MediaSaveHelper.save(embed: post.embed)
+        isSavingMedia = false
+        let msg = count > 0
+            ? String(localized: "media.saveSuccess")
+            : String(localized: "media.saveFailed")
+        withAnimation { saveToastMessage = msg }
+        try? await Task.sleep(for: .seconds(2))
+        withAnimation { saveToastMessage = nil }
     }
 
     // MARK: - Helpers

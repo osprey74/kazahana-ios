@@ -12455,6 +12455,26 @@
         }
       }
     },
+    "media.saveFailed" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Failed to save" }
+        },
+        "ja" : {
+          "stringUnit" : { "state" : "translated", "value" : "保存に失敗しました" }
+        }
+      }
+    },
+    "media.saveSuccess" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Saved to Photos" }
+        },
+        "ja" : {
+          "stringUnit" : { "state" : "translated", "value" : "写真に保存しました" }
+        }
+      }
+    },
     "post.saveMedia" : {
       "localizations" : {
         "de" : {
