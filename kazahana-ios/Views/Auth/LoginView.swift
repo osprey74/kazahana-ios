@@ -17,9 +17,11 @@ struct LoginView: View {
                 VStack(spacing: 32) {
                     // ロゴ・タイトル
                     VStack(spacing: 12) {
-                        Image(systemName: "wind")
-                            .font(.system(size: 60))
-                            .foregroundStyle(Color.accentColor)
+                        Image("AppLogo")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 80, height: 80)
+                            .clipShape(RoundedRectangle(cornerRadius: 18))
 
                         Text("kazahana")
                             .font(.largeTitle.bold())
