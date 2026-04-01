@@ -135,6 +135,19 @@ struct ThreadView: View {
                 Button(String(localized: "common.cancel"), role: .cancel) { blockTargetPost = nil }
             }
         }
+        .overlay {
+            if isSavingMedia {
+                ZStack {
+                    Color.black.opacity(0.45)
+                        .ignoresSafeArea()
+                    ProgressView()
+                        .tint(.white)
+                        .scaleEffect(1.5)
+                }
+                .transition(.opacity)
+            }
+        }
+        .animation(.easeInOut(duration: 0.2), value: isSavingMedia)
         .task {
             await viewModel.load()
             if let post = viewModel.thread?.post {

@@ -227,6 +227,18 @@ struct PostCardView: View {
                 }
             }
             .animation(.easeInOut(duration: 0.2), value: saveToastMessage)
+            .overlay {
+                if isSavingMedia {
+                    ZStack {
+                        Color.black.opacity(0.45)
+                        ProgressView()
+                            .tint(.white)
+                            .scaleEffect(1.5)
+                    }
+                    .transition(.opacity)
+                }
+            }
+            .animation(.easeInOut(duration: 0.2), value: isSavingMedia)
             .alert(String(localized: "post.deleteConfirm"), isPresented: $showDeleteConfirm) {
                 Button(String(localized: "post.deleteAction"), role: .destructive) {
                     Task { await deletePost() }
