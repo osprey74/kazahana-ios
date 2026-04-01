@@ -64,7 +64,10 @@ struct LoginView: View {
                         // ログインボタン
                         Button {
                             Task {
-                                await authVM.login(identifier: identifier, password: password)
+                                await authVM.login(
+                                    identifier: identifier.trimmingCharacters(in: .whitespaces).lowercased(),
+                                    password: password.trimmingCharacters(in: .whitespaces).lowercased()
+                                )
                             }
                         } label: {
                             HStack {

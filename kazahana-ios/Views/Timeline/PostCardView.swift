@@ -3,6 +3,7 @@
 // タイムラインの投稿カード（インタラクション対応・リッチテキスト対応）
 
 import SwiftUI
+import Photos
 
 struct PostCardView: View {
 
@@ -46,6 +47,7 @@ struct PostCardView: View {
     @State private var repostUri: String?
     @State private var showDeleteConfirm = false
     @State private var reportTarget: ReportTarget? = nil
+    @State private var isSavingMedia = false
 
     private var post: PostView { feedPost.post }
     private var author: ProfileViewBasic { post.author }
@@ -348,6 +350,16 @@ struct PostCardView: View {
                 }
             } label: {
                 Label(String(localized: "post.translate"), systemImage: "character.bubble")
+            }
+
+            // 画像・動画を保存（画像または動画が含まれる投稿のみ表示）
+            if hasMediaToSave {
+                Button {
+                    Task { await saveMediaToPhotoLibrary() }
+                } label: {
+                    Label(String(localized: "post.saveMedia"), systemImage: "square.and.arrow.down")
+                }
+                .disabled(isSavingMedia)
             }
 
             // 他人の投稿のみ：非表示・通報・スレッドミュート・ミュート・ブロック・通報
@@ -715,6 +727,83 @@ struct PostCardView: View {
             }
             av.popoverPresentationController?.sourceView = presenter.view
             presenter.present(av, animated: true)
+        }
+    }
+
+    // MARK: - メディア保存
+
+    /// 投稿に保存可能な画像または動画が含まれるか
+    private var hasMediaToSave: Bool {
+        guard let embed = post.embed else { return false }
+        switch embed {
+        case .images(let imgs): return !imgs.images.isEmpty
+        case .video: return true
+        case .recordWithMedia(let rwm):
+            guard let media = rwm.media else { return false }
+            switch media {
+            case .images(let imgs): return !imgs.images.isEmpty
+            case .video: return true
+            default: return false
+            }
+        default: return false
+        }
+    }
+
+    /// 投稿に含まれる画像・動画を写真ライブラリに保存する
+    private func saveMediaToPhotoLibrary() async {
+        let status = await PHPhotoLibrary.requestAuthorization(for: .addOnly)
+        guard status == .authorized || status == .limited else { return }
+
+        isSavingMedia = true
+        defer { isSavingMedia = false }
+
+        guard let embed = post.embed else { return }
+
+        switch embed {
+        case .images(let imgs):
+            await saveImages(imgs.images)
+        case .video(let video):
+            if let playlist = video.playlist {
+                await saveVideo(playlistURL: playlist)
+            }
+        case .recordWithMedia(let rwm):
+            if let media = rwm.media {
+                switch media {
+                case .images(let imgs): await saveImages(imgs.images)
+                case .video(let video):
+                    if let playlist = video.playlist { await saveVideo(playlistURL: playlist) }
+                default: break
+                }
+            }
+        default: break
+        }
+    }
+
+    private func saveImages(_ images: [EmbedImageView]) async {
+        for image in images {
+            guard let url = URL(string: image.fullsize),
+                  let (data, _) = try? await URLSession.shared.data(from: url),
+                  let uiImage = UIImage(data: data) else { continue }
+            try? await PHPhotoLibrary.shared().performChanges {
+                PHAssetChangeRequest.creationRequestForAsset(from: uiImage)
+            }
+        }
+    }
+
+    /// HLS playlist URL を MP4 直 URL に変換してダウンロード・保存する
+    private func saveVideo(playlistURL: String) async {
+        guard let url = URL(string: playlistURL) else { return }
+        let mp4URL = url.deletingLastPathComponent().appendingPathComponent("video.mp4")
+
+        guard let (data, _) = try? await URLSession.shared.data(from: mp4URL) else { return }
+        let tempURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString)
+            .appendingPathExtension("mp4")
+        guard (try? data.write(to: tempURL)) != nil else { return }
+        defer { try? FileManager.default.removeItem(at: tempURL) }
+
+        try? await PHPhotoLibrary.shared().performChanges {
+            PHAssetChangeRequest.creationRequestForAssetFromVideo(atFileURL: tempURL)
         }
     }
 

@@ -100,14 +100,12 @@ struct NotificationListView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {
             List {
-                ForEach(vm.notifications) { notification in
-                    // follow 通知はタップ不可（アバターのみプロフィールへ）
-                    // それ以外は投稿URIがあればスレッドへ遷移
-                    let postURI = notificationPostURI(notification, resolvedRepostURIs: vm.resolvedRepostURIs)
+                ForEach(vm.groupedNotifications) { group in
+                    let postURI = notificationPostURI(group.latestNotification, resolvedRepostURIs: vm.resolvedRepostURIs)
                     let subjectPost = postURI.flatMap { vm.subjectPosts[$0] }
 
                     NotificationItemView(
-                        notification: notification,
+                        group: group,
                         subjectPost: subjectPost,
                         postService: postService,
                         onTapAuthor: { did in
@@ -127,7 +125,7 @@ struct NotificationListView: View {
                     .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
                     .listRowSeparator(.hidden)
                     .task {
-                        if notification.id == vm.notifications.last?.id {
+                        if group.latestNotification.id == vm.notifications.last?.id {
                             await vm.loadMore()
                         }
                     }

@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct NotificationItemView: View {
-    let notification: AppNotification
+    let group: NotificationGroup
     var subjectPost: PostView? = nil
     var postService: PostService? = nil
     var onTapAuthor: ((String) -> Void)? = nil
@@ -16,59 +16,75 @@ struct NotificationItemView: View {
     @State private var repostUri: String? = nil
     @State private var initialized = false
 
+    private var notification: AppNotification { group.latestNotification }
+    private var isGrouped: Bool { group.notifications.count > 1 }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            // ── ヘッダー行：アバター＋アクションアイコン＋理由テキスト ──
+            // ── ヘッダー行 ──
             HStack(alignment: .top, spacing: 10) {
-                // アバター（タップでプロフィール）
-                Button {
-                    onTapAuthor?(notification.author.did)
-                } label: {
-                    ZStack(alignment: .bottomTrailing) {
-                        AvatarView(url: notification.author.avatar, size: 40)
-                        Image(systemName: notification.reasonIcon)
-                            .font(.system(size: 9, weight: .bold))
-                            .foregroundStyle(.white)
-                            .padding(3)
-                            .background(notification.reasonColor, in: Circle())
-                            .offset(x: 3, y: 3)
-                    }
-                }
-                .buttonStyle(.plain)
-
-                VStack(alignment: .leading, spacing: 2) {
-                    // ユーザー名（タップでプロフィール）
+                if isGrouped {
+                    stackedAvatarsView
+                } else {
+                    // 単一: アバター＋アクションアイコン（タップでプロフィール）
                     Button {
                         onTapAuthor?(notification.author.did)
                     } label: {
-                        HStack(spacing: 4) {
-                            Text(notification.author.displayName ?? notification.author.handle)
-                                .font(.subheadline.weight(.semibold))
-                                .foregroundStyle(.primary)
-                                .lineLimit(1)
-                            if isBotAccount(did: notification.author.did, labels: notification.author.labels) {
-                                BotBadge(size: 13)
-                            }
+                        ZStack(alignment: .bottomTrailing) {
+                            AvatarView(url: notification.author.avatar, size: 40)
+                            Image(systemName: group.reasonIcon)
+                                .font(.system(size: 9, weight: .bold))
+                                .foregroundStyle(.white)
+                                .padding(3)
+                                .background(group.reasonColor, in: Circle())
+                                .offset(x: 3, y: 3)
                         }
                     }
                     .buttonStyle(.plain)
+                }
 
-                    Text(notification.reasonLabel)
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
+                VStack(alignment: .leading, spacing: 2) {
+                    if isGrouped {
+                        // グループ: 「〇〇ほかN人が…」を1行で表示
+                        Text(group.groupLabel)
+                            .font(.subheadline)
+                            .foregroundStyle(.primary)
+                            .lineLimit(2)
+                            .fixedSize(horizontal: false, vertical: true)
+                    } else {
+                        // 単一: ユーザー名（タップでプロフィール）
+                        Button {
+                            onTapAuthor?(notification.author.did)
+                        } label: {
+                            HStack(spacing: 4) {
+                                Text(notification.author.displayName ?? notification.author.handle)
+                                    .font(.subheadline.weight(.semibold))
+                                    .foregroundStyle(.primary)
+                                    .lineLimit(1)
+                                if isBotAccount(did: notification.author.did, labels: notification.author.labels) {
+                                    BotBadge(size: 13)
+                                }
+                            }
+                        }
+                        .buttonStyle(.plain)
+
+                        Text(notification.reasonLabel)
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                    }
                 }
 
                 Spacer(minLength: 0)
 
                 VStack(alignment: .trailing, spacing: 4) {
                     // 未読インジケーター
-                    if !notification.isRead {
+                    if !group.isRead {
                         Circle()
                             .fill(.blue)
                             .frame(width: 8, height: 8)
                     }
-                    Text(notification.indexedAt.relativeFormatted)
+                    Text(group.indexedAt.relativeFormatted)
                         .font(.caption)
                         .foregroundStyle(.tertiary)
                 }
@@ -89,7 +105,7 @@ struct NotificationItemView: View {
             }
         }
         .padding(.vertical, 6)
-        .opacity(notification.isRead ? 0.85 : 1.0)
+        .opacity(group.isRead ? 0.85 : 1.0)
         .task(id: subjectPost?.uri) {
             if !initialized, let post = subjectPost {
                 isLiked    = post.viewer?.like != nil
@@ -101,6 +117,33 @@ struct NotificationItemView: View {
                 initialized = true
             }
         }
+    }
+
+    // MARK: - 複数アバター（スタック表示）
+
+    private var stackedAvatarsView: some View {
+        let visibleAuthors = Array(group.authors.prefix(3))
+        return ZStack(alignment: .bottomTrailing) {
+            HStack(spacing: -10) {
+                ForEach(Array(visibleAuthors.enumerated()), id: \.offset) { index, author in
+                    Button {
+                        onTapAuthor?(author.did)
+                    } label: {
+                        AvatarView(url: author.avatar, size: 28)
+                            .overlay(Circle().stroke(Color(.systemBackground), lineWidth: 1.5))
+                    }
+                    .buttonStyle(.plain)
+                    .zIndex(Double(visibleAuthors.count - index))
+                }
+            }
+            Image(systemName: group.reasonIcon)
+                .font(.system(size: 9, weight: .bold))
+                .foregroundStyle(.white)
+                .padding(3)
+                .background(group.reasonColor, in: Circle())
+                .offset(x: 3, y: 3)
+        }
+        .frame(minWidth: 40, alignment: .leading)
     }
 
     // MARK: - 投稿コンテンツビュー

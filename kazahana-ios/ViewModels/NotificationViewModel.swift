@@ -13,6 +13,48 @@ final class NotificationViewModel {
     var errorMessage: String?
     var unreadCount = 0
 
+    /// 同一投稿への同種アクション（like/repost等）をグループ化した通知リスト
+    var groupedNotifications: [NotificationGroup] {
+        var groups: [NotificationGroup] = []
+        var groupIndexMap: [String: Int] = [:]
+
+        for notif in notifications {
+            // like/repost系のみグループ化。reply/mention/quote/followは個別表示
+            let groupKey: String?
+            switch notif.reason {
+            case "like", "repost", "like-via-repost", "repost-via-repost":
+                if let subject = notif.reasonSubject {
+                    groupKey = "\(notif.reason):\(subject)"
+                } else {
+                    groupKey = nil
+                }
+            default:
+                groupKey = nil
+            }
+
+            if let key = groupKey, let idx = groupIndexMap[key] {
+                let existing = groups[idx]
+                groups[idx] = NotificationGroup(
+                    id: existing.id,
+                    reason: existing.reason,
+                    reasonSubject: existing.reasonSubject,
+                    notifications: existing.notifications + [notif]
+                )
+            } else {
+                let newID = groupKey ?? notif.uri
+                let group = NotificationGroup(
+                    id: newID,
+                    reason: notif.reason,
+                    reasonSubject: notif.reasonSubject,
+                    notifications: [notif]
+                )
+                groupIndexMap[newID] = groups.count
+                groups.append(group)
+            }
+        }
+        return groups
+    }
+
     private var cursor: String?
     private var hasMore = true
     private let notificationService: NotificationService

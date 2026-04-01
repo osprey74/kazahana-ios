@@ -83,6 +83,7 @@ final class AuthViewModel {
         do {
             _ = try await authService.login(identifier: identifier, password: password)
             isLoggedIn = true
+            await loadPostLanguages()
         } catch {
             errorMessage = error.localizedDescription
         }
