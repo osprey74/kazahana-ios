@@ -25,10 +25,6 @@ struct LoginView: View {
 
                         Text("kazahana")
                             .font(.largeTitle.bold())
-
-                        Text(String(localized: "auth.tagline"))
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
                     }
                     .padding(.top, 60)
 

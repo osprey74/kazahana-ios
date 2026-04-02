@@ -16,6 +16,7 @@ final class IAPService {
     // MARK: - State
 
     var product: Product?
+    var isLoadingProducts = true   // true on init so spinner shows before first fetch
     var isPurchasing = false
     var isRestoring = false
     var purchaseError: String?
@@ -28,6 +29,8 @@ final class IAPService {
 
     /// App Store から商品情報を取得する
     func fetchProducts() async {
+        isLoadingProducts = true
+        defer { isLoadingProducts = false }
         do {
             let products = try await Product.products(for: [IAPService.productID])
             product = products.first

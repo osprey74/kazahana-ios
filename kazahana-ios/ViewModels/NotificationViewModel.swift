@@ -74,16 +74,20 @@ final class NotificationViewModel {
         hasMore = true
 
         do {
+            // 通知一覧を一括取得してリストを即時表示
             let response = try await notificationService.listNotifications(limit: 50)
             notifications = response.notifications
             cursor = response.cursor
             hasMore = response.cursor != nil
             await markAsSeen()
-            await fetchSubjectPosts(for: response.notifications)
+            isLoading = false
+
+            // subject posts を先頭から10件ずつ段階的に取得
+            await fetchSubjectPostsInBatches(for: response.notifications)
         } catch {
             errorMessage = error.localizedDescription
+            isLoading = false
         }
-        isLoading = false
     }
 
     @MainActor
@@ -93,20 +97,24 @@ final class NotificationViewModel {
         errorMessage = nil
         cursor = nil
         hasMore = true
+        subjectPosts = [:]
+        resolvedRepostURIs = [:]
 
         do {
+            // 通知一覧を一括取得してリストを即時表示
             let response = try await notificationService.listNotifications(limit: 50)
             notifications = response.notifications
             cursor = response.cursor
             hasMore = response.cursor != nil
             await markAsSeen()
-            subjectPosts = [:]
-            resolvedRepostURIs = [:]
-            await fetchSubjectPosts(for: response.notifications)
+            isRefreshing = false
+
+            // subject posts を先頭から10件ずつ段階的に取得
+            await fetchSubjectPostsInBatches(for: response.notifications)
         } catch {
             errorMessage = error.localizedDescription
+            isRefreshing = false
         }
-        isRefreshing = false
     }
 
     @MainActor
@@ -128,21 +136,49 @@ final class NotificationViewModel {
 
     // MARK: - subject投稿取得
 
+    /// 通知リストを10件ずつに分割してポスト内容を段階的に取得する（先頭から順番に表示を埋める）
+    @MainActor
+    private func fetchSubjectPostsInBatches(for notifs: [AppNotification], batchSize: Int = 10) async {
+        var offset = 0
+        while offset < notifs.count {
+            let batch = Array(notifs[offset..<min(offset + batchSize, notifs.count)])
+            await fetchSubjectPosts(for: batch)
+            offset += batchSize
+        }
+    }
+
     @MainActor
     private func fetchSubjectPosts(for notifs: [AppNotification]) async {
         guard let postService else { return }
 
-        // Step1: like-via-repost / repost-via-repost のリポストレコードを解決して元投稿 URI を取得
-        var viaRepostNotifs = notifs.filter { $0.isViaRepost && $0.reasonSubject != nil }
-        viaRepostNotifs = viaRepostNotifs.filter { notif in
-            // reasonSubject のリポスト URI がまだ解決されていないもののみ
-            guard let repostURI = notif.reasonSubject else { return false }
-            return resolvedRepostURIs[repostURI] == nil
-        }
+        // Step1: like-via-repost / repost-via-repost のリポストURIを並列解決
+        let viaRepostURIs = Array(Set(
+            notifs
+                .filter { $0.isViaRepost && $0.reasonSubject != nil }
+                .compactMap { $0.reasonSubject }
+                .filter { resolvedRepostURIs[$0] == nil }
+        ))
 
-        for notif in viaRepostNotifs {
-            guard let repostURI = notif.reasonSubject else { continue }
-            if let postURI = await resolveRepostURI(repostURI) {
+        if !viaRepostURIs.isEmpty {
+            // withTaskGroup で並列処理
+            let resolved: [(String, String)] = await withTaskGroup(
+                of: (String, String?).self,
+                returning: [(String, String)].self
+            ) { group in
+                for repostURI in viaRepostURIs {
+                    group.addTask { [weak self] in
+                        guard let self else { return (repostURI, nil) }
+                        let postURI = await self.resolveRepostURI(repostURI)
+                        return (repostURI, postURI)
+                    }
+                }
+                var results: [(String, String)] = []
+                for await (repostURI, postURI) in group {
+                    if let postURI { results.append((repostURI, postURI)) }
+                }
+                return results
+            }
+            for (repostURI, postURI) in resolved {
                 resolvedRepostURIs[repostURI] = postURI
             }
         }

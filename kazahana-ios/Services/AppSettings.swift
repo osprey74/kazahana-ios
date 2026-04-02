@@ -83,9 +83,8 @@ final class AppSettings {
 
     // MARK: - 投稿言語設定
 
-    /// 投稿に付与する言語（デスクトップ版と同じ11言語 + システム連動）
+    /// 投稿に付与する言語（11言語）
     enum PostLanguage: String, CaseIterable {
-        case system   = "system"
         case japanese = "ja"
         case english  = "en"
         case portuguese = "pt"
@@ -101,7 +100,6 @@ final class AppSettings {
         /// 設定画面に表示する名前（その言語のネイティブ表記）
         var displayName: String {
             switch self {
-            case .system:      return String(localized: "lang.system")
             case .japanese:    return String(localized: "lang.ja")
             case .english:     return String(localized: "lang.en")
             case .portuguese:  return String(localized: "lang.pt")
@@ -115,40 +113,21 @@ final class AppSettings {
             case .indonesian:  return String(localized: "lang.id")
             }
         }
-
-        /// 投稿レコードの `langs` に渡す BCP-47 コード（system の場合は nil → 呼び出し側で端末ロケール使用）
-        var langCode: String? {
-            self == .system ? nil : rawValue
-        }
     }
 
-    /// ユーザーが設定した投稿言語（system = 端末ロケール自動）
+    /// ユーザーが設定した投稿言語（kazahana 設定が唯一の参照元）
     var postLanguageSetting: PostLanguage {
         didSet {
             defaults.set(postLanguageSetting.rawValue, forKey: "postLanguageSetting")
-            // AppleLanguages を書き込むことで次回起動時の表示言語を変更する
-            if let code = postLanguageSetting.langCode {
-                defaults.set([code], forKey: "AppleLanguages")
-            } else {
-                defaults.removeObject(forKey: "AppleLanguages")
-            }
+            // AppleLanguages は UserDefaults.standard に書き込む必要がある
+            // （App Group UserDefaults では iOS の起動時言語判定に反映されない）
+            UserDefaults.standard.set([postLanguageSetting.rawValue], forKey: "AppleLanguages")
         }
     }
 
-    /// Bluesky アカウントプリファレンスから取得した言語設定（ログイン時に上書き）
-    var postLanguages: [String] = []
-
-    /// 実際に投稿レコードに渡す言語コード配列。
-    /// 優先順: ユーザー設定 > Bluesky プリファレンス > 端末ロケール
+    /// 実際に投稿レコードに渡す言語コード配列（設定値をそのまま使用）
     var resolvedPostLangs: [String] {
-        if let code = postLanguageSetting.langCode {
-            return [code]
-        }
-        if !postLanguages.isEmpty {
-            return postLanguages
-        }
-        let locale = Locale.current.language.languageCode?.identifier ?? "ja"
-        return [locale]
+        [postLanguageSetting.rawValue]
     }
 
     // MARK: - モデレーション設定
@@ -259,8 +238,8 @@ final class AppSettings {
         self.showVia = d.object(forKey: "showVia") as? Bool ?? false
         self.adultContentEnabled = d.object(forKey: "adultContentEnabled") as? Bool ?? false
         self.claudeApiKey = d.string(forKey: "claudeApiKey") ?? ""
-        let langRaw = d.string(forKey: "postLanguageSetting") ?? PostLanguage.system.rawValue
-        self.postLanguageSetting = PostLanguage(rawValue: langRaw) ?? .system
+        let langRaw = d.string(forKey: "postLanguageSetting") ?? PostLanguage.japanese.rawValue
+        self.postLanguageSetting = PostLanguage(rawValue: langRaw) ?? .japanese
         if let stored = d.dictionary(forKey: "labelPreferences") as? [String: String] {
             self.labelPreferences = stored.compactMapValues { ModerationBehavior(rawValue: $0) }
         } else {

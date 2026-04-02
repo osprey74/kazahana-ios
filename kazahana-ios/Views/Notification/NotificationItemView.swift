@@ -208,11 +208,11 @@ struct NotificationItemView: View {
         .padding(.leading, indentWidth)
     }
 
-    /// 通知画面用の embed 表示（動画はサムネイルのみ）
+    /// 通知画面用の embed 表示（画像は64ptサムネイル、動画はサムネイルのみ）
     private func notificationEmbedView(_ embed: PostEmbed) -> AnyView {
         switch embed {
         case .images(let images):
-            AnyView(ImageGridView(images: images.images))
+            AnyView(notificationImageThumbnails(images.images))
         case .video(let video):
             AnyView(VideoPlayerView(video: video, thumbnailOnly: true))
         case .external(let ext):
@@ -236,6 +236,27 @@ struct NotificationItemView: View {
             )
         case .unknown:
             AnyView(EmptyView())
+        }
+    }
+
+    /// 通知用画像サムネイル（最大4枚・64ptの正方形を横並び）
+    @ViewBuilder
+    private func notificationImageThumbnails(_ images: [EmbedImageView]) -> some View {
+        HStack(spacing: 4) {
+            ForEach(images.prefix(4)) { image in
+                AsyncImage(url: URL(string: image.thumb)) { phase in
+                    switch phase {
+                    case .success(let img):
+                        img
+                            .resizable()
+                            .scaledToFill()
+                    default:
+                        Color.secondary.opacity(0.2)
+                    }
+                }
+                .frame(width: 64, height: 64)
+                .clipShape(RoundedRectangle(cornerRadius: 6))
+            }
         }
     }
 

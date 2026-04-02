@@ -387,6 +387,7 @@
       }
     },
     "auth.tagline" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -7880,6 +7881,76 @@
         }
       }
     },
+    "iap.retry" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Erneut versuchen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Retry"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reintentar"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Réessayer"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Coba lagi"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "再試行"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "다시 시도"
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tentar novamente"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Повторить"
+          }
+        },
+        "zh-CN" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重试"
+          }
+        },
+        "zh-TW" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重試"
+          }
+        }
+      }
+    },
     "iap.title" : {
       "localizations" : {
         "de" : {
@@ -9077,6 +9148,7 @@
       }
     },
     "lang.system" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -9352,6 +9424,38 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "此列表中沒有帖子"
+          }
+        }
+      }
+    },
+    "media.saveFailed" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Failed to save"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "保存に失敗しました"
+          }
+        }
+      }
+    },
+    "media.saveSuccess" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Saved to Photos"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "写真に保存しました"
           }
         }
       }
@@ -12452,26 +12556,6 @@
             "state" : "translated",
             "value" : "轉發了"
           }
-        }
-      }
-    },
-    "media.saveFailed" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : { "state" : "translated", "value" : "Failed to save" }
-        },
-        "ja" : {
-          "stringUnit" : { "state" : "translated", "value" : "保存に失敗しました" }
-        }
-      }
-    },
-    "media.saveSuccess" : {
-      "localizations" : {
-        "en" : {
-          "stringUnit" : { "state" : "translated", "value" : "Saved to Photos" }
-        },
-        "ja" : {
-          "stringUnit" : { "state" : "translated", "value" : "写真に保存しました" }
         }
       }
     },
@@ -19209,76 +19293,6 @@
         }
       }
     },
-    "settings.polling.never" : {
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nie"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Never"
-          }
-        },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nunca"
-          }
-        },
-        "fr" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Jamais"
-          }
-        },
-        "id" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Tidak pernah"
-          }
-        },
-        "ja" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "自動更新しない"
-          }
-        },
-        "ko" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "자동 새로고침 안 함"
-          }
-        },
-        "pt" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Nunca"
-          }
-        },
-        "ru" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Никогда"
-          }
-        },
-        "zh-CN" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "不自动刷新"
-          }
-        },
-        "zh-TW" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "不自動重新整理"
-          }
-        }
-      }
-    },
     "settings.polling.30s" : {
       "localizations" : {
         "de" : {
@@ -19559,6 +19573,76 @@
         }
       }
     },
+    "settings.polling.never" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nie"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Never"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nunca"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Jamais"
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tidak pernah"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "自動更新しない"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "자동 새로고침 안 함"
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nunca"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Никогда"
+          }
+        },
+        "zh-CN" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "不自动刷新"
+          }
+        },
+        "zh-TW" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "不自動重新整理"
+          }
+        }
+      }
+    },
     "settings.pollingInterval" : {
       "localizations" : {
         "de" : {
@@ -19774,67 +19858,67 @@
         "de" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ändert die App-Anzeigesprache und die Sprache der Beiträge. \"System\" verwendet die Geräte- oder Bluesky-Sprache."
+            "value" : "Ändert die App-Anzeigesprache und die Sprache der Beiträge."
           }
         },
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Changes the app display language and the language tag on posts. \"System\" uses your device language or Bluesky account language preference."
+            "value" : "Changes the app display language and the language tag on posts."
           }
         },
         "es" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Cambia el idioma de visualización de la app y la etiqueta de idioma en los posts. \"Sistema\" usa el idioma del dispositivo o de Bluesky."
+            "value" : "Cambia el idioma de visualización de la app y la etiqueta de idioma en los posts."
           }
         },
         "fr" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Modifie la langue d'affichage de l'app et l'étiquette de langue des publications. \"Système\" utilise la langue de l'appareil ou de Bluesky."
+            "value" : "Modifie la langue d'affichage de l'app et l'étiquette de langue des publications."
           }
         },
         "id" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Mengubah bahasa tampilan aplikasi dan tag bahasa pada posting. \"Sistem\" menggunakan bahasa perangkat atau pengaturan bahasa Bluesky."
+            "value" : "Mengubah bahasa tampilan aplikasi dan tag bahasa pada posting."
           }
         },
         "ja" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "アプリの表示言語と投稿に付与する言語タグを変更します。「システム連動」の場合、端末の言語設定またはBlueskyのアカウント設定が使用されます。"
+            "value" : "アプリの表示言語と投稿に付与する言語タグを変更します。"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "앱 표시 언어와 게시물의 언어 태그를 변경합니다. \"시스템\"은 기기 언어 또는 Bluesky 계정 언어 설정을 사용합니다."
+            "value" : "앱 표시 언어와 게시물의 언어 태그를 변경합니다."
           }
         },
         "pt" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Altera o idioma de exibição do app e a tag de idioma nos posts. \"Sistema\" usa o idioma do dispositivo ou do Bluesky."
+            "value" : "Altera o idioma de exibição do app e a tag de idioma nos posts."
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Меняет язык интерфейса приложения и языковой тег публикаций. «Система» использует язык устройства или настройки Bluesky."
+            "value" : "Меняет язык интерфейса приложения и языковой тег публикаций."
           }
         },
         "zh-CN" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "更改应用显示语言和帖子的语言标签。「系统」使用设备语言或 Bluesky 帐户语言设置。"
+            "value" : "更改应用显示语言和帖子的语言标签。"
           }
         },
         "zh-TW" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "變更應用程式顯示語言和貼文的語言標籤。「系統」使用裝置語言或 Bluesky 帳戶語言設定。"
+            "value" : "變更應用程式顯示語言和貼文的語言標籤。"
           }
         }
       }

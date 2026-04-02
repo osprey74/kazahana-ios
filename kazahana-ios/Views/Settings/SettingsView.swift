@@ -166,9 +166,15 @@ struct SettingsView: View {
                             }
                         }
                         .disabled(iapService.isPurchasing || iapService.isRestoring)
-                    } else {
+                    } else if iapService.isLoadingProducts {
                         ProgressView()
-                            .task { await iapService.fetchProducts() }
+                    } else {
+                        // 商品取得失敗時：再試行ボタン
+                        Button {
+                            Task { await iapService.fetchProducts() }
+                        } label: {
+                            Label(String(localized: "iap.retry"), systemImage: "arrow.clockwise")
+                        }
                     }
 
                     // リストアボタン
@@ -193,6 +199,11 @@ struct SettingsView: View {
                     Text(String(localized: "iap.title"))
                 } footer: {
                     Text(String(localized: "iap.footer"))
+                }
+                .task {
+                    if iapService.product == nil {
+                        await iapService.fetchProducts()
+                    }
                 }
 
                 // MARK: - アカウント
