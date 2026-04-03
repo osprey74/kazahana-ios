@@ -13,6 +13,7 @@ struct TimelineView: View {
     @State private var replyToPost: PostView? = nil
     @State private var quotePost: PostView? = nil
     @State private var showFeedSelector: Bool = false
+    @State private var showAccountSwitcher: Bool = false
     @State private var selectedPost: FeedViewPost? = nil
     @State private var selectedAuthorDID: IdentifiableString? = nil
     @State private var postActorListType: PostActorListType? = nil
@@ -88,9 +89,24 @@ struct TimelineView: View {
                     }
                 }
 
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    if let handle = authVM.client.currentSession?.handle {
+                        Button {
+                            showAccountSwitcher = true
+                        } label: {
+                            Text(abbreviatedHandle(handle))
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
             }
             .sheet(isPresented: $showFeedSelector) {
                 FeedSelectorView(viewModel: viewModel, isPresented: $showFeedSelector)
+            }
+            .sheet(isPresented: $showAccountSwitcher) {
+                AccountPickerView()
+                    .environment(authVM)
             }
             // スレッド遷移
             .navigationDestination(item: $selectedPost) { feedPost in
@@ -299,6 +315,13 @@ struct TimelineView: View {
         }
         .onAppear { listScrollProxy = proxy }
         } // ScrollViewReader
+    }
+
+    /// ナビバーに収まるよう @handle を最大22文字に切り詰める（超過時は末尾に…）
+    private func abbreviatedHandle(_ handle: String) -> String {
+        let full = "@\(handle)"
+        guard full.count > 22 else { return full }
+        return String(full.prefix(21)) + "…"
     }
 
     private func errorView(message: String) -> some View {

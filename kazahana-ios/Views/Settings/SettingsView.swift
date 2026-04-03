@@ -12,6 +12,8 @@ struct SettingsView: View {
     @State private var showRestartAlert = false
     @State private var showRevokeApiKeyAlert = false
     @State private var iapService = IAPService.shared
+    @State private var showAddAccount = false
+    @State private var removeAccountTarget: Session? = nil
 
     var body: some View {
         @Bindable var settings = settings
@@ -206,19 +208,31 @@ struct SettingsView: View {
                     }
                 }
 
-                // MARK: - アカウント
-                Section(String(localized: "settings.account")) {
-                    if let session = authVM.client.currentSession {
-                        LabeledContent(String(localized: "settings.handle"), value: "@\(session.handle)")
-                        LabeledContent("DID", value: session.did)
-                            .font(.caption)
+                // MARK: - アカウント管理
+                Section {
+                    ForEach(authVM.savedAccounts, id: \.did) { session in
+                        SettingsAccountRow(session: session, isActive: session.did == authVM.activeAccountDID)
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            guard session.did != authVM.activeAccountDID else { return }
+                            Task { await authVM.switchAccount(to: session) }
+                        }
+                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                            Button(role: .destructive) {
+                                removeAccountTarget = session
+                            } label: {
+                                Label(String(localized: "auth.accountPicker.removeAccount"), systemImage: "trash")
+                            }
+                        }
                     }
 
-                    Button(role: .destructive) {
-                        Task { await authVM.logout() }
+                    Button {
+                        showAddAccount = true
                     } label: {
-                        Label(String(localized: "settings.logout"), systemImage: "rectangle.portrait.and.arrow.right")
+                        Label(String(localized: "settings.addAccount"), systemImage: "plus.circle")
                     }
+                } header: {
+                    Text(String(localized: "settings.accounts"))
                 }
 
                 // MARK: - アプリ情報
@@ -229,6 +243,28 @@ struct SettingsView: View {
             }
             .navigationTitle(String(localized: "settings.title"))
             .navigationBarTitleDisplayMode(.inline)
+        }
+        .sheet(isPresented: $showAddAccount) {
+            LoginView()
+                .environment(authVM)
+        }
+        .confirmationDialog(
+            String(localized: "auth.accountPicker.removeConfirmTitle"),
+            isPresented: Binding(
+                get: { removeAccountTarget != nil },
+                set: { if !$0 { removeAccountTarget = nil } }
+            ),
+            titleVisibility: .visible
+        ) {
+            Button(String(localized: "auth.accountPicker.removeAccount"), role: .destructive) {
+                if let session = removeAccountTarget {
+                    Task { await authVM.removeAccount(did: session.did) }
+                    removeAccountTarget = nil
+                }
+            }
+            Button(String(localized: "common.cancel"), role: .cancel) { removeAccountTarget = nil }
+        } message: {
+            Text(String(localized: "auth.accountPicker.removeConfirmMessage"))
         }
     }
 
@@ -249,5 +285,30 @@ struct SettingsView: View {
         let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
         let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1"
         return "\(version) (\(build))"
+    }
+}
+
+private struct SettingsAccountRow: View {
+    let session: Session
+    let isActive: Bool
+
+    var body: some View {
+        HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("@\(session.handle)")
+                    .font(.subheadline)
+                    .fontWeight(isActive ? .semibold : .regular)
+                Text(session.did)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+            Spacer()
+            if isActive {
+                Image(systemName: "checkmark")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Color.accentColor)
+            }
+        }
     }
 }

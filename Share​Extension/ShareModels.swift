@@ -23,27 +23,51 @@ struct Session: Codable, Equatable {
     }
 }
 
-// MARK: - SessionStore
+// MARK: - SessionStore（Share Extension 用・読み取りのみ）
 
 final class SessionStore {
 
     private enum Keys {
-        static let service = "com.osprey74.kazahana"
-        static let account = "session"
+        static let service     = "com.osprey74.kazahana"
         static let accessGroup = "9L6A9KDH5P.com.osprey74.kazahana"
+        static let suiteName   = "group.com.osprey74.kazahana"
+        static let activeDIDKey = "activeAccountDID"
     }
 
+    /// アクティブアカウントのセッションを返す
+    /// 新形式（session:{did}）を試み、失敗した場合は旧形式（session）にフォールバックする
     func load() -> Session? {
-        let query: [String: Any] = [
+        let sharedDefaults = UserDefaults(suiteName: Keys.suiteName) ?? .standard
+
+        // 新形式: activeAccountDID ベース
+        if let did = sharedDefaults.string(forKey: Keys.activeDIDKey) {
+            let newQuery: [String: Any] = [
+                kSecClass as String:           kSecClassGenericPassword,
+                kSecAttrService as String:     Keys.service,
+                kSecAttrAccount as String:     "session:\(did)",
+                kSecAttrAccessGroup as String: Keys.accessGroup,
+                kSecReturnData as String:      true,
+                kSecMatchLimit as String:      kSecMatchLimitOne
+            ]
+            var result: AnyObject?
+            if SecItemCopyMatching(newQuery as CFDictionary, &result) == errSecSuccess,
+               let data = result as? Data,
+               let session = try? JSONDecoder().decode(Session.self, from: data) {
+                return session
+            }
+        }
+
+        // 旧形式フォールバック（マイグレーション前の互換性）
+        let oldQuery: [String: Any] = [
             kSecClass as String:           kSecClassGenericPassword,
             kSecAttrService as String:     Keys.service,
-            kSecAttrAccount as String:     Keys.account,
+            kSecAttrAccount as String:     "session",
             kSecAttrAccessGroup as String: Keys.accessGroup,
             kSecReturnData as String:      true,
             kSecMatchLimit as String:      kSecMatchLimitOne
         ]
         var result: AnyObject?
-        let status = SecItemCopyMatching(query as CFDictionary, &result)
+        let status = SecItemCopyMatching(oldQuery as CFDictionary, &result)
         guard status == errSecSuccess,
               let data = result as? Data,
               let session = try? JSONDecoder().decode(Session.self, from: data) else {

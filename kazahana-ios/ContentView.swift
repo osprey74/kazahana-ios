@@ -11,6 +11,11 @@ struct ContentView: View {
     var body: some View {
         if authVM.isLoggedIn {
             MainTabView(client: authVM.client)
+                // アカウント切替時に全子ビューを再生成
+                .id(authVM.activeAccountDID)
+        } else if !authVM.savedAccounts.isEmpty {
+            // 保存済みアカウントあり（複数 or トークン期限切れ）→ アカウント選択
+            AccountPickerView()
         } else {
             LoginView()
         }
@@ -74,6 +79,8 @@ struct MainTabView: View {
                 }
                 .tag(Tab.profile)
         }
+        // iPad でも iPhone と同様に下部タブバーを表示するため compact に固定
+        .environment(\.horizontalSizeClass, .compact)
         // ディープリンクでプロフィール遷移（home タブに表示）
         .sheet(item: Binding(
             get: { deepLinkProfileActor.map { IdentifiableString(value: $0) } },

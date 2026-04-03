@@ -7,9 +7,11 @@ import SwiftUI
 struct LoginView: View {
 
     @Environment(AuthViewModel.self) private var authVM
+    @Environment(\.dismiss) private var dismiss
 
     @State private var identifier: String = ""
     @State private var password: String = ""
+    @State private var isPasswordVisible: Bool = false
 
     var body: some View {
         NavigationStack {
@@ -46,9 +48,27 @@ struct LoginView: View {
                             Text(String(localized: "auth.appPassword"))
                                 .font(.footnote.weight(.medium))
                                 .foregroundStyle(.secondary)
-                            SecureField("xxxx-xxxx-xxxx-xxxx", text: $password)
+                            ZStack(alignment: .trailing) {
+                                Group {
+                                    if isPasswordVisible {
+                                        TextField("xxxx-xxxx-xxxx-xxxx", text: $password)
+                                            .textContentType(.password)
+                                            .autocorrectionDisabled()
+                                            .textInputAutocapitalization(.never)
+                                    } else {
+                                        SecureField("xxxx-xxxx-xxxx-xxxx", text: $password)
+                                            .textContentType(.password)
+                                    }
+                                }
                                 .textFieldStyle(.roundedBorder)
-                                .textContentType(.password)
+                                Button {
+                                    isPasswordVisible.toggle()
+                                } label: {
+                                    Image(systemName: isPasswordVisible ? "eye" : "eye.slash")
+                                        .foregroundStyle(isPasswordVisible ? Color.accentColor : Color.secondary)
+                                }
+                                .padding(.trailing, 8)
+                            }
                         }
 
                         // エラーメッセージ
@@ -66,6 +86,8 @@ struct LoginView: View {
                                     identifier: identifier.trimmingCharacters(in: .whitespaces).lowercased(),
                                     password: password.trimmingCharacters(in: .whitespaces).lowercased()
                                 )
+                                // シートとして表示されている場合は閉じる
+                                if authVM.isLoggedIn { dismiss() }
                             }
                         } label: {
                             HStack {
@@ -83,18 +105,6 @@ struct LoginView: View {
                         .buttonStyle(.borderedProminent)
                         .controlSize(.large)
                         .disabled(authVM.isLoading || identifier.isEmpty || password.isEmpty)
-                    }
-                    .padding(.horizontal, 24)
-
-                    // アプリパスワード注意
-                    VStack(spacing: 8) {
-                        Text(String(localized: "auth.appPassword"))
-                            .font(.caption.weight(.medium))
-                            .foregroundStyle(.secondary)
-                        Text(String(localized: "auth.helpText"))
-                            .font(.caption)
-                            .foregroundStyle(.tertiary)
-                            .multilineTextAlignment(.center)
                     }
                     .padding(.horizontal, 24)
 

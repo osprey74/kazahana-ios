@@ -49,6 +49,8 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		C02EE7562F7F4E7700B135D2 /* HANDOFF-multi-account.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = "HANDOFF-multi-account.md"; sourceTree = "<group>"; };
+		C02EE7592F7F6FA100B135D2 /* HANDOFF-v1.1.0.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = "HANDOFF-v1.1.0.md"; sourceTree = "<group>"; };
 		C0365D4E2F6E520900700B14 /* Share​Extension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = "Share​Extension.appex"; sourceTree = BUILT_PRODUCTS_DIR; };
 		C060067A2F6A412F00EC6BCF /* tasks.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = tasks.md; sourceTree = "<group>"; };
 		C0D362142F6A388000E5A980 /* kazahana-ios.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "kazahana-ios.app"; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -138,6 +140,8 @@
 			isa = PBXGroup;
 			children = (
 				C060067A2F6A412F00EC6BCF /* tasks.md */,
+				C02EE7562F7F4E7700B135D2 /* HANDOFF-multi-account.md */,
+				C02EE7592F7F6FA100B135D2 /* HANDOFF-v1.1.0.md */,
 			);
 			path = Documentation;
 			sourceTree = "<group>";
@@ -395,7 +399,7 @@
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = "Share​Extension​/​Share​Extension​.entitlements";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 3;
 				DEVELOPMENT_TEAM = 9L6A9KDH5P;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Share​Extension/Info.plist";
@@ -406,7 +410,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.0.0;
+				MARKETING_VERSION = 1.1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.osprey74.kazahana.ShareExtension;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -424,7 +428,7 @@
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = "Share​Extension​/​Share​Extension​.entitlements";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 3;
 				DEVELOPMENT_TEAM = 9L6A9KDH5P;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Share​Extension/Info.plist";
@@ -435,7 +439,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.0.0;
+				MARKETING_VERSION = 1.1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.osprey74.kazahana.ShareExtension;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -576,7 +580,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = "kazahana​-ios​/kazahana​-ios​.entitlements";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2;
+				CURRENT_PROJECT_VERSION = 3;
 				DEVELOPMENT_TEAM = 9L6A9KDH5P;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -590,7 +594,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0.1;
+				MARKETING_VERSION = 1.1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.osprey74.kazahana;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
@@ -610,7 +614,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = "kazahana​-ios​/kazahana​-ios​.entitlements";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2;
+				CURRENT_PROJECT_VERSION = 3;
 				DEVELOPMENT_TEAM = 9L6A9KDH5P;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -624,7 +628,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0.1;
+				MARKETING_VERSION = 1.1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.osprey74.kazahana;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;

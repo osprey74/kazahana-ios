@@ -1,6 +1,6 @@
 # kazahana-ios 開発タスク・進捗記録
 
-最終更新: 2026-03-28 (引用ボタンメニュー化・三点メニュー並び順変更・識別子統一・バージョン1.0.0)
+最終更新: 2026-04-03 (マルチアカウント実装完了・v1.1.0 リリース準備完了)
 
 ---
 
@@ -11,9 +11,10 @@
 - Phase 3 (通知・プロフィール・検索): 6/6 ✅ 完了
 - Phase 3.5 (UX改善・バグ修正): 12/12 ✅ 完了
 - Phase 4 (DM・モデレーション・設定): 28/28 ✅ 完了
-- Phase 5 (BSAF・高度な機能): 5-A 完了（BSAF対応）、5-B 完了（スレッド投稿ペンディング）、5-C 完了（送受信共有）、5-F/Bot Badge 完了、5-D 一部削除（フィード/リストタブを削除）、5-E 未着手
+- Phase 5 (BSAF・高度な機能): 5-A 完了（BSAF対応）、5-B 完了（スレッド投稿ペンディング）、5-C 完了（送受信共有）、5-F/Bot Badge 完了、5-D 一部削除（フィード/リストタブを削除）、5-E 完了（IAP登録・実装・審査通過）
 - Phase 6 (UX補完・モデレーション強化): 自動メンション・DM リンク化・ハッシュタグ検索・ミュート/ブロック/リスト管理 完了
-- App Store 準備: バージョン 1.0.0・Bundle ID 統一（Keychain/IAP/BGTask/CFBundleURLName）・プライバシーポリシー公開・審査用アカウント作成
+- Phase 7 (マルチアカウント): 7/7 ✅ 完了（v1.1.0）
+- App Store 準備: バージョン 1.1.0・Bundle ID 統一（Keychain/IAP/BGTask/CFBundleURLName）・プライバシーポリシー公開・審査用アカウント作成・v1.0 リリース完了 ✅
 
 ---
 
@@ -351,7 +352,7 @@
 
 
 **実装タスク**
-- [ ] App Store Connect で Non-renewing subscription 商品を登録（product ID: `com.osprey74.kazahana-ios.supporter_badge_30d`）※ユーザー作業
+- [x] App Store Connect で Non-renewing subscription 商品を登録（product ID: `com.osprey74.kazahana-ios.supporter_badge_30d`）※ユーザー作業
 - [x] `Services/IAPService.swift` 新規作成
   - `StoreKit` import、`Product.products(for:)` で商品フェッチ
   - `purchase()` — `product.purchase()` 呼び出し・トランザクション完了処理
@@ -527,6 +528,68 @@
 
 ---
 
+## Phase 7: マルチアカウント対応（2026-04-03 設計確定）
+
+> 設計仕様書: `Documentation/HANDOFF-multi-account.md`
+> 他プラットフォームへの横展開も予定（設計は共通）
+
+### 7-A: SessionStore 複数アカウント対応 - 完了 ✅
+- [x] `SessionStore` を複数セッション対応に変更
+  - `save(_ session:)` → `session:{did}` キーで保存（DID ごと）
+  - `loadAll() -> [Session]` 追加（全アカウント一覧取得）
+  - `load(forDID:) -> Session?` 追加（DID 指定で取得）
+  - `delete(did:)` 追加（DID 指定で削除）
+  - `load()` は `activeAccountDID` に基づくアクティブセッション取得に変更
+  - 旧形式（`account = "session"`）からの一回限りのマイグレーション処理を追加
+  - App Groups UserDefaults (`group.com.osprey74.kazahana`) で `activeAccountDID` / `savedAccountDIDs` を管理
+- [x] `UserDefaults["activeAccountDID"]` の読み書きヘルパーを `SessionStore` に追加
+
+### 7-B: AuthViewModel マルチアカウント対応 - 完了 ✅
+- [x] `savedAccounts: [Session]` プロパティ追加（全保存アカウント一覧）
+- [x] `activeAccountDID: String?` プロパティ追加
+- [x] `switchAccount(to session: Session)` メソッド追加
+- [x] `removeAccount(did: String)` メソッド追加（Keychain削除・サーバーサイドbesteffort・次アカウントへの切替）
+- [x] `login(identifier:password:)` 成功後に `savedAccounts` を更新
+- [x] 起動時ロジック: 0件→LoginView、1件→自動ログイン、2件以上→AccountPickerView
+
+### 7-C: アカウント選択 UI（起動時・設定画面） — 完了 ✅
+- [x] `AccountPickerView` 新規作成（`Views/Auth/AccountPickerView.swift`）
+  - 保存済みアカウント一覧（アバタープレースホルダー + ハンドル + DID）
+  - アカウント行タップ → `switchAccount()` → ホーム遷移
+  - アカウント行スワイプ削除 → 削除確認ダイアログ → `removeAccount()`
+  - 「別のアカウントを追加」ボタン → `LoginView` へシート表示
+- [x] `ContentView` の分岐ロジック変更（isLoggedIn / savedAccounts の3ウェイ分岐）
+- [x] `MainTabView` に `.id(authVM.activeAccountDID)` を付与してアカウント切替時に全 ViewModel を再生成
+- [x] `LoginView` にシート dismiss 対応追加（`@Environment(\.dismiss)` + ログイン成功後に自動close）
+
+### 7-D: 設定画面のアカウント管理 UI — 完了 ✅
+- [x] `SettingsView` のアカウントセクションを刷新
+  - 全保存アカウントをリスト表示（アクティブアカウントにチェックマーク）
+  - アカウント行タップ → 即時切替
+  - アカウント行スワイプ削除 → 削除確認ダイアログ → `removeAccount()`
+  - 「アカウントを追加」ボタン → `LoginView` へのシート表示
+
+### 7-E: Share Extension 対応 - 完了 ✅
+- [x] `ShareModels.swift` の `SessionStore.load()` を新形式に対応
+  - App Groups UserDefaults の `activeAccountDID` → `session:{did}` Keychain の順で取得
+  - 旧形式 `"session"` キーへのフォールバックあり（移行期対応）
+
+### 7-F: 多言語対応 — 完了 ✅
+- [x] `Localizable.xcstrings` に `auth.accountPicker.*` 5キー + `settings.accounts` / `settings.addAccount` 追加（11言語）
+
+### 7-G: バージョンアップ・リリース — 完了 ✅
+- [x] バージョンを `1.1.0`、ビルド番号を `3` に更新（MARKETING_VERSION / CURRENT_PROJECT_VERSION）
+- [x] ビルド確認・tasks.md 完了記録
+
+---
+
+## UX改善（2026-04-03）— 完了 ✅
+
+- [x] **ホーム画面ナビバーにログイン中アカウント表示** — `TimelineView` ナビバー右上に `@handle` を表示（最大幅=画面幅/2・左寄せテキスト・省略表示）。タップで `AccountPickerView` シートを開きアカウント切替が可能
+- [x] **パスワード表示切替ボタン** — `LoginView` のパスワード入力フィールド右端に eye/eye.slash アイコンボタンを追加。タップで `SecureField` ↔ `TextField` を切替（マスク解除時はアクセントカラー）
+
+---
+
 ## 既知の課題・TODO
 
 - [x] **ブックマーク**: `app.bsky.bookmark.*` API で実装済み（PostCardView / ThreadView ボタン + プロフィールタブ）
@@ -585,9 +648,10 @@ kazahana-ios/
 │   └── ChatThreadViewModel.swift  # メッセージ一覧 + 送信 + 削除 + 15秒ポーリング + 既読
 ├── Views/
 │   ├── Auth/
-│   │   └── LoginView.swift
+│   │   ├── LoginView.swift        # パスワード表示切替（eye/eye.slash トグル）対応
+│   │   └── AccountPickerView.swift # 複数アカウント選択・追加・削除
 │   ├── Timeline/
-│   │   ├── TimelineView.swift     # FAB・返信・引用・横スクロールタブバー（フィード2件以上で表示）
+│   │   ├── TimelineView.swift     # FAB・返信・引用・横スクロールタブバー（フィード2件以上で表示）・ナビバー右上にログイン中アカウント @handle 表示（タップでアカウント切替）
 │   │   └── PostCardView.swift     # モデレーション(blur/mediaBlur/filter) + 通報メニュー + 共有 + BSAFボーダー/タグバッジ/重複インジケーター
 │   ├── Compose/
 │   │   ├── ComposeView.swift      # 返信・引用投稿・画像添付・動画添付・スレッドゲート・ポストゲート・下書き
