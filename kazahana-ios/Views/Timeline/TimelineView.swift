@@ -75,8 +75,9 @@ struct TimelineView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    // タブバー非表示時 or showAllFeedsInSelector=true のときにフィード選択ボタンを表示
-                    if viewModel.visibleFeedSources.count <= 1 || settings.showAllFeedsInSelector {
+                    // showAllFeedsInSelector=true のときのみフィード選択ボタンを表示
+                    // （false のときはタブバーで切替、全フィード非表示時はボタンも非表示）
+                    if settings.showAllFeedsInSelector {
                         Button {
                             showFeedSelector = true
                         } label: {
