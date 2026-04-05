@@ -23,4 +23,6 @@ extension Notification.Name {
     static let timelineScrollToTop = Notification.Name("timelineScrollToTop")
     /// ハッシュタグ検索通知 — userInfo["tag"] にタグ文字列（# なし）が入る
     static let searchHashtag = Notification.Name("searchHashtag")
+    /// プッシュ通知タップ通知 — userInfo["targetDID"] に通知先アカウントの DID が入る
+    static let pushNotificationTapped = Notification.Name("pushNotificationTapped")
 }

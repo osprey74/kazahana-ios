@@ -43,7 +43,12 @@ final class AuthViewModel {
             self.activeAccountDID = accounts[0].did
             self.isLoggedIn = client.currentSession != nil
             if client.currentSession != nil {
-                Task { await refreshSessionOnLaunch() }
+                Task {
+                    await refreshSessionOnLaunch()
+                    // 通知許可を求め、保存済みトークンがあれば全アカウントに再登録
+                    await PushNotificationService.shared.requestPermission()
+                    await PushNotificationService.shared.registerTokenForAllAccounts()
+                }
             }
         } else if accounts.count > 1 {
             // 複数アカウント：アカウント選択画面を表示（isLoggedIn = false）
@@ -83,6 +88,10 @@ final class AuthViewModel {
                 activeAccountDID = sessionStore.activeAccountDID
                 isLoggedIn = true
             }
+            // 通知許可を求め、デバイストークンをバックエンドに登録
+            let did = sessionStore.activeAccountDID ?? ""
+            await PushNotificationService.shared.requestPermission()
+            await PushNotificationService.shared.registerToken(for: did)
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -104,6 +113,9 @@ final class AuthViewModel {
         }
         // 新セッションのトークンをリフレッシュ
         await refreshSessionOnLaunch()
+        // 通知許可を求め、切替先アカウントのデバイストークンをバックエンドに登録
+        await PushNotificationService.shared.requestPermission()
+        await PushNotificationService.shared.registerToken(for: session.did)
     }
 
     // MARK: - アカウント削除
@@ -118,6 +130,9 @@ final class AuthViewModel {
             request.setValue("Bearer \(session.refreshJwt)", forHTTPHeaderField: "Authorization")
             _ = try? await URLSession.shared.data(for: request)
         }
+
+        // プッシュ通知トークンをバックエンドから削除（ベストエフォート）
+        await PushNotificationService.shared.unregisterToken(for: did)
 
         let isRemovingActive = (did == (sessionStore.activeAccountDID ?? ""))
         sessionStore.delete(did: did)

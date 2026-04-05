@@ -128,6 +128,22 @@ struct MainTabView: View {
         }
         // ホームタブの再タップを UITabBarControllerDelegate で検出
         .background(TabBarDelegateInjector(delegate: tabBarDelegate))
+        // プッシュ通知タップ → 対象アカウントに切り替えて通知タブへ遷移
+        .onReceive(NotificationCenter.default.publisher(for: .pushNotificationTapped)) { note in
+            guard let targetDID = note.userInfo?["targetDID"] as? String else { return }
+            Task {
+                // 通知先アカウントが現在のアカウントと異なる場合は切り替え
+                if authVM.activeAccountDID != targetDID,
+                   let session = authVM.savedAccounts.first(where: { $0.did == targetDID }) {
+                    await authVM.switchAccount(to: session)
+                }
+                await MainActor.run { selectedTab = .notifications }
+            }
+        }
+        // バッジをリセット（アプリ起動時）
+        .task {
+            PushNotificationService.shared.resetBadge()
+        }
     }
 
     /// kazahana:// ディープリンクを処理する
