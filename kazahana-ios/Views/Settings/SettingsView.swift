@@ -105,6 +105,30 @@ struct SettingsView: View {
                     Text(String(localized: "settings.claudeApiFooter"))
                 }
 
+                // MARK: - ウォーターマーク
+                Section {
+                    NavigationLink {
+                        WatermarkSettingsView()
+                            .environment(settings)
+                    } label: {
+                        HStack {
+                            Label(String(localized: "watermark.title"), systemImage: "signature")
+                            Spacer()
+                            if settings.watermarkSettings.enabled {
+                                Text(String(localized: "watermark.statusOn"))
+                                    .font(.subheadline)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                    }
+                }
+
+                // MARK: - 下書き設定
+                Section(String(localized: "settings.draftImageWarning")) {
+                    Toggle(String(localized: "settings.enableDraftImageWarning"),
+                           isOn: $settings.confirmDraftImageQuality)
+                }
+
                 // MARK: - ホームフィード管理
                 Section(String(localized: "settings.feedManagement")) {
                     NavigationLink {

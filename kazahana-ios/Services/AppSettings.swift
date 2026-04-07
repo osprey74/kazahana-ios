@@ -273,6 +273,8 @@ final class AppSettings {
         } else {
             self.bsafRegisteredBots = []
         }
+        self.confirmDraftImageQuality = d.object(forKey: "confirmDraftImageQuality") as? Bool ?? true
+        self.watermarkSettings = WatermarkSettings.load()
     }
 
     // MARK: - BSAF Bot 管理
@@ -308,6 +310,19 @@ final class AppSettings {
     /// 投稿著者の DID から登録済み Bot を検索する。
     func findRegisteredBot(did: String) -> BsafRegisteredBot? {
         bsafRegisteredBots.first { $0.definition.bot.did == did }
+    }
+
+    // MARK: - 下書き設定
+
+    /// 画像を含む下書き保存前に確認ダイアログを表示するか
+    var confirmDraftImageQuality: Bool {
+        didSet { defaults.set(confirmDraftImageQuality, forKey: "confirmDraftImageQuality") }
+    }
+
+    // MARK: - ウォーターマーク設定
+
+    var watermarkSettings: WatermarkSettings {
+        didSet { watermarkSettings.save() }
     }
 
     // MARK: - Singleton

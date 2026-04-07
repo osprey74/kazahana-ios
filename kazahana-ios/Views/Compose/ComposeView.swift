@@ -13,6 +13,12 @@ struct SelectedImage: Identifiable {
     var alt: String = ""
 }
 
+/// ウォーターマーク確認モーダルに渡すデータ。.sheet(item:) で状態を確実に渡すためのラッパー。
+struct WatermarkConfirmData: Identifiable {
+    let id = UUID()
+    let images: [SelectedImage]
+}
+
 struct SelectedVideo: Identifiable {
     let id = UUID()
     let url: URL
@@ -26,6 +32,7 @@ struct ComposeView: View {
 
     @Environment(\.dismiss) private var dismiss
     @Environment(AppSettings.self) private var appSettings
+    @Environment(AuthViewModel.self) private var authVM
 
     // テキストは View の @State で直接管理（@Observable ViewModel の TextEditor バインディング問題を回避）
     @State private var text: String = ""
@@ -45,6 +52,9 @@ struct ComposeView: View {
     @State private var selectedVideo: SelectedVideo? = nil
     @State private var videoPickerItem: PhotosPickerItem? = nil
 
+    // ウォーターマーク確認モーダル用データ（nil = 非表示）
+    @State private var watermarkConfirmImages: WatermarkConfirmData? = nil
+
     // スレッドゲート / ポストゲート
     @State private var threadgateSetting: ThreadgateSetting = .everyone
     @State private var disableEmbedding: Bool = false
@@ -54,6 +64,7 @@ struct ComposeView: View {
     // 下書き
     @State private var showCancelDraftDialog: Bool = false
     @State private var showDraftList: Bool = false
+    @State private var showDraftImageWarning: Bool = false
 
     // メンションオートコンプリート
     @State private var mentionCandidates: [ProfileViewBasic] = []
@@ -174,7 +185,16 @@ struct ComposeView: View {
                         }
                     }
                 }
-                ToolbarItem(placement: .confirmationAction) {
+                ToolbarItemGroup(placement: .confirmationAction) {
+                    // WMなしで投稿（ウォーターマーク有効 && 画像あり時のみ表示）
+                    if appSettings.watermarkSettings.enabled && !selectedImages.isEmpty {
+                        Button(String(localized: "watermark.postWithout")) {
+                            Task { await submitPost(skipWatermark: true) }
+                        }
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .disabled(!canPost)
+                    }
                     Button(String(localized: "compose.post")) {
                         Task { await submitPost() }
                     }
@@ -196,6 +216,10 @@ struct ComposeView: View {
                 set: { if !$0 { editingAltIndex = nil } }
             )) {
                 altEditSheet
+            }
+            // ウォーターマーク確認モーダル（.sheet(item:) で確実に画像を渡す）
+            .sheet(item: $watermarkConfirmImages) { data in
+                watermarkConfirmSheet(data: data)
             }
             // 画像クロップエディタ
             .fullScreenCover(isPresented: Binding(
@@ -231,13 +255,27 @@ struct ComposeView: View {
                 titleVisibility: .visible
             ) {
                 Button(String(localized: "compose.draft.save")) {
-                    saveDraft()
-                    dismiss()
+                    if !selectedImages.isEmpty && appSettings.confirmDraftImageQuality {
+                        showDraftImageWarning = true
+                    } else {
+                        saveDraft()
+                        dismiss()
+                    }
                 }
                 Button(String(localized: "compose.draft.discard"), role: .destructive) {
                     dismiss()
                 }
                 Button(String(localized: "common.cancel"), role: .cancel) {}
+            }
+            // 下書き保存時の画像品質警告
+            .alert(String(localized: "draft.imageWarningTitle"), isPresented: $showDraftImageWarning) {
+                Button(String(localized: "draft.saveAnyway")) {
+                    saveDraft()
+                    dismiss()
+                }
+                Button(String(localized: "common.cancel"), role: .cancel) {}
+            } message: {
+                Text(String(localized: "draft.imageWarningMessage"))
             }
             // 下書き一覧シート
             .sheet(isPresented: $showDraftList) {
@@ -250,15 +288,45 @@ struct ComposeView: View {
 
     // MARK: - Actions
 
-    private func submitPost() async {
+    private func submitPost(skipWatermark: Bool = false) async {
         guard canPost else { return }
+
+        let wm = appSettings.watermarkSettings
+        let handle = authVM.client.currentSession?.handle ?? ""
+
+        // ウォーターマーク有効 && 画像あり && スキップしない → 合成してから確認 or 直接投稿
+        if wm.enabled && !selectedImages.isEmpty && !skipWatermark {
+            // メインアクターで合成（UIGraphicsImageRenderer はメインスレッド必須）
+            let watermarked = await MainActor.run {
+                selectedImages.map { selected in
+                    SelectedImage(
+                        image: WatermarkService.apply(to: selected.image, settings: wm, handle: handle),
+                        alt: selected.alt
+                    )
+                }
+            }
+            if wm.confirmBeforePost {
+                // .sheet(item:) に渡すことでシート表示時に確実に画像が存在することを保証
+                watermarkConfirmImages = WatermarkConfirmData(images: watermarked)
+                return
+            }
+            // 確認なしで直接投稿
+            await uploadAndPost(images: watermarked)
+            return
+        }
+
+        // ウォーターマークなしで投稿
+        await uploadAndPost(images: selectedImages)
+    }
+
+    private func uploadAndPost(images: [SelectedImage]) async {
         isPosting = true
         errorMessage = nil
 
         do {
             // 画像をアップロード（1MB 超の場合は自動圧縮・リサイズ）
             var uploadedImages: [(blob: BlobRef, alt: String)] = []
-            for selected in selectedImages {
+            for selected in images {
                 guard let (imageData, mimeType) = compressImage(selected.image) else { continue }
                 let blob = try await postService.uploadImage(data: imageData, mimeType: mimeType)
                 uploadedImages.append((blob: blob, alt: selected.alt))
@@ -841,6 +909,78 @@ struct ComposeView: View {
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
+        }
+    }
+
+    // MARK: - ウォーターマーク確認モーダル
+
+    @ViewBuilder
+    private func watermarkConfirmSheet(data: WatermarkConfirmData) -> some View {
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: 16) {
+                    Text(String(localized: "watermark.confirmMessage"))
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal)
+
+                    // 画像プレビュー（1枚: 単独表示 / 複数: 2列グリッド）
+                    if data.images.count == 1, let first = data.images.first {
+                        Image(uiImage: first.image)
+                            .resizable()
+                            .scaledToFit()
+                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                            .padding(.horizontal)
+                    } else {
+                        LazyVGrid(
+                            columns: [GridItem(.flexible()), GridItem(.flexible())],
+                            spacing: 8
+                        ) {
+                            ForEach(data.images) { selected in
+                                Image(uiImage: selected.image)
+                                    .resizable()
+                                    .scaledToFit()
+                                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                            }
+                        }
+                        .padding(.horizontal)
+                    }
+
+                    // ボタン群
+                    VStack(spacing: 10) {
+                        Button {
+                            let toPost = data.images
+                            watermarkConfirmImages = nil
+                            Task { await uploadAndPost(images: toPost) }
+                        } label: {
+                            Text(String(localized: "compose.post"))
+                                .fontWeight(.bold)
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(.borderedProminent)
+
+                        Button {
+                            watermarkConfirmImages = nil
+                            Task { await uploadAndPost(images: selectedImages) }
+                        } label: {
+                            Text(String(localized: "watermark.postWithout"))
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(.bordered)
+
+                        Button(String(localized: "common.cancel"), role: .cancel) {
+                            watermarkConfirmImages = nil
+                        }
+                        .foregroundStyle(.secondary)
+                    }
+                    .padding(.horizontal)
+                    .padding(.bottom)
+                }
+                .padding(.top, 16)
+            }
+            .navigationTitle(String(localized: "watermark.confirmTitle"))
+            .navigationBarTitleDisplayMode(.inline)
         }
     }
 
