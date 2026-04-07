@@ -793,8 +793,8 @@ struct ComposeView: View {
                         Image(uiImage: selected.image)
                             .resizable()
                             .scaledToFill()
-                            .frame(width: 80, height: 80)
-                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                            .frame(width: 110, height: 110)
+                            .clipShape(RoundedRectangle(cornerRadius: 10))
                             .onTapGesture {
                                 altText = selected.alt
                                 editingAltIndex = index
@@ -805,7 +805,7 @@ struct ComposeView: View {
                             selectedImages.remove(at: index)
                         } label: {
                             Image(systemName: "xmark.circle.fill")
-                                .font(.system(size: 18))
+                                .font(.system(size: 22))
                                 .foregroundStyle(.white)
                                 .shadow(radius: 2)
                         }
@@ -828,15 +828,15 @@ struct ComposeView: View {
                             croppingImageIndex = index
                         } label: {
                             Image(systemName: "crop")
-                                .font(.system(size: 11, weight: .bold))
+                                .font(.system(size: 13, weight: .bold))
                                 .foregroundStyle(.white)
-                                .padding(5)
+                                .padding(6)
                                 .background(Color.black.opacity(0.6), in: Circle())
                         }
                         .padding(4)
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
                     }
-                    .frame(width: 80, height: 80)
+                    .frame(width: 110, height: 110)
                 }
             }
             .padding(.horizontal, 12)

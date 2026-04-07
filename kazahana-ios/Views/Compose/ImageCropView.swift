@@ -544,8 +544,10 @@ struct ImageCropView: View {
     // MARK: - クロップ実行
 
     private func applyCrop() -> UIImage? {
-        // 1. 回転を画像に焼き込む
-        let rotated = rotationDegrees == 0 ? image : applyRotation(to: image, degrees: rotationDegrees)
+        // 1. EXIF orientation を .up に正規化（cgImage と size を一致させる）
+        let base = normalizeOrientation(image)
+        // 2. 手動回転を焼き込む
+        let rotated = rotationDegrees == 0 ? base : applyRotation(to: base, degrees: rotationDegrees)
         guard let cgImage = rotated.cgImage else { return nil }
 
         // 2. UIImage.size はポイント単位、CGImage は実ピクセル単位
@@ -561,6 +563,16 @@ struct ImageCropView: View {
 
         guard let cropped = cgImage.cropping(to: pixelRect) else { return nil }
         return UIImage(cgImage: cropped, scale: rotated.scale, orientation: .up)
+    }
+
+    /// EXIF orientation を .up に正規化し、cgImage と size を一致させる
+    private func normalizeOrientation(_ src: UIImage) -> UIImage {
+        guard src.imageOrientation != .up else { return src }
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = src.scale
+        return UIGraphicsImageRenderer(size: src.size, format: format).image { _ in
+            src.draw(in: CGRect(origin: .zero, size: src.size))
+        }
     }
 
     /// UIImage を指定角度（90の倍数）だけ回転させて新しい UIImage を返す
