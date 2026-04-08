@@ -20,27 +20,31 @@ enum WatermarkPreset: String, CaseIterable, Codable {
 }
 
 enum WatermarkPosition: String, CaseIterable, Codable {
-    case tl, tc, tr, bl, bc, br
+    case tl, tc, tr, bl, bc, br, random, tile
 
     var localizedLabel: String {
         switch self {
-        case .tl: return String(localized: "watermark.posTopLeft")
-        case .tc: return String(localized: "watermark.posTopCenter")
-        case .tr: return String(localized: "watermark.posTopRight")
-        case .bl: return String(localized: "watermark.posBottomLeft")
-        case .bc: return String(localized: "watermark.posBottomCenter")
-        case .br: return String(localized: "watermark.posBottomRight")
+        case .tl:     return String(localized: "watermark.posTopLeft")
+        case .tc:     return String(localized: "watermark.posTopCenter")
+        case .tr:     return String(localized: "watermark.posTopRight")
+        case .bl:     return String(localized: "watermark.posBottomLeft")
+        case .bc:     return String(localized: "watermark.posBottomCenter")
+        case .br:     return String(localized: "watermark.posBottomRight")
+        case .random: return String(localized: "watermark.posRandom")
+        case .tile:   return String(localized: "watermark.posTile")
         }
     }
 
     var systemImage: String {
         switch self {
-        case .tl: return "arrow.up.left"
-        case .tc: return "arrow.up"
-        case .tr: return "arrow.up.right"
-        case .bl: return "arrow.down.left"
-        case .bc: return "arrow.down"
-        case .br: return "arrow.down.right"
+        case .tl:     return "arrow.up.left"
+        case .tc:     return "arrow.up"
+        case .tr:     return "arrow.up.right"
+        case .bl:     return "arrow.down.left"
+        case .bc:     return "arrow.down"
+        case .br:     return "arrow.down.right"
+        case .random: return "shuffle"
+        case .tile:   return "square.grid.2x2"
         }
     }
 }

@@ -177,38 +177,50 @@ struct WatermarkSettingsView: View {
 
     @ViewBuilder
     private func positionGrid(selection: Binding<WatermarkPosition>) -> some View {
-        let positions: [[WatermarkPosition]] = [
+        let fixedRows: [[WatermarkPosition]] = [
             [.tl, .tc, .tr],
             [.bl, .bc, .br]
         ]
         VStack(spacing: 8) {
-            ForEach(positions, id: \.self) { row in
+            // 固定6方向（3×2グリッド）
+            ForEach(fixedRows, id: \.self) { row in
                 HStack(spacing: 8) {
                     ForEach(row, id: \.self) { pos in
-                        Button {
-                            selection.wrappedValue = pos
-                        } label: {
-                            VStack(spacing: 4) {
-                                Image(systemName: pos.systemImage)
-                                    .font(.system(size: 16))
-                                Text(pos.localizedLabel)
-                                    .font(.caption2)
-                            }
-                            .frame(maxWidth: .infinity, minHeight: 52)
-                            .foregroundStyle(selection.wrappedValue == pos ? .white : .primary)
-                            .background(
-                                selection.wrappedValue == pos
-                                    ? Color.accentColor
-                                    : Color.secondary.opacity(0.12),
-                                in: RoundedRectangle(cornerRadius: 8)
-                            )
-                        }
-                        .buttonStyle(.plain)
+                        positionButton(pos, selection: selection)
                     }
                 }
             }
+            // 特殊モード（ランダム・タイリング）
+            HStack(spacing: 8) {
+                positionButton(.random, selection: selection)
+                positionButton(.tile, selection: selection)
+            }
         }
         .padding(.vertical, 4)
+    }
+
+    @ViewBuilder
+    private func positionButton(_ pos: WatermarkPosition,
+                                 selection: Binding<WatermarkPosition>) -> some View {
+        Button {
+            selection.wrappedValue = pos
+        } label: {
+            VStack(spacing: 4) {
+                Image(systemName: pos.systemImage)
+                    .font(.system(size: 16))
+                Text(pos.localizedLabel)
+                    .font(.caption2)
+            }
+            .frame(maxWidth: .infinity, minHeight: 52)
+            .foregroundStyle(selection.wrappedValue == pos ? .white : .primary)
+            .background(
+                selection.wrappedValue == pos
+                    ? Color.accentColor
+                    : Color.secondary.opacity(0.12),
+                in: RoundedRectangle(cornerRadius: 8)
+            )
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: - W3C 16色パレット
