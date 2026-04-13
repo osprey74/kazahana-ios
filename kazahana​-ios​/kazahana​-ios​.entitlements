@@ -4,9 +4,13 @@
 <dict>
 	<key>aps-environment</key>
 	<string>development</string>
+	<key>com.apple.security.application-groups</key>
+	<array>
+		<string>group.com.osprey74.kazahana</string>
+	</array>
 	<key>keychain-access-groups</key>
 	<array>
-		<string>$(AppIdentifierPrefix)com.osprey74.kazahana-ios</string>
+		<string>$(AppIdentifierPrefix)com.osprey74.kazahana</string>
 	</array>
 </dict>
 </plist>
