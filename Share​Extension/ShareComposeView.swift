@@ -110,8 +110,13 @@ struct ShareComposeView: View {
 
                 Divider()
 
-                // 文字数カウンター
+                // 文字数カウンター・via 表示
                 HStack {
+                    if let via = ShareSettings.via {
+                        Text("via \(via)")
+                            .font(.caption)
+                            .foregroundStyle(.tertiary)
+                    }
                     Spacer()
                     Text("\(remaining)")
                         .font(.caption)

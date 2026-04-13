@@ -192,10 +192,14 @@ final class SessionStore {
     }
 
     /// 既存の Keychain セッションを App Group UserDefaults にキャッシュする
-    /// キャッシュが存在しない DID のみ書き込む（起動コストは最小限）
+    /// activeAccountDID も必ず sharedDefaults に書き込む（アップグレード後の初回起動に対応）
     private func populateSessionCacheIfNeeded() {
-        for did in savedDIDs {
-            guard sharedDefaults.data(forKey: Keys.sessionCacheKey(for: did)) == nil else { continue }
+        let dids = savedDIDs
+        // activeAccountDID を shared container に必ず書き込む
+        if let activeDID = sharedDefaults.string(forKey: Keys.activeDIDKey) ?? dids.first {
+            sharedDefaults.set(activeDID, forKey: Keys.activeDIDKey)
+        }
+        for did in dids {
             if let session = load(forDID: did),
                let data = try? JSONEncoder().encode(session) {
                 sharedDefaults.set(data, forKey: Keys.sessionCacheKey(for: did))

@@ -41,7 +41,7 @@ final class SessionStore {
         let sharedDefaults = UserDefaults(suiteName: Keys.suiteName) ?? .standard
 
         if let did = sharedDefaults.string(forKey: Keys.activeDIDKey) {
-            // 最優先: App Group UserDefaults キャッシュ（Keychain 共有の信頼性に依存しない）
+            // 最優先: App Group UserDefaults キャッシュ
             if let data = sharedDefaults.data(forKey: Keys.sessionCacheKey(for: did)),
                let session = try? JSONDecoder().decode(Session.self, from: data) {
                 return session
@@ -52,31 +52,12 @@ final class SessionStore {
             }
         }
 
-        // 旧形式フォールバック（マイグレーション前の互換性）
+        // 旧形式フォールバック
         if let session = keychainLoad(account: "session") {
             return session
         }
 
         // 全 session:* アイテムを検索（最終フォールバック）
-        return searchAnySession()
-    }
-
-    private func keychainLoad(account: String) -> Session? {
-        let query: [String: Any] = [
-            kSecClass as String:           kSecClassGenericPassword,
-            kSecAttrService as String:     Keys.service,
-            kSecAttrAccount as String:     account,
-            kSecAttrAccessGroup as String: Keys.accessGroup,
-            kSecReturnData as String:      true,
-            kSecMatchLimit as String:      kSecMatchLimitOne
-        ]
-        var result: AnyObject?
-        guard SecItemCopyMatching(query as CFDictionary, &result) == errSecSuccess,
-              let data = result as? Data else { return nil }
-        return try? JSONDecoder().decode(Session.self, from: data)
-    }
-
-    private func searchAnySession() -> Session? {
         let query: [String: Any] = [
             kSecClass as String:            kSecClassGenericPassword,
             kSecAttrService as String:      Keys.service,
@@ -96,6 +77,35 @@ final class SessionStore {
             return session
         }
         return nil
+    }
+
+    private func keychainLoad(account: String) -> Session? {
+        // まず accessGroup 指定で試みる
+        let query: [String: Any] = [
+            kSecClass as String:           kSecClassGenericPassword,
+            kSecAttrService as String:     Keys.service,
+            kSecAttrAccount as String:     account,
+            kSecAttrAccessGroup as String: Keys.accessGroup,
+            kSecReturnData as String:      true,
+            kSecMatchLimit as String:      kSecMatchLimitOne
+        ]
+        var result: AnyObject?
+        if SecItemCopyMatching(query as CFDictionary, &result) == errSecSuccess,
+           let data = result as? Data {
+            return try? JSONDecoder().decode(Session.self, from: data)
+        }
+        // accessGroup なしでも試みる（entitlement 問題のフォールバック）
+        let queryNoGroup: [String: Any] = [
+            kSecClass as String:       kSecClassGenericPassword,
+            kSecAttrService as String: Keys.service,
+            kSecAttrAccount as String: account,
+            kSecReturnData as String:  true,
+            kSecMatchLimit as String:  kSecMatchLimitOne
+        ]
+        var result2: AnyObject?
+        guard SecItemCopyMatching(queryNoGroup as CFDictionary, &result2) == errSecSuccess,
+              let data = result2 as? Data else { return nil }
+        return try? JSONDecoder().decode(Session.self, from: data)
     }
 }
 
@@ -252,7 +262,8 @@ struct PostRecordCreate: Encodable {
         case type = "$type"
         case text, facets
         case replyRef = "reply"
-        case embed, langs, createdAt, via
+        case embed, langs, createdAt
+        case via = "$via"
     }
 
     func encode(to encoder: Encoder) throws {
