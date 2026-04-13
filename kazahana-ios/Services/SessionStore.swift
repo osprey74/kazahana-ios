@@ -143,19 +143,45 @@ final class SessionStore {
 
     /// Keychain アクセシビリティを ThisDeviceOnly から通常に変更する一回限りのマイグレーション
     /// Share Extension からのアクセス互換性を確保するために必要
+    /// Note: SecItemUpdate は kSecAttrAccessible を変更できないため、削除→再追加で移行する
     private func migrateKeychainAccessibilityIfNeeded() {
-        let migratedKey = "keychainAccessMigrated_v1"
+        let migratedKey = "keychainAccessMigrated_v2"
         guard !sharedDefaults.bool(forKey: migratedKey) else { return }
 
-        let query: [String: Any] = [
-            kSecClass as String:           kSecClassGenericPassword,
-            kSecAttrService as String:     Keys.service,
-            kSecAttrAccessGroup as String: Keys.accessGroup
+        let searchQuery: [String: Any] = [
+            kSecClass as String:            kSecClassGenericPassword,
+            kSecAttrService as String:      Keys.service,
+            kSecAttrAccessGroup as String:  Keys.accessGroup,
+            kSecReturnData as String:       true,
+            kSecReturnAttributes as String: true,
+            kSecMatchLimit as String:       kSecMatchLimitAll
         ]
-        let update: [String: Any] = [
-            kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock
-        ]
-        SecItemUpdate(query as CFDictionary, update as CFDictionary)
+        var result: AnyObject?
+        guard SecItemCopyMatching(searchQuery as CFDictionary, &result) == errSecSuccess,
+              let items = result as? [[String: Any]] else {
+            sharedDefaults.set(true, forKey: migratedKey)
+            return
+        }
+        for item in items {
+            guard let account = item[kSecAttrAccount as String] as? String,
+                  let data = item[kSecValueData as String] as? Data else { continue }
+            let deleteQuery: [String: Any] = [
+                kSecClass as String:           kSecClassGenericPassword,
+                kSecAttrService as String:     Keys.service,
+                kSecAttrAccount as String:     account,
+                kSecAttrAccessGroup as String: Keys.accessGroup
+            ]
+            SecItemDelete(deleteQuery as CFDictionary)
+            let addQuery: [String: Any] = [
+                kSecClass as String:           kSecClassGenericPassword,
+                kSecAttrService as String:     Keys.service,
+                kSecAttrAccount as String:     account,
+                kSecAttrAccessGroup as String: Keys.accessGroup,
+                kSecValueData as String:       data,
+                kSecAttrAccessible as String:  kSecAttrAccessibleAfterFirstUnlock
+            ]
+            SecItemAdd(addQuery as CFDictionary, nil)
+        }
         sharedDefaults.set(true, forKey: migratedKey)
     }
 

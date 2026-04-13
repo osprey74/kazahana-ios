@@ -313,6 +313,16 @@ final class ATProtoClient {
         default:
             // AT Protocol エラーレスポンスをパース
             if let errorResponse = try? decoder.decode(ATProtoErrorResponse.self, from: data) {
+                // Bluesky は期限切れアクセストークンに 400 ExpiredToken を返す場合がある
+                // 401 と同様にリフレッシュして再試行する
+                if errorResponse.error == "ExpiredToken", retryCount == 0 {
+                    try await refreshToken()
+                    var retryRequest = request
+                    if let newToken = currentSession?.accessJwt {
+                        retryRequest.setValue("Bearer \(newToken)", forHTTPHeaderField: "Authorization")
+                    }
+                    return try await perform(request: retryRequest, retryCount: retryCount + 1)
+                }
                 throw ATProtoError.apiError(code: errorResponse.error, message: errorResponse.message)
             }
             throw ATProtoError.httpError(statusCode: httpResponse.statusCode)

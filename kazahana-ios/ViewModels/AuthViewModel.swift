@@ -106,13 +106,19 @@ final class AuthViewModel {
         // ストアを先に永続化（refreshSession 後のコールバックが古い DID を返さないように）
         sessionStore.activeAccountDID = session.did
         client.updateSession(session)
+        // タイムラインと並走させると期限切れトークンで競合するため、
+        // リフレッシュを先に完了させてからログイン状態にする
+        do {
+            try await client.refreshSessionPublic()
+        } catch {
+            client.updateSession(nil)
+        }
         await MainActor.run {
             savedAccounts = sessionStore.loadAll()
-            activeAccountDID = session.did
-            isLoggedIn = true
+            activeAccountDID = sessionStore.activeAccountDID ?? session.did
+            isLoggedIn = client.currentSession != nil
         }
-        // 新セッションのトークンをリフレッシュ
-        await refreshSessionOnLaunch()
+        guard client.currentSession != nil else { return }
         // 通知許可を求め、切替先アカウントのデバイストークンをバックエンドに登録
         await PushNotificationService.shared.requestPermission()
         await PushNotificationService.shared.registerToken(for: session.did)
