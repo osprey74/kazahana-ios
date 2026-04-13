@@ -17,6 +17,8 @@ final class SessionStore {
         static let activeDIDKey = "activeAccountDID"
 
         static func accountKey(for did: String) -> String { "session:\(did)" }
+        /// Share Extension 向け UserDefaults キャッシュキー
+        static func sessionCacheKey(for did: String) -> String { "sessionCache:\(did)" }
     }
 
     // MARK: - Shared UserDefaults（App Groups）
@@ -70,6 +72,8 @@ final class SessionStore {
             savedDIDs.append(session.did)
         }
         activeAccountDID = session.did
+        // Share Extension 向け: App Group UserDefaults にもセッションをキャッシュ
+        sharedDefaults.set(data, forKey: Keys.sessionCacheKey(for: session.did))
     }
 
     // MARK: - 取得
@@ -115,6 +119,7 @@ final class SessionStore {
         if activeAccountDID == did {
             activeAccountDID = savedDIDs.first
         }
+        sharedDefaults.removeObject(forKey: Keys.sessionCacheKey(for: did))
         return result
     }
 

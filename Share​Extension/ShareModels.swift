@@ -32,6 +32,7 @@ final class SessionStore {
         static let accessGroup = "9L6A9KDH5P.com.osprey74.kazahana"
         static let suiteName   = "group.com.osprey74.kazahana"
         static let activeDIDKey = "activeAccountDID"
+        static func sessionCacheKey(for did: String) -> String { "sessionCache:\(did)" }
     }
 
     /// Keychain アクセシビリティを ThisDeviceOnly → 通常に移行する（削除→再追加）
@@ -79,15 +80,21 @@ final class SessionStore {
     }
 
     /// アクティブアカウントのセッションを返す
-    /// 新形式（session:{did}）を試み、失敗した場合は旧形式・全検索の順にフォールバックする
+    /// App Group UserDefaults キャッシュ → Keychain の順で検索する
     func load() -> Session? {
         migrateKeychainAccessibilityIfNeeded()
         let sharedDefaults = UserDefaults(suiteName: Keys.suiteName) ?? .standard
 
-        // 新形式: activeAccountDID ベース
-        if let did = sharedDefaults.string(forKey: Keys.activeDIDKey),
-           let session = keychainLoad(account: "session:\(did)") {
-            return session
+        if let did = sharedDefaults.string(forKey: Keys.activeDIDKey) {
+            // 最優先: App Group UserDefaults キャッシュ（Keychain 共有の信頼性に依存しない）
+            if let data = sharedDefaults.data(forKey: Keys.sessionCacheKey(for: did)),
+               let session = try? JSONDecoder().decode(Session.self, from: data) {
+                return session
+            }
+            // Keychain フォールバック
+            if let session = keychainLoad(account: "session:\(did)") {
+                return session
+            }
         }
 
         // 旧形式フォールバック（マイグレーション前の互換性）
@@ -95,7 +102,7 @@ final class SessionStore {
             return session
         }
 
-        // 全 session:* アイテムを検索（activeAccountDID 未設定時の最終フォールバック）
+        // 全 session:* アイテムを検索（最終フォールバック）
         return searchAnySession()
     }
 
