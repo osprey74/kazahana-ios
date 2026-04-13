@@ -35,54 +35,9 @@ final class SessionStore {
         static func sessionCacheKey(for did: String) -> String { "sessionCache:\(did)" }
     }
 
-    /// Keychain アクセシビリティを ThisDeviceOnly → 通常に移行する（削除→再追加）
-    /// Share Extension からも呼び出せるよう、メインアプリと同じ処理を実施する
-    private func migrateKeychainAccessibilityIfNeeded() {
-        let migratedKey = "keychainAccessMigrated_v2"
-        let sharedDefaults = UserDefaults(suiteName: Keys.suiteName) ?? .standard
-        guard !sharedDefaults.bool(forKey: migratedKey) else { return }
-
-        let searchQuery: [String: Any] = [
-            kSecClass as String:            kSecClassGenericPassword,
-            kSecAttrService as String:      Keys.service,
-            kSecAttrAccessGroup as String:  Keys.accessGroup,
-            kSecReturnData as String:       true,
-            kSecReturnAttributes as String: true,
-            kSecMatchLimit as String:       kSecMatchLimitAll
-        ]
-        var result: AnyObject?
-        guard SecItemCopyMatching(searchQuery as CFDictionary, &result) == errSecSuccess,
-              let items = result as? [[String: Any]] else {
-            sharedDefaults.set(true, forKey: migratedKey)
-            return
-        }
-        for item in items {
-            guard let account = item[kSecAttrAccount as String] as? String,
-                  let data = item[kSecValueData as String] as? Data else { continue }
-            let deleteQuery: [String: Any] = [
-                kSecClass as String:           kSecClassGenericPassword,
-                kSecAttrService as String:     Keys.service,
-                kSecAttrAccount as String:     account,
-                kSecAttrAccessGroup as String: Keys.accessGroup
-            ]
-            SecItemDelete(deleteQuery as CFDictionary)
-            let addQuery: [String: Any] = [
-                kSecClass as String:           kSecClassGenericPassword,
-                kSecAttrService as String:     Keys.service,
-                kSecAttrAccount as String:     account,
-                kSecAttrAccessGroup as String: Keys.accessGroup,
-                kSecValueData as String:       data,
-                kSecAttrAccessible as String:  kSecAttrAccessibleAfterFirstUnlock
-            ]
-            SecItemAdd(addQuery as CFDictionary, nil)
-        }
-        sharedDefaults.set(true, forKey: migratedKey)
-    }
-
     /// アクティブアカウントのセッションを返す
     /// App Group UserDefaults キャッシュ → Keychain の順で検索する
     func load() -> Session? {
-        migrateKeychainAccessibilityIfNeeded()
         let sharedDefaults = UserDefaults(suiteName: Keys.suiteName) ?? .standard
 
         if let did = sharedDefaults.string(forKey: Keys.activeDIDKey) {
