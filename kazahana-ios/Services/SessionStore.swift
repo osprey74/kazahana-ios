@@ -45,6 +45,7 @@ final class SessionStore {
     init() {
         migrateIfNeeded()
         migrateKeychainAccessibilityIfNeeded()
+        populateSessionCacheIfNeeded()
     }
 
     // MARK: - 保存
@@ -188,6 +189,18 @@ final class SessionStore {
             SecItemAdd(addQuery as CFDictionary, nil)
         }
         sharedDefaults.set(true, forKey: migratedKey)
+    }
+
+    /// 既存の Keychain セッションを App Group UserDefaults にキャッシュする
+    /// キャッシュが存在しない DID のみ書き込む（起動コストは最小限）
+    private func populateSessionCacheIfNeeded() {
+        for did in savedDIDs {
+            guard sharedDefaults.data(forKey: Keys.sessionCacheKey(for: did)) == nil else { continue }
+            if let session = load(forDID: did),
+               let data = try? JSONEncoder().encode(session) {
+                sharedDefaults.set(data, forKey: Keys.sessionCacheKey(for: did))
+            }
+        }
     }
 
     /// 旧形式（account = "session"）から新形式（account = "session:{did}"）へ一回限り移行する
