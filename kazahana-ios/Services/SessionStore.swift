@@ -42,6 +42,7 @@ final class SessionStore {
 
     init() {
         migrateIfNeeded()
+        migrateKeychainAccessibilityIfNeeded()
     }
 
     // MARK: - 保存
@@ -58,7 +59,7 @@ final class SessionStore {
             kSecAttrAccount as String:      accountKey,
             kSecAttrAccessGroup as String:  Keys.accessGroup,
             kSecValueData as String:        data,
-            kSecAttrAccessible as String:   kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
+            kSecAttrAccessible as String:   kSecAttrAccessibleAfterFirstUnlock
         ]
         let status = SecItemAdd(query as CFDictionary, nil)
         guard status == errSecSuccess else {
@@ -139,6 +140,24 @@ final class SessionStore {
     }
 
     // MARK: - マイグレーション（旧形式 → 新形式）
+
+    /// Keychain アクセシビリティを ThisDeviceOnly から通常に変更する一回限りのマイグレーション
+    /// Share Extension からのアクセス互換性を確保するために必要
+    private func migrateKeychainAccessibilityIfNeeded() {
+        let migratedKey = "keychainAccessMigrated_v1"
+        guard !sharedDefaults.bool(forKey: migratedKey) else { return }
+
+        let query: [String: Any] = [
+            kSecClass as String:           kSecClassGenericPassword,
+            kSecAttrService as String:     Keys.service,
+            kSecAttrAccessGroup as String: Keys.accessGroup
+        ]
+        let update: [String: Any] = [
+            kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock
+        ]
+        SecItemUpdate(query as CFDictionary, update as CFDictionary)
+        sharedDefaults.set(true, forKey: migratedKey)
+    }
 
     /// 旧形式（account = "session"）から新形式（account = "session:{did}"）へ一回限り移行する
     private func migrateIfNeeded() {

@@ -35,45 +35,60 @@ final class SessionStore {
     }
 
     /// アクティブアカウントのセッションを返す
-    /// 新形式（session:{did}）を試み、失敗した場合は旧形式（session）にフォールバックする
+    /// 新形式（session:{did}）を試み、失敗した場合は旧形式・全検索の順にフォールバックする
     func load() -> Session? {
         let sharedDefaults = UserDefaults(suiteName: Keys.suiteName) ?? .standard
 
         // 新形式: activeAccountDID ベース
-        if let did = sharedDefaults.string(forKey: Keys.activeDIDKey) {
-            let newQuery: [String: Any] = [
-                kSecClass as String:           kSecClassGenericPassword,
-                kSecAttrService as String:     Keys.service,
-                kSecAttrAccount as String:     "session:\(did)",
-                kSecAttrAccessGroup as String: Keys.accessGroup,
-                kSecReturnData as String:      true,
-                kSecMatchLimit as String:      kSecMatchLimitOne
-            ]
-            var result: AnyObject?
-            if SecItemCopyMatching(newQuery as CFDictionary, &result) == errSecSuccess,
-               let data = result as? Data,
-               let session = try? JSONDecoder().decode(Session.self, from: data) {
-                return session
-            }
+        if let did = sharedDefaults.string(forKey: Keys.activeDIDKey),
+           let session = keychainLoad(account: "session:\(did)") {
+            return session
         }
 
         // 旧形式フォールバック（マイグレーション前の互換性）
-        let oldQuery: [String: Any] = [
+        if let session = keychainLoad(account: "session") {
+            return session
+        }
+
+        // 全 session:* アイテムを検索（activeAccountDID 未設定時の最終フォールバック）
+        return searchAnySession()
+    }
+
+    private func keychainLoad(account: String) -> Session? {
+        let query: [String: Any] = [
             kSecClass as String:           kSecClassGenericPassword,
             kSecAttrService as String:     Keys.service,
-            kSecAttrAccount as String:     "session",
+            kSecAttrAccount as String:     account,
             kSecAttrAccessGroup as String: Keys.accessGroup,
             kSecReturnData as String:      true,
             kSecMatchLimit as String:      kSecMatchLimitOne
         ]
         var result: AnyObject?
-        let status = SecItemCopyMatching(oldQuery as CFDictionary, &result)
-        guard status == errSecSuccess,
-              let data = result as? Data,
-              let session = try? JSONDecoder().decode(Session.self, from: data) else {
-            return nil
+        guard SecItemCopyMatching(query as CFDictionary, &result) == errSecSuccess,
+              let data = result as? Data else { return nil }
+        return try? JSONDecoder().decode(Session.self, from: data)
+    }
+
+    private func searchAnySession() -> Session? {
+        let query: [String: Any] = [
+            kSecClass as String:            kSecClassGenericPassword,
+            kSecAttrService as String:      Keys.service,
+            kSecAttrAccessGroup as String:  Keys.accessGroup,
+            kSecReturnData as String:       true,
+            kSecReturnAttributes as String: true,
+            kSecMatchLimit as String:       kSecMatchLimitAll
+        ]
+        var result: AnyObject?
+        guard SecItemCopyMatching(query as CFDictionary, &result) == errSecSuccess,
+              let items = result as? [[String: Any]] else { return nil }
+        for item in items {
+            guard let account = item[kSecAttrAccount as String] as? String,
+                  account.hasPrefix("session:"),
+                  let data = item[kSecValueData as String] as? Data,
+                  let session = try? JSONDecoder().decode(Session.self, from: data) else { continue }
+            return session
         }
-        return session
+        return nil
     }
 }
 
