@@ -324,12 +324,16 @@ struct ComposeView: View {
         errorMessage = nil
 
         do {
-            // 画像をアップロード（1MB 超の場合は自動圧縮・リサイズ）
-            var uploadedImages: [(blob: BlobRef, alt: String)] = []
+            // 画像をアップロード（2 MB 超の場合は自動圧縮・リサイズ。古い PDS は 413 時に 1 MB で再試行）
+            var uploadedImages: [(blob: BlobRef, alt: String, aspectRatio: AspectRatioCreate?)] = []
             for selected in images {
-                guard let (imageData, mimeType) = compressImage(selected.image) else { continue }
-                let blob = try await postService.uploadImage(data: imageData, mimeType: mimeType)
-                uploadedImages.append((blob: blob, alt: selected.alt))
+                let img = selected.image
+                let pixW = Int(img.size.width * img.scale)
+                let pixH = Int(img.size.height * img.scale)
+                let aspectRatio = (pixW > 0 && pixH > 0) ? AspectRatioCreate(width: pixW, height: pixH) : nil
+                guard let (imageData, mimeType) = compressImage(img) else { continue }
+                let blob = try await uploadImageWithFallback(image: img, data: imageData, mimeType: mimeType)
+                uploadedImages.append((blob: blob, alt: selected.alt, aspectRatio: aspectRatio))
             }
 
             // 動画をアップロード
@@ -441,8 +445,10 @@ struct ComposeView: View {
     // Bluesky 画像アップロード制限
     // サーバー側の実際の制限は 976,562 bytes (976.56KB)
     // 安全マージンを確保して 950KB に設定（デスクトップ版 OGP_MAX_BYTES と同値）
-    private static let imageMaxBytes = 950_000
-    private static let imageMaxWidth: CGFloat = 2048
+    /// 通常アップロード上限（Bluesky は 2 MB まで対応）
+    private static let imageMaxBytes = 1_900_000
+    /// 古い PDS が 413 を返した場合のフォールバック上限
+    private static let imageMaxBytesFallback = 950_000
 
     private func loadPickedImages(items: [PhotosPickerItem]) async {
         guard !items.isEmpty else { return }
@@ -464,59 +470,58 @@ struct ComposeView: View {
         }
     }
 
-    /// デスクトップ版 compressImageFile と同等のロジック。
-    /// image.size はポイント単位なので、ピクセル単位（size × scale）で比較する。
-    /// 最大幅 2048px に収まるようリサイズし、JPEG 品質を 0.85→0.3 と段階的に落として 950KB 以下にする。
-    private func compressImage(_ image: UIImage) -> (Data, String)? {
-        let maxBytes = Self.imageMaxBytes
-        let maxWidthPx = Self.imageMaxWidth  // ピクセル単位
-
-        // 実ピクセルサイズ
+    /// 公式クライアント互換の圧縮アルゴリズム。
+    /// 最大辺 4000px からスタートし ×0.8 で段階的に縮小（最大 5 段）、それでも超える場合は品質を下げる。
+    /// - Parameters:
+    ///   - image: 圧縮元画像
+    ///   - maxBytes: バイト上限（デフォルト 1.9 MB）
+    private func compressImage(_ image: UIImage, maxBytes: Int = Self.imageMaxBytes) -> (Data, String)? {
         let pixelWidth  = image.size.width  * image.scale
         let pixelHeight = image.size.height * image.scale
+        let currentMax  = max(pixelWidth, pixelHeight)
 
-        // スケール計算（ピクセル幅が 2048px を超える場合のみ縮小）
-        let scale = min(1.0, maxWidthPx / pixelWidth)
-        let targetPixelSize = CGSize(
-            width:  round(pixelWidth  * scale),
-            height: round(pixelHeight * scale)
-        )
-
-        // リサイズ（UIGraphicsImageRenderer は scale=1 でピクセル等倍描画）
-        let drawImage: UIImage
-        if scale < 1.0 {
-            let format = UIGraphicsImageRendererFormat()
-            format.scale = 1.0  // 出力を実ピクセル等倍にする
-            let renderer = UIGraphicsImageRenderer(size: targetPixelSize, format: format)
-            drawImage = renderer.image { _ in
-                image.draw(in: CGRect(origin: .zero, size: targetPixelSize))
+        // 4000 → 3200 → 2560 → 2048 → 1638 の順でリサイズを試みる
+        var maxDimension: CGFloat = 4000
+        while maxDimension >= 1000 {
+            let s = min(1.0, maxDimension / currentMax)
+            let targetSize = CGSize(width: round(pixelWidth * s), height: round(pixelHeight * s))
+            let format = UIGraphicsImageRendererFormat(); format.scale = 1.0
+            let drawn = UIGraphicsImageRenderer(size: targetSize, format: format).image { _ in
+                image.draw(in: CGRect(origin: .zero, size: targetSize))
             }
-        } else {
-            // リサイズ不要でも scale=1 の UIImage に正規化してから JPEG 変換
-            let format = UIGraphicsImageRendererFormat()
-            format.scale = 1.0
-            let renderer = UIGraphicsImageRenderer(
-                size: CGSize(width: pixelWidth, height: pixelHeight),
-                format: format
-            )
-            drawImage = renderer.image { _ in
-                image.draw(in: CGRect(origin: .zero, size: CGSize(width: pixelWidth, height: pixelHeight)))
+            if let data = drawn.jpegData(compressionQuality: 0.85), data.count <= maxBytes {
+                return (data, "image/jpeg")
             }
+            maxDimension = (maxDimension * 0.8).rounded(.down)
         }
 
-        // 品質を段階的に低下（0.85 → 0.3、0.1 ステップ）
-        var quality: CGFloat = 0.85
-        while quality >= 0.3 {
-            if let data = drawImage.jpegData(compressionQuality: quality), data.count <= maxBytes {
+        // 解像度を最小（1000px）に固定して品質を段階的に下げるフォールバック
+        let fs = min(1.0, 1000 / currentMax)
+        let fallbackSize = CGSize(width: round(pixelWidth * fs), height: round(pixelHeight * fs))
+        let fmt = UIGraphicsImageRendererFormat(); fmt.scale = 1.0
+        let fallback = UIGraphicsImageRenderer(size: fallbackSize, format: fmt).image { _ in
+            image.draw(in: CGRect(origin: .zero, size: fallbackSize))
+        }
+        var quality: CGFloat = 0.7
+        while quality >= 0.2 {
+            if let data = fallback.jpegData(compressionQuality: quality), data.count <= maxBytes {
                 return (data, "image/jpeg")
             }
             quality -= 0.1
         }
-        // フォールバック: 最低品質 0.2
-        if let data = drawImage.jpegData(compressionQuality: 0.2) {
-            return (data, "image/jpeg")
+        return fallback.jpegData(compressionQuality: 0.1).map { ($0, "image/jpeg") }
+    }
+
+    /// 画像をアップロードし、PDS が 413 を返した場合は 1 MB 以下に再圧縮して再試行する
+    private func uploadImageWithFallback(image: UIImage, data: Data, mimeType: String) async throws -> BlobRef {
+        do {
+            return try await postService.uploadImage(data: data, mimeType: mimeType)
+        } catch ATProtoError.httpError(let code) where code == 413 || code == 400 {
+            guard let (fallbackData, fallbackMime) = compressImage(image, maxBytes: Self.imageMaxBytesFallback) else {
+                throw ATProtoError.httpError(statusCode: code)
+            }
+            return try await postService.uploadImage(data: fallbackData, mimeType: fallbackMime)
         }
-        return nil
     }
 
     private func loadPickedVideo(item: PhotosPickerItem) async {

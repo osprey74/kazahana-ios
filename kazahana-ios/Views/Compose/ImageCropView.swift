@@ -55,6 +55,15 @@ struct ImageCropView: View {
     // 回転（0 / 90 / 180 / 270 度）
     @State private var rotationDegrees: Int = 0
 
+    // 表示用画像（EXIF 正規化 + 手動回転を事前適用、UIImage() は onAppear 前のプレースホルダ）
+    @State private var normalizedBase: UIImage = UIImage()
+    @State private var displayImage: UIImage = UIImage()
+
+    /// onAppear 前は元画像にフォールバック
+    private var currentDisplayImage: UIImage {
+        displayImage.size.width > 0 ? displayImage : image
+    }
+
     // ジェスチャー状態
     @State private var activeHandle: CropHandle? = nil
     @State private var dragStartLocation: CGPoint = .zero
@@ -98,8 +107,10 @@ struct ImageCropView: View {
             }
         }
         .onAppear {
-            // 初期クロップ矩形 = 画像全体
-            cropRect = CGRect(origin: .zero, size: rotatedImageSize)
+            let base = normalizeOrientation(image)
+            normalizedBase = base
+            displayImage = base
+            resetCropRect()
         }
     }
 
@@ -141,12 +152,11 @@ struct ImageCropView: View {
             )
 
             ZStack {
-                // 画像本体（回転を適用）
-                Image(uiImage: image)
+                // 画像本体（rotationEffect なし: displayImage に回転を事前適用済み）
+                Image(uiImage: currentDisplayImage)
                     .resizable()
                     .scaledToFit()
                     .frame(width: imgRect.width, height: imgRect.height)
-                    .rotationEffect(.degrees(Double(rotationDegrees)))
                     .position(x: imgRect.midX, y: imgRect.midY)
 
                 // クロップオーバーレイ（画像表示領域のみ）
@@ -286,8 +296,18 @@ struct ImageCropView: View {
 
     private func rotate(by delta: Int) {
         rotationDegrees = ((rotationDegrees + delta) % 360 + 360) % 360
-        // 回転後は cropRect を新しい画像サイズ全体にリセット
-        cropRect = CGRect(origin: .zero, size: rotatedImageSize)
+        displayImage = rotationDegrees == 0
+            ? normalizedBase
+            : applyRotation(to: normalizedBase, degrees: rotationDegrees)
+        resetCropRect()
+    }
+
+    /// cropRect をインセット付きでリセット（ハンドルが画像端に貼り付かないように）
+    private func resetCropRect() {
+        let w = rotatedImageSize.width
+        let h = rotatedImageSize.height
+        let inset = min(w, h) * 0.04
+        cropRect = CGRect(x: inset, y: inset, width: w - inset * 2, height: h - inset * 2)
     }
 
     // MARK: - 下部アスペクト比セレクター
@@ -334,7 +354,7 @@ struct ImageCropView: View {
         let imgDelta = CGPoint(x: delta.x / scale, y: delta.y / scale)
 
         var newRect = dragStartCropRect
-        let imageBounds = CGRect(origin: .zero, size: image.size)
+        let imageBounds = CGRect(origin: .zero, size: rotatedImageSize)
 
         switch handle {
         case .move:
@@ -408,8 +428,8 @@ struct ImageCropView: View {
             return enforceRatio(rect: rect, ratio: 1.0, anchorCorner: anchorCorner)
 
         case .original:
-            guard image.size.height > 0 else { return rect }
-            let ratio = image.size.width / image.size.height
+            guard rotatedImageSize.height > 0 else { return rect }
+            let ratio = rotatedImageSize.width / rotatedImageSize.height
             return enforceRatio(rect: rect, ratio: ratio, anchorCorner: anchorCorner)
         }
     }
@@ -419,7 +439,6 @@ struct ImageCropView: View {
     /// 指定比率を維持するように矩形を調整（アンカーコーナーを固定）
     private func enforceRatio(rect: CGRect, ratio: CGFloat, anchorCorner: AnchorCorner) -> CGRect {
         let w = rect.width
-        let h = rect.height
         // 幅を基準に高さを調整
         let newH = w / ratio
         var r = rect
@@ -453,8 +472,8 @@ struct ImageCropView: View {
             )
 
         case .original:
-            guard image.size.height > 0 else { break }
-            let ratio = image.size.width / image.size.height
+            guard rotatedImageSize.height > 0 else { break }
+            let ratio = rotatedImageSize.width / rotatedImageSize.height
             // 現在の幅を基準に高さを調整
             let newH = cropRect.width / ratio
             let center = CGPoint(x: cropRect.midX, y: cropRect.midY)
@@ -544,15 +563,13 @@ struct ImageCropView: View {
     // MARK: - クロップ実行
 
     private func applyCrop() -> UIImage? {
-        // 1. EXIF orientation を .up に正規化（cgImage と size を一致させる）
-        let base = normalizeOrientation(image)
-        // 2. 手動回転を焼き込む
-        let rotated = rotationDegrees == 0 ? base : applyRotation(to: base, degrees: rotationDegrees)
-        guard let cgImage = rotated.cgImage else { return nil }
+        // displayImage は EXIF 正規化 + 手動回転が事前適用済み
+        let src = currentDisplayImage
+        guard let cgImage = src.cgImage else { return nil }
 
-        // 2. UIImage.size はポイント単位、CGImage は実ピクセル単位
-        let scaleX = CGFloat(cgImage.width)  / rotated.size.width
-        let scaleY = CGFloat(cgImage.height) / rotated.size.height
+        // UIImage.size はポイント単位、CGImage は実ピクセル単位
+        let scaleX = CGFloat(cgImage.width)  / src.size.width
+        let scaleY = CGFloat(cgImage.height) / src.size.height
 
         let pixelRect = CGRect(
             x:      cropRect.origin.x * scaleX,
@@ -562,7 +579,7 @@ struct ImageCropView: View {
         )
 
         guard let cropped = cgImage.cropping(to: pixelRect) else { return nil }
-        return UIImage(cgImage: cropped, scale: rotated.scale, orientation: .up)
+        return UIImage(cgImage: cropped, scale: src.scale, orientation: .up)
     }
 
     /// EXIF orientation を .up に正規化し、cgImage と size を一致させる

@@ -116,12 +116,12 @@ final class ShareATProtoClient {
     }
 
     private func compressIfNeeded(data: Data, mimeType: String) -> Data {
-        guard data.count > 1_000_000,
+        guard data.count > 1_900_000,
               mimeType.hasPrefix("image/"),
               let uiImage = UIImage(data: data) else { return data }
-        var quality: CGFloat = 0.8
+        var quality: CGFloat = 0.85
         var result = uiImage.jpegData(compressionQuality: quality) ?? data
-        while result.count > 950_000 && quality > 0.2 {
+        while result.count > 1_900_000 && quality > 0.2 {
             quality -= 0.1
             result = uiImage.jpegData(compressionQuality: quality) ?? result
         }

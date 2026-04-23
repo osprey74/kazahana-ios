@@ -22,7 +22,7 @@ final class PostService {
         facets: [Facet]? = nil,
         replyTo: ReplyTarget? = nil,
         quotePost: PostView? = nil,
-        images: [(blob: BlobRef, alt: String)]? = nil,
+        images: [(blob: BlobRef, alt: String, aspectRatio: AspectRatioCreate?)]? = nil,
         video: (blob: BlobRef, alt: String?, aspectRatio: AspectRatioCreate?)? = nil,
         linkCard: LinkPreview? = nil,
         via: String? = nil
@@ -40,7 +40,7 @@ final class PostService {
         // embed の組み立て（画像 / 動画 / 外部リンク / 引用 / 画像+引用）
         let embed: PostEmbedCreate?
         if let images, !images.isEmpty {
-            let imageEmbed = ImageEmbedCreate(images: images.map { ImageEmbedItem(image: $0.blob, alt: $0.alt, aspectRatio: nil) })
+            let imageEmbed = ImageEmbedCreate(images: images.map { ImageEmbedItem(image: $0.blob, alt: $0.alt, aspectRatio: $0.aspectRatio) })
             if let quotePost {
                 embed = .recordWithMedia(imageEmbed, QuoteEmbedRecord(uri: quotePost.uri, cid: quotePost.cid))
             } else {
