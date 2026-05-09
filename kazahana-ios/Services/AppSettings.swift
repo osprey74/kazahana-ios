@@ -273,6 +273,7 @@ final class AppSettings {
         } else {
             self.bsafRegisteredBots = []
         }
+        self.longFormServiceUrl = d.string(forKey: "longFormServiceUrl") ?? ""
         self.confirmDraftImageQuality = d.object(forKey: "confirmDraftImageQuality") as? Bool ?? true
         self.watermarkSettings = WatermarkSettings.load()
     }
@@ -310,6 +311,13 @@ final class AppSettings {
     /// 投稿著者の DID から登録済み Bot を検索する。
     func findRegisteredBot(did: String) -> BsafRegisteredBot? {
         bsafRegisteredBots.first { $0.definition.bot.did == did }
+    }
+
+    // MARK: - 長文投稿サービス設定
+
+    /// standard.site 対応サービスの投稿ページ URL（空 = 機能 OFF）
+    var longFormServiceUrl: String {
+        didSet { defaults.set(longFormServiceUrl, forKey: "longFormServiceUrl") }
     }
 
     // MARK: - 下書き設定

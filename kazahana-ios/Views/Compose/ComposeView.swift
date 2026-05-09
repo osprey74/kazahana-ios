@@ -61,6 +61,9 @@ struct ComposeView: View {
     @State private var showThreadgateSheet: Bool = false
     @State private var showPostgateSheet: Bool = false
 
+    // 長文投稿サービス
+    @State private var showLongFormSafari: Bool = false
+
     // 下書き
     @State private var showCancelDraftDialog: Bool = false
     @State private var showDraftList: Bool = false
@@ -281,6 +284,13 @@ struct ComposeView: View {
             .sheet(isPresented: $showDraftList) {
                 DraftListView { draft in
                     restoreDraft(draft)
+                }
+            }
+            // 長文投稿サービス（SFSafariViewController）
+            .sheet(isPresented: $showLongFormSafari) {
+                if let url = URL(string: appSettings.longFormServiceUrl) {
+                    SafariView(url: url)
+                        .ignoresSafeArea()
                 }
             }
         }
@@ -1142,6 +1152,19 @@ struct ComposeView: View {
                     .foregroundStyle((!selectedImages.isEmpty || selectedVideo != nil) ? .tertiary : .secondary)
             }
             .disabled(!selectedImages.isEmpty || selectedVideo != nil)
+
+            // 長文を書く（設定済みの場合のみ表示）
+            if let longFormURL = URL(string: appSettings.longFormServiceUrl),
+               longFormURL.scheme == "https" {
+                Button {
+                    showLongFormSafari = true
+                } label: {
+                    Image(systemName: "doc.text")
+                        .font(.system(size: 20))
+                        .foregroundStyle(.secondary)
+                }
+                .accessibilityLabel(String(localized: "compose.longform.button"))
+            }
 
             // スレッドゲート（返信制限）—— 返信投稿では非表示
             if replyTarget == nil {

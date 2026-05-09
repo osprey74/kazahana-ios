@@ -105,6 +105,29 @@ struct SettingsView: View {
                     Text(String(localized: "settings.claudeApiFooter"))
                 }
 
+                // MARK: - 長文投稿サービス
+                Section {
+                    TextField("https://", text: $settings.longFormServiceUrl)
+                        .keyboardType(.URL)
+                        .textContentType(.URL)
+                        .autocorrectionDisabled()
+                        .textInputAutocapitalization(.never)
+                    if !settings.longFormServiceUrl.isEmpty {
+                        Button(role: .destructive) {
+                            settings.longFormServiceUrl = ""
+                        } label: {
+                            Label(String(localized: "settings.longformServiceUrlDelete"), systemImage: "trash")
+                        }
+                    }
+                } header: {
+                    Text(String(localized: "settings.longformServiceUrl"))
+                } footer: {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(String(localized: "settings.longformServiceUrlFooter"))
+                        Link("standard.site", destination: URL(string: "https://standard.site")!)
+                    }
+                }
+
                 // MARK: - ウォーターマーク
                 Section {
                     NavigationLink {
