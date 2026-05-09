@@ -1,6 +1,6 @@
 # kazahana-ios 開発タスク・進捗記録
 
-最終更新: 2026-04-03 (マルチアカウント実装完了・v1.1.0 リリース準備完了)
+最終更新: 2026-05-10 (standard.site 長文投稿サービス連携・v2.3.0 リリース)
 
 ---
 
@@ -14,6 +14,7 @@
 - Phase 5 (BSAF・高度な機能): 5-A 完了（BSAF対応）、5-B 完了（スレッド投稿ペンディング）、5-C 完了（送受信共有）、5-F/Bot Badge 完了、5-D 一部削除（フィード/リストタブを削除）、5-E 完了（IAP登録・実装・審査通過）
 - Phase 6 (UX補完・モデレーション強化): 自動メンション・DM リンク化・ハッシュタグ検索・ミュート/ブロック/リスト管理 完了
 - Phase 7 (マルチアカウント): 7/7 ✅ 完了（v1.1.0）
+- Phase 8 (standard.site 連携): 6/6 ✅ 完了（v2.3.0）
 - App Store 準備: バージョン 1.1.0・Bundle ID 統一（Keychain/IAP/BGTask/CFBundleURLName）・プライバシーポリシー公開・審査用アカウント作成・v1.0 リリース完了 ✅
 
 ---
@@ -590,6 +591,19 @@
 
 ---
 
+## Phase 8: standard.site 長文投稿サービス連携（2026-05-10）— 完了 ✅
+
+> ハンドオフ文書: `../HANDOFF_kazahana-standard-site.md` §3-2
+
+- [x] **[I-1] 設定永続化** — `AppSettings.longFormServiceUrl: String` 追加（UserDefaults、空=機能OFF）
+- [x] **[I-2] 設定画面 UI** — `SettingsView` に「長文投稿サービス URL」セクション追加（TextField + バリデーション + standard.site リンク + 赤文字削除ボタン）
+- [x] **[I-3] コンポーザボタン** — `ComposeView.bottomBar` に「長文を書く」ボタン追加（`doc.text` アイコン、`longFormServiceUrl` が `https://` で始まる場合のみ表示）
+- [x] **[I-4] SafariView ラッパ** — `Views/Common/SafariView.swift` 新規作成（`SFSafariViewController` の `UIViewControllerRepresentable` ラッパ、`.sheet` で表示）
+- [x] **[I-5] ローカライズ** — `Localizable.xcstrings` に4キー追加（`compose.longform.button` / `settings.longformServiceUrl` / `settings.longformServiceUrlDelete` / `settings.longformServiceUrlFooter`、JA/EN）
+- [x] **バージョン更新** — v2.3.0 (build 11)
+
+---
+
 ## 既知の課題・TODO
 
 - [x] **ブックマーク**: `app.bsky.bookmark.*` API で実装済み（PostCardView / ThreadView ボタン + プロフィールタブ）
@@ -688,6 +702,7 @@ kazahana-ios/
 │       ├── QuoteEmbedView.swift
 │       ├── BotBadge.swift         # Bot自動化ラベルバッジ（smart_toy グリフ + isBotAccount() ユーティリティ）
 │       ├── WrappingHStack.swift   # Layout プロトコル準拠の折り返し水平スタック（BSAFタグチップ用）
+│       ├── SafariView.swift        # SFSafariViewController SwiftUI ラッパ（長文投稿サービス連携用）
 │       ├── FeedSelectorView.swift # フィード選択シート（showAllFeedsInSelector 対応）
 │       ├── PostActorListView.swift # いいね/リポストユーザー一覧
 │       ├── PostQuoteListView.swift # 引用一覧
