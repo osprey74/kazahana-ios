@@ -3,6 +3,7 @@
 // BSAF 対応 Bot 管理画面（登録・解除・フィルタ設定）
 
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct BsafBotsView: View {
 
@@ -17,6 +18,7 @@ struct BsafBotsView: View {
     @State private var successMessage: String? = nil
     @State private var expandedDid: String? = nil
     @State private var confirmUnregisterDid: String? = nil
+    @State private var showFileImporter: Bool = false
 
     init(client: ATProtoClient) {
         self.graphService = GraphService(client: client)
@@ -78,8 +80,23 @@ struct BsafBotsView: View {
                     .font(.caption)
                     .foregroundStyle(.green)
             }
+            // ローカル JSON ファイルからの登録
+            #if targetEnvironment(macCatalyst)
+            Button {
+                showFileImporter = true
+            } label: {
+                Label(String(localized: "bsaf.importLocalFile"), systemImage: "doc")
+            }
+            #endif
         } header: {
             Text(String(localized: "bsaf.title"))
+        }
+        .fileImporter(
+            isPresented: $showFileImporter,
+            allowedContentTypes: [.json],
+            allowsMultipleSelection: false
+        ) { result in
+            Task { await handleLocalFileImport(result) }
         }
     }
 
@@ -302,6 +319,51 @@ struct BsafBotsView: View {
         confirmUnregisterDid = nil
         if expandedDid == did { expandedDid = nil }
         successMessage = String(localized: "bsaf.unregistered")
+    }
+
+    // MARK: - ローカル JSON ファイル読み込み
+
+    private func handleLocalFileImport(_ result: Result<[URL], Error>) async {
+        switch result {
+        case .success(let urls):
+            guard let fileURL = urls.first else { return }
+            guard fileURL.startAccessingSecurityScopedResource() else {
+                await MainActor.run { errorMessage = "ファイルへのアクセスが拒否されました" }
+                return
+            }
+            defer { fileURL.stopAccessingSecurityScopedResource() }
+
+            do {
+                let data = try Data(contentsOf: fileURL)
+                let definition = try JSONDecoder().decode(BsafBotDefinition.self, from: data)
+
+                await MainActor.run {
+                    if settings.bsafRegisteredBots.contains(where: {
+                        $0.definition.bot.did == definition.bot.did
+                    }) {
+                        errorMessage = BsafError.duplicateBot.localizedDescription
+                        return
+                    }
+                    settings.registerBot(definition)
+                }
+
+                // 自動フォロー
+                do {
+                    _ = try await graphService.follow(did: definition.bot.did)
+                } catch {
+                    await MainActor.run { successMessage = String(localized: "bsaf.followFailed") }
+                    return
+                }
+
+                await MainActor.run {
+                    successMessage = String(localized: "bsaf.registered")
+                }
+            } catch {
+                await MainActor.run { errorMessage = error.localizedDescription }
+            }
+        case .failure(let error):
+            await MainActor.run { errorMessage = error.localizedDescription }
+        }
     }
 
     // MARK: - ヘルパー

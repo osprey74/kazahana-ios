@@ -42,6 +42,8 @@ struct MainTabView: View {
     let client: ATProtoClient
     @State private var selectedTab: Tab = .home
     @State private var dmUnreadCount = 0
+    /// Catalyst でプログラマティックなタブ切替時に TabView を強制再構築するための ID
+    @State private var tabViewRefreshID = UUID()
     private let tabBarDelegate = TabBarDelegate()
 
     // ディープリンクで開くプロフィールの actor (DID or handle)
@@ -96,13 +98,9 @@ struct MainTabView: View {
                 }
                 .tag(Tab.profile)
         }
-        #if targetEnvironment(macCatalyst)
-        // macOS: タブバーをサイドバー化せず下部タブバーを維持
+        .id(tabViewRefreshID)
+        // iPad / macOS でも iPhone と同様に下部タブバーを表示するため compact に固定
         .environment(\.horizontalSizeClass, .compact)
-        #else
-        // iPad でも iPhone と同様に下部タブバーを表示するため compact に固定
-        .environment(\.horizontalSizeClass, .compact)
-        #endif
         // ディープリンクでプロフィール遷移（home タブに表示）
         .sheet(item: Binding(
             get: { deepLinkProfileActor.map { IdentifiableString(value: $0) } },
@@ -163,19 +161,11 @@ struct MainTabView: View {
             }
         }
         // macOS: メニューバーからのタブ切替（MenuCommandRelay 経由）
-        // Catalyst では SwiftUI の TabView selection 変更だけではタブバー UI が
-        // 同期しないため、UITabBarController を先に直接操作してから SwiftUI 状態を遅延更新する
         .onChange(of: MenuCommandRelay.shared.tabCommand?.id) { _, _ in
             guard let command = MenuCommandRelay.shared.tabCommand else { return }
-            let target = command.tab
-            let targetIndex = [Tab.home, .search, .notifications, .messages, .profile]
-                .firstIndex(of: target) ?? 0
-            // 1. UITabBarController を直接操作（タブバー UI + 表示コンテンツを即時切替）
-            Self.setTabBarSelectedIndex(targetIndex)
-            // 2. SwiftUI の状態を遅延更新（UIKit の変更が確定した後に同期）
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
-                selectedTab = target
-            }
+            selectedTab = command.tab
+            // TabView の id を変更して強制再構築 → タブバー UI が確実に同期
+            tabViewRefreshID = UUID()
         }
         // バッジをリセット（アプリ起動時）
         .task {
@@ -235,19 +225,6 @@ struct MainTabView: View {
         }
     }
 
-    /// UITabBarController を探してプログラマティックにタブを選択する
-    static func setTabBarSelectedIndex(_ index: Int) {
-        guard let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-              let root = scene.windows.first?.rootViewController else { return }
-        func find(in vc: UIViewController?) -> UITabBarController? {
-            if let tbc = vc as? UITabBarController { return tbc }
-            for child in vc?.children ?? [] {
-                if let found = find(in: child) { return found }
-            }
-            return vc?.presentedViewController.flatMap { find(in: $0) }
-        }
-        find(in: root)?.selectedIndex = index
-    }
 }
 
 // MARK: - ホームタブ再タップ検出

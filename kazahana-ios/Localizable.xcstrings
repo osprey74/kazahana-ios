@@ -1533,6 +1533,16 @@
         }
       }
     },
+    "bsaf.importLocalFile" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Import from local file" }
+        },
+        "ja" : {
+          "stringUnit" : { "state" : "translated", "value" : "ローカルファイルから読み込み" }
+        }
+      }
+    },
     "bsaf.fetch" : {
       "localizations" : {
         "de" : {

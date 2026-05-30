@@ -188,17 +188,21 @@ enum MacLoginItemHelper {
 }
 
 final class MacSceneDelegate: UIResponder, UIWindowSceneDelegate {
+
     func scene(_ scene: UIScene, willConnectTo session: UISceneSession, options connectionOptions: UIScene.ConnectionOptions) {
         guard let windowScene = scene as? UIWindowScene else { return }
 
         // Desktop 版準拠: 最小 400×600
         windowScene.sizeRestrictions?.minimumSize = CGSize(width: 400, height: 600)
 
-        // デフォルトサイズ 480×800
-        let geometryPreferences = UIWindowScene.GeometryPreferences.Mac(
-            systemFrame: CGRect(x: 0, y: 0, width: 480, height: 800)
-        )
-        windowScene.requestGeometryUpdate(geometryPreferences)
+        // 初回のみデフォルトサイズ 480×800 を設定
+        if !UserDefaults.standard.bool(forKey: "hasLaunchedBefore") {
+            let geometryPreferences = UIWindowScene.GeometryPreferences.Mac(
+                systemFrame: CGRect(x: 0, y: 0, width: 480, height: 800)
+            )
+            windowScene.requestGeometryUpdate(geometryPreferences)
+            UserDefaults.standard.set(true, forKey: "hasLaunchedBefore")
+        }
 
         // タイトルバーのスタイル調整
         if let titlebar = windowScene.titlebar {
@@ -206,11 +210,25 @@ final class MacSceneDelegate: UIResponder, UIWindowSceneDelegate {
             titlebar.toolbar = nil
         }
 
-        // 閉じるボタン動作: 「最小化」設定時は windowShouldClose をフックして最小化に差し替え
+        // 閉じるボタン動作
         setupCloseButtonBehavior(for: windowScene)
 
         // ログインアイテム同期
         syncLoginItem()
+
+        // NSWindow の frameAutosaveName を設定（AppKit が自動で位置・サイズを保存・復元）
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            guard let nsWindow = windowScene.windows.first?.value(forKey: "hostWindow") as? NSObject else { return }
+            nsWindow.perform(NSSelectorFromString("setFrameAutosaveName:"), with: "kazahanaMainWindow")
+        }
+    }
+
+    /// Dock アイコンクリック時にウィンドウを復元
+    func sceneDidBecomeActive(_ scene: UIScene) {
+        guard let windowScene = scene as? UIWindowScene else { return }
+        for window in windowScene.windows {
+            window.makeKeyAndVisible()
+        }
     }
 
     /// 閉じるボタンの動作を設定に応じて制御
