@@ -12,6 +12,7 @@ struct LoginView: View {
     @State private var identifier: String = ""
     @State private var password: String = ""
     @State private var isPasswordVisible: Bool = false
+    @State private var showHandleHistory: Bool = false
 
     var body: some View {
         NavigationStack {
@@ -42,6 +43,42 @@ struct LoginView: View {
                                 .autocorrectionDisabled()
                                 .textInputAutocapitalization(.never)
                                 .keyboardType(.emailAddress)
+                                .onTapGesture { showHandleHistory = true }
+                                .onChange(of: identifier) { _, _ in showHandleHistory = true }
+
+                            // ハンドル履歴サジェスト
+                            if showHandleHistory {
+                                let filtered = filteredHandleHistory
+                                if !filtered.isEmpty {
+                                    VStack(spacing: 0) {
+                                        ForEach(filtered, id: \.self) { handle in
+                                            HStack {
+                                                Text("@\(handle)")
+                                                    .font(.subheadline)
+                                                Spacer()
+                                                Button {
+                                                    AppSettings.shared.removeHandleHistory(handle)
+                                                } label: {
+                                                    Image(systemName: "xmark")
+                                                        .font(.caption)
+                                                        .foregroundStyle(.secondary)
+                                                }
+                                                .buttonStyle(.plain)
+                                            }
+                                            .padding(.horizontal, 10)
+                                            .padding(.vertical, 8)
+                                            .contentShape(Rectangle())
+                                            .onTapGesture {
+                                                identifier = handle
+                                                showHandleHistory = false
+                                            }
+                                            Divider()
+                                        }
+                                    }
+                                    .background(Color(.secondarySystemBackground))
+                                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                                }
+                            }
                         }
 
                         VStack(alignment: .leading, spacing: 6) {
@@ -111,8 +148,30 @@ struct LoginView: View {
                     Spacer()
                 }
             }
-            .navigationBarHidden(true)
+            .toolbar {
+                // sheet として表示された場合のみ閉じるボタンを表示
+                if isPresented {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button(String(localized: "common.close")) {
+                            dismiss()
+                        }
+                    }
+                }
+            }
+            .navigationBarTitleDisplayMode(.inline)
         }
+    }
+
+    /// sheet として表示されているかを判定（保存済みアカウントがある＝ルートではない）
+    private var isPresented: Bool {
+        !authVM.savedAccounts.isEmpty
+    }
+
+    /// 入力にマッチするハンドル履歴（空入力時は全件）
+    private var filteredHandleHistory: [String] {
+        let history = AppSettings.shared.handleHistory
+        if identifier.isEmpty { return history }
+        return history.filter { $0.localizedCaseInsensitiveContains(identifier) }
     }
 }
 

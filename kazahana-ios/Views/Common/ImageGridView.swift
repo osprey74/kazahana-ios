@@ -13,6 +13,17 @@ struct ImageGridView: View {
     @State private var selectedImageIndex: Int = 0
     @State private var isViewerPresented = false
 
+    private func handleImageTap(index: Int) {
+        if AppSettings.shared.imageOpenMode == .external {
+            if let url = URL(string: images[index].fullsize) {
+                UIApplication.shared.open(url)
+            }
+        } else {
+            selectedImageIndex = index
+            isViewerPresented = true
+        }
+    }
+
     private var gridHeight: CGFloat {
         // maxWidth が指定されている場合は幅に比例して高さも縮小（基準200pt @ 幅無制限）
         guard let w = maxWidth else { return 200 }
@@ -98,10 +109,7 @@ struct ImageGridView: View {
                 .frame(maxWidth: maxWidth ?? .infinity, maxHeight: 400)
                 .clipShape(RoundedRectangle(cornerRadius: 12))
                 .contentShape(Rectangle())
-                .onTapGesture {
-                    selectedImageIndex = index
-                    isViewerPresented = true
-                }
+                .onTapGesture { handleImageTap(index: index) }
                 .accessibilityLabel(image.alt.isEmpty ? String(localized: "image.accessibility") : image.alt)
             } else {
                 // アスペクト比不明の場合: 従来通り固定高さ + scaledToFill

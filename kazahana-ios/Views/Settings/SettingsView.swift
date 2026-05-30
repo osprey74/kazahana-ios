@@ -9,6 +9,7 @@ struct SettingsView: View {
 
     @Environment(AuthViewModel.self) private var authVM
     @Environment(AppSettings.self) private var settings
+    @Environment(\.dismiss) private var dismiss
     @State private var showRestartAlert = false
     @State private var showRevokeApiKeyAlert = false
     @State private var iapService = IAPService.shared
@@ -142,6 +143,15 @@ struct SettingsView: View {
                                     .font(.subheadline)
                                     .foregroundStyle(.secondary)
                             }
+                        }
+                    }
+                }
+
+                // MARK: - 画像表示モード
+                Section(String(localized: "settings.imageOpenMode")) {
+                    Picker(String(localized: "settings.imageOpenMode"), selection: $settings.imageOpenMode) {
+                        ForEach(AppSettings.ImageOpenMode.allCases, id: \.self) { mode in
+                            Text(mode.displayName).tag(mode)
                         }
                     }
                 }
@@ -282,6 +292,21 @@ struct SettingsView: View {
                     Text(String(localized: "settings.accounts"))
                 }
 
+                // MARK: - macOS 専用設定
+                #if targetEnvironment(macCatalyst)
+                Section(String(localized: "settings.macOS")) {
+                    Toggle(String(localized: "settings.launchAtLogin"), isOn: $settings.launchAtLogin)
+                        .onChange(of: settings.launchAtLogin) { _, newValue in
+                            MacLoginItemHelper.setEnabled(newValue)
+                        }
+                    Picker(String(localized: "settings.closeAction"), selection: $settings.closeButtonAction) {
+                        ForEach(AppSettings.CloseButtonAction.allCases, id: \.self) { action in
+                            Text(action.displayName).tag(action)
+                        }
+                    }
+                }
+                #endif
+
                 // MARK: - アプリ情報
                 Section(String(localized: "settings.appInfo")) {
                     LabeledContent(String(localized: "settings.version"), value: appVersion)
@@ -290,6 +315,13 @@ struct SettingsView: View {
             }
             .navigationTitle(String(localized: "settings.title"))
             .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(String(localized: "common.close")) {
+                        dismiss()
+                    }
+                }
+            }
         }
         .sheet(isPresented: $showAddAccount) {
             LoginView()

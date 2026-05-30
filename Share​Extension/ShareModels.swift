@@ -113,7 +113,13 @@ final class SessionStore {
 
 struct ShareSettings {
     /// showVia が true の場合に付与するクライアント名
-    static let viaName = "kazahana for iOS"
+    static var viaName: String {
+        #if targetEnvironment(macCatalyst)
+        "kazahana for macOS"
+        #else
+        "kazahana for iOS"
+        #endif
+    }
 
     /// メインアプリと共有する App Group UserDefaults
     private static var defaults: UserDefaults {
@@ -232,6 +238,7 @@ struct ExternalCard: Encodable {
     let title: String
     let description: String
     let thumb: BlobRef?
+    let associatedRefs: [PostRefStrong]?
 }
 
 enum PostEmbedCreate: Encodable {

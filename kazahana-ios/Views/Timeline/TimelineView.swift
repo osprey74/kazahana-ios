@@ -106,7 +106,7 @@ struct TimelineView: View {
                 FeedSelectorView(viewModel: viewModel, isPresented: $showFeedSelector)
             }
             .sheet(isPresented: $showAccountSwitcher) {
-                AccountPickerView()
+                AccountPickerView(showCloseButton: true)
                     .environment(authVM)
             }
             // スレッド遷移
@@ -133,6 +133,15 @@ struct TimelineView: View {
             .sheet(isPresented: $showCompose, onDismiss: { replyToPost = nil; quotePost = nil }) {
                 ComposeView(postService: postService, replyTo: replyToPost, quotedPost: quotePost)
                     .environment(AppSettings.shared)
+            }
+            // macOS: メニューバーからの新規投稿
+            .onReceive(NotificationCenter.default.publisher(for: .composeNewPost)) { _ in
+                replyToPost = nil; quotePost = nil
+                showCompose = true
+            }
+            // macOS: メニューバーからの再読み込み
+            .onReceive(NotificationCenter.default.publisher(for: .reloadTimeline)) { _ in
+                Task { await viewModel.refresh() }
             }
         }
         // ミュート確認ダイアログ
@@ -275,6 +284,11 @@ struct TimelineView: View {
         ScrollViewReader { proxy in
         List {
             ForEach(viewModel.posts) { feedPost in
+                // 既読位置マーカー（この投稿の直前に表示）
+                if feedPost.post.uri == viewModel.readMarkerPostURI {
+                    readMarkerDivider
+                }
+
                 PostCardView(
                     feedPost: feedPost,
                     postService: postService,
@@ -323,6 +337,21 @@ struct TimelineView: View {
         let full = "@\(handle)"
         guard full.count > 22 else { return full }
         return String(full.prefix(21)) + "…"
+    }
+
+    /// 既読位置マーカー（Desktop版準拠: 青い帯に「↓ ここまで読んだ ↓」）
+    private var readMarkerDivider: some View {
+        HStack {
+            Spacer()
+            Text(String(localized: "timeline.readUpToHere"))
+                .font(.caption.weight(.medium))
+                .foregroundStyle(.blue)
+            Spacer()
+        }
+        .padding(.vertical, 6)
+        .background(Color.blue.opacity(0.1))
+        .listRowInsets(EdgeInsets())
+        .listRowSeparator(.hidden)
     }
 
     private func errorView(message: String) -> some View {

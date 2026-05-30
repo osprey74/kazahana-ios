@@ -160,11 +160,47 @@ struct EmbedExternal: Codable {
     let external: ExternalView
 }
 
+/// app.bsky.embed.getEmbedExternalView レスポンス
+struct EmbedExternalViewResponse: Codable {
+    let view: EmbedExternal
+    let associatedRefs: [StrongRef]?
+}
+
 struct ExternalView: Codable {
     let uri: String
     let title: String
     let description: String?
     let thumb: String?
+    // Standard Site 拡張フィールド
+    let createdAt: String?
+    let updatedAt: String?
+    let readingTime: Int?
+    let source: ExternalSource?
+    let associatedRefs: [StrongRef]?
+    let associatedProfiles: [ProfileViewBasic]?
+}
+
+// MARK: - Standard Site パブリケーション情報
+
+struct ExternalSource: Codable {
+    let uri: String
+    let icon: String?
+    let title: String
+    let description: String?
+    let theme: ExternalSourceTheme?
+}
+
+struct ExternalSourceTheme: Codable {
+    let backgroundRGB: ColorRGB?
+    let foregroundRGB: ColorRGB?
+    let accentRGB: ColorRGB?
+    let accentForegroundRGB: ColorRGB?
+}
+
+struct ColorRGB: Codable {
+    let r: Int
+    let g: Int
+    let b: Int
 }
 
 // MARK: - 引用リポスト埋め込み
@@ -364,6 +400,7 @@ struct ExternalCardCreate: Encodable {
     let title: String
     let description: String
     let thumb: BlobRef?
+    let associatedRefs: [StrongRef]?
 }
 
 /// 投稿作成時の embed（画像/動画/外部リンク/引用）を統一する enum（Encodable）

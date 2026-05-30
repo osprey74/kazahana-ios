@@ -12,6 +12,8 @@ struct LinkPreview {
     let description: String
     var thumbImage: UIImage? = nil   // ローカル表示用サムネイル
     var thumbBlob: BlobRef? = nil    // アップロード済みサムネイル（投稿時に使用）
+    var associatedRefs: [StrongRef]? = nil  // Standard Site 関連参照（投稿時に使用）
+    var externalView: ExternalView? = nil   // Standard Site 拡張プレビュー（コンポーザー表示用）
 }
 
 /// OGP 取得・サムネイルアップロードを担当するサービス
@@ -28,10 +30,11 @@ final class LinkPreviewService {
         self.client = client
     }
 
-    // MARK: - OGP 取得
+    // MARK: - プレビュー取得（Standard Site 対応）
 
     /// URL の OGP メタデータを取得して LinkPreview を返す
-    /// サムネイルは UIImage としてのみ返す（アップロードは uploadThumbnail で別途行う）
+    /// Standard Site 対応 URL の場合は getEmbedExternalView XRPC を呼び出し、
+    /// associatedRefs を含むリッチプレビューを返す
     func fetchPreview(url: URL) async throws -> LinkPreview {
         var request = URLRequest(url: url)
         request.setValue("Mozilla/5.0 (compatible; kazahana/1.0)", forHTTPHeaderField: "User-Agent")
@@ -42,6 +45,16 @@ final class LinkPreviewService {
             ?? String(data: data, encoding: .isoLatin1)
             ?? ""
 
+        // Standard Site: AT-URI を抽出し、見つかれば XRPC で拡張プレビューを取得
+        let standardSiteURIs = Self.extractStandardSiteURIs(from: html)
+        if !standardSiteURIs.isEmpty {
+            if let preview = try? await fetchStandardSitePreview(url: url, uris: standardSiteURIs) {
+                return preview
+            }
+            // XRPC 失敗時は OGP にフォールバック
+        }
+
+        // 通常の OGP パース
         let title = ogValue(html: html, property: "og:title")
             ?? titleTag(html: html)
             ?? url.host
@@ -63,6 +76,59 @@ final class LinkPreviewService {
             title: title,
             description: description,
             thumbImage: thumbImage
+        )
+    }
+
+    // MARK: - Standard Site
+
+    /// HTML から Standard Site の AT-URI を抽出（<link rel="site.standard.*" href="at://...">）
+    static func extractStandardSiteURIs(from html: String) -> [String] {
+        var uris = Set<String>()
+        guard let linkRegex = try? NSRegularExpression(
+            pattern: #"<link\b[^>]*>"#, options: .caseInsensitive
+        ) else { return [] }
+
+        let matches = linkRegex.matches(in: html, range: NSRange(html.startIndex..., in: html))
+        for match in matches {
+            guard let range = Range(match.range, in: html) else { continue }
+            let tag = String(html[range])
+            // rel="site.standard.*" を含むか
+            guard tag.range(of: #"rel=["']site\.standard\.[a-z]+["']"#, options: .regularExpression, range: nil, locale: nil) != nil else { continue }
+            // href="at://..." を抽出
+            if let hrefMatch = tag.range(of: #"href=["'](at://[^"']+)["']"#, options: .regularExpression),
+               let atURIMatch = tag[hrefMatch].range(of: #"at://[^"']+"#, options: .regularExpression) {
+                uris.insert(String(tag[atURIMatch]))
+            }
+        }
+        return Array(uris)
+    }
+
+    /// getEmbedExternalView XRPC を呼び出して Standard Site 拡張プレビューを取得
+    private func fetchStandardSitePreview(url: URL, uris: [String]) async throws -> LinkPreview {
+        var queryItems = [URLQueryItem(name: "url", value: url.absoluteString)]
+        for uri in uris {
+            queryItems.append(URLQueryItem(name: "uris", value: uri))
+        }
+
+        let response: EmbedExternalViewResponse = try await client.getWithArrayParams(
+            nsid: "app.bsky.embed.getEmbedExternalView",
+            queryItems: queryItems
+        )
+
+        let ext = response.view.external
+        // サムネイル取得（Standard Site URL は thumb が空の場合がある）
+        var thumbImage: UIImage? = nil
+        if let thumbStr = ext.thumb, let thumbURL = URL(string: thumbStr) {
+            thumbImage = try? await fetchThumbnailImage(from: thumbURL)
+        }
+
+        return LinkPreview(
+            url: url,
+            title: ext.title,
+            description: ext.description ?? "",
+            thumbImage: thumbImage,
+            associatedRefs: response.associatedRefs,
+            externalView: ext
         )
     }
 

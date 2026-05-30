@@ -79,7 +79,13 @@ final class AppSettings {
     }
 
     /// via として付与するクライアント名
-    let viaName: String = "kazahana for iOS"
+    var viaName: String {
+        #if targetEnvironment(macCatalyst)
+        "kazahana for macOS"
+        #else
+        "kazahana for iOS"
+        #endif
+    }
 
     // MARK: - 投稿言語設定
 
@@ -276,6 +282,11 @@ final class AppSettings {
         self.longFormServiceUrl = d.string(forKey: "longFormServiceUrl") ?? ""
         self.confirmDraftImageQuality = d.object(forKey: "confirmDraftImageQuality") as? Bool ?? true
         self.watermarkSettings = WatermarkSettings.load()
+        let imageRaw = d.string(forKey: "imageOpenMode") ?? ImageOpenMode.app.rawValue
+        self.imageOpenMode = ImageOpenMode(rawValue: imageRaw) ?? .app
+        let closeRaw = d.string(forKey: "closeButtonAction") ?? CloseButtonAction.quit.rawValue
+        self.closeButtonAction = CloseButtonAction(rawValue: closeRaw) ?? .quit
+        self.launchAtLogin = d.object(forKey: "launchAtLogin") as? Bool ?? false
     }
 
     // MARK: - BSAF Bot 管理
@@ -331,6 +342,77 @@ final class AppSettings {
 
     var watermarkSettings: WatermarkSettings {
         didSet { watermarkSettings.save() }
+    }
+
+    // MARK: - ログインハンドル履歴
+
+    private static let handleHistoryKey = "handleHistory"
+    private static let handleHistoryLimit = 20
+
+    /// ログイン成功時にハンドルを履歴に追加（最新が先頭、最大20件）
+    func addHandleHistory(_ handle: String) {
+        var history = handleHistory
+        history.removeAll { $0.lowercased() == handle.lowercased() }
+        history.insert(handle, at: 0)
+        if history.count > Self.handleHistoryLimit {
+            history = Array(history.prefix(Self.handleHistoryLimit))
+        }
+        defaults.set(history, forKey: Self.handleHistoryKey)
+    }
+
+    /// ハンドル履歴を取得
+    var handleHistory: [String] {
+        defaults.stringArray(forKey: Self.handleHistoryKey) ?? []
+    }
+
+    /// ハンドル履歴から削除
+    func removeHandleHistory(_ handle: String) {
+        var history = handleHistory
+        history.removeAll { $0 == handle }
+        defaults.set(history, forKey: Self.handleHistoryKey)
+    }
+
+    // MARK: - macOS: 閉じるボタン動作
+
+    enum CloseButtonAction: String, CaseIterable {
+        case quit = "quit"
+        case minimize = "minimize"
+
+        var displayName: String {
+            switch self {
+            case .quit: return String(localized: "settings.closeAction.quit")
+            case .minimize: return String(localized: "settings.closeAction.minimize")
+            }
+        }
+    }
+
+    var closeButtonAction: CloseButtonAction {
+        didSet { defaults.set(closeButtonAction.rawValue, forKey: "closeButtonAction") }
+    }
+
+    // MARK: - macOS: OS 起動時自動スタート
+
+    var launchAtLogin: Bool {
+        didSet { defaults.set(launchAtLogin, forKey: "launchAtLogin") }
+    }
+
+
+    // MARK: - 画像表示モード
+
+    enum ImageOpenMode: String, CaseIterable {
+        case app = "app"
+        case external = "external"
+
+        var displayName: String {
+            switch self {
+            case .app: return String(localized: "settings.imageOpenModeApp")
+            case .external: return String(localized: "settings.imageOpenModeExternal")
+            }
+        }
+    }
+
+    var imageOpenMode: ImageOpenMode {
+        didSet { defaults.set(imageOpenMode.rawValue, forKey: "imageOpenMode") }
     }
 
     // MARK: - Singleton

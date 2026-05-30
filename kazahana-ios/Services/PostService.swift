@@ -53,7 +53,8 @@ final class PostService {
                 uri: linkCard.url.absoluteString,
                 title: linkCard.title,
                 description: linkCard.description,
-                thumb: linkCard.thumbBlob
+                thumb: linkCard.thumbBlob,
+                associatedRefs: linkCard.associatedRefs
             )
             embed = .external(ExternalEmbedCreate(external: card))
         } else if let quotePost {

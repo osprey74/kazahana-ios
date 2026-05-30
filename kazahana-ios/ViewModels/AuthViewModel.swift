@@ -87,6 +87,7 @@ final class AuthViewModel {
                 savedAccounts = sessionStore.loadAll()
                 activeAccountDID = sessionStore.activeAccountDID
                 isLoggedIn = true
+                AppSettings.shared.addHandleHistory(identifier)
             }
             // 通知許可を求め、デバイストークンをバックエンドに登録
             let did = sessionStore.activeAccountDID ?? ""

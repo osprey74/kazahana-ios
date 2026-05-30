@@ -47,6 +47,9 @@ struct PostCardView: View {
     @State private var showDeleteConfirm = false
     @State private var reportTarget: ReportTarget? = nil
     @State private var isSavingMedia = false
+    #if targetEnvironment(macCatalyst)
+    @State private var isHovered = false
+    #endif
     @State private var saveToastMessage: String? = nil
 
     private var post: PostView { feedPost.post }
@@ -196,6 +199,49 @@ struct PostCardView: View {
                     .onTapGesture {
                         onTapPost?(feedPost)
                     }
+                    .contextMenu {
+                        // 返信
+                        if let onTapReply {
+                            Button {
+                                onTapReply(post)
+                            } label: {
+                                Label(String(localized: "compose.reply"), systemImage: "bubble.left")
+                            }
+                        }
+                        // 引用
+                        if let onTapQuote {
+                            Button {
+                                onTapQuote(post)
+                            } label: {
+                                Label(String(localized: "post.quoteRepost"), systemImage: "quote.bubble")
+                            }
+                        }
+                        Divider()
+                        // 共有
+                        Button {
+                            let url = "https://bsky.app/profile/\(author.handle)/post/\(post.uri.components(separatedBy: "/").last ?? "")"
+                            sharePost(urlString: url)
+                        } label: {
+                            Label(String(localized: "post.share"), systemImage: "square.and.arrow.up")
+                        }
+                        // リンクコピー
+                        Button {
+                            let url = "https://bsky.app/profile/\(author.handle)/post/\(post.uri.components(separatedBy: "/").last ?? "")"
+                            UIPasteboard.general.string = url
+                        } label: {
+                            Label(String(localized: "post.copyLink"), systemImage: "link")
+                        }
+                        // 翻訳
+                        Button {
+                            let text = post.record.text.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+                            let langCode = Locale.current.language.languageCode?.identifier ?? "en"
+                            if let url = URL(string: "https://translate.google.com/?text=\(text)&sl=auto&tl=\(langCode)") {
+                                UIApplication.shared.open(url)
+                            }
+                        } label: {
+                            Label(String(localized: "post.translate"), systemImage: "character.bubble")
+                        }
+                    }
 
                     // 投稿全体ブラー（blur 判定時）
                     if moderation.decision == .blur {
@@ -214,6 +260,10 @@ struct PostCardView: View {
                         .frame(width: 8)
                 }
             }
+            #if targetEnvironment(macCatalyst)
+            .background(isHovered ? Color.secondary.opacity(0.06) : Color.clear)
+            .onHover { hovering in isHovered = hovering }
+            #endif
             .overlay(alignment: .bottom) {
                 if let msg = saveToastMessage {
                     Text(msg)

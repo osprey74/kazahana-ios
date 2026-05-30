@@ -9,6 +9,7 @@ struct ImageViewer: View {
     let images: [EmbedImageView]
     @Binding var selectedIndex: Int
     @Environment(\.dismiss) private var dismiss
+    @FocusState private var isFocused: Bool
 
     /// 現在表示中の画像の ALT テキスト
     private var currentAlt: String {
@@ -60,6 +61,25 @@ struct ImageViewer: View {
             }
         }
         .statusBarHidden(true)
+        .focusable()
+        .focusEffectDisabled()
+        .focused($isFocused)
+        .onAppear { isFocused = true }
+        .onKeyPress(keys: [.leftArrow, .rightArrow, .escape]) { press in
+            switch press.key {
+            case .leftArrow:
+                if selectedIndex > 0 { withAnimation { selectedIndex -= 1 } }
+                return .handled
+            case .rightArrow:
+                if selectedIndex < images.count - 1 { withAnimation { selectedIndex += 1 } }
+                return .handled
+            case .escape:
+                dismiss()
+                return .handled
+            default:
+                return .ignored
+            }
+        }
     }
 }
 
@@ -134,3 +154,4 @@ private struct ZoomableImage: View {
         }
     }
 }
+

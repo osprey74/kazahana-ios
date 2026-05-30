@@ -203,6 +203,7 @@ struct ComposeView: View {
                     }
                     .fontWeight(.bold)
                     .disabled(!canPost)
+                    .keyboardShortcut(.return, modifiers: .command)
                 }
             }
             .alert(String(localized: "compose.error"), isPresented: Binding(
@@ -718,46 +719,53 @@ struct ComposeView: View {
     /// プレビューカード UI
     @ViewBuilder
     private func linkCardPreviewRow(_ preview: LinkPreview) -> some View {
-        HStack(alignment: .top, spacing: 10) {
-            // サムネイル
-            if let thumb = preview.thumbImage {
-                Image(uiImage: thumb)
-                    .resizable()
-                    .scaledToFill()
-                    .frame(width: 56, height: 56)
-                    .clipShape(RoundedRectangle(cornerRadius: 6))
+        HStack(alignment: .top, spacing: 0) {
+            // Standard Site 拡張プレビューがあれば LinkCardView を使用
+            if let extView = preview.externalView, extView.source != nil {
+                LinkCardView(external: extView, hideSubscribe: true)
             } else {
-                RoundedRectangle(cornerRadius: 6)
-                    .fill(Color.secondary.opacity(0.15))
-                    .frame(width: 56, height: 56)
-                    .overlay {
-                        Image(systemName: "link")
-                            .foregroundStyle(.secondary)
+                // 通常の OGP プレビュー
+                HStack(alignment: .top, spacing: 10) {
+                    if let thumb = preview.thumbImage {
+                        Image(uiImage: thumb)
+                            .resizable()
+                            .scaledToFill()
+                            .frame(width: 56, height: 56)
+                            .clipShape(RoundedRectangle(cornerRadius: 6))
+                    } else {
+                        RoundedRectangle(cornerRadius: 6)
+                            .fill(Color.secondary.opacity(0.15))
+                            .frame(width: 56, height: 56)
+                            .overlay {
+                                Image(systemName: "link")
+                                    .foregroundStyle(.secondary)
+                            }
                     }
-            }
 
-            VStack(alignment: .leading, spacing: 2) {
-                Text(preview.url.host ?? preview.url.absoluteString)
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-                Text(preview.title.isEmpty ? preview.url.absoluteString : preview.title)
-                    .font(.caption.weight(.semibold))
-                    .lineLimit(2)
-                if !preview.description.isEmpty {
-                    Text(preview.description)
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(2)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(preview.url.host ?? preview.url.absoluteString)
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                        Text(preview.title.isEmpty ? preview.url.absoluteString : preview.title)
+                            .font(.caption.weight(.semibold))
+                            .lineLimit(2)
+                        if !preview.description.isEmpty {
+                            Text(preview.description)
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(2)
+                        }
+                    }
                 }
             }
 
             Spacer()
 
-            // 削除ボタン（× で閉じたら同じ URL のカードを再表示しない）
+            // 削除ボタン
             Button {
                 linkPreview = nil
-                detectedURL = nil   // ボタン・自動フェッチの再トリガーを抑制
+                detectedURL = nil
             } label: {
                 Image(systemName: "xmark.circle.fill")
                     .font(.system(size: 18))

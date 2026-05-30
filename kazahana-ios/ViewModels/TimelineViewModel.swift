@@ -15,6 +15,11 @@ final class TimelineViewModel {
     var isRefreshing: Bool = false
     var errorMessage: String? = nil
 
+    /// 既読位置マーカー: この URI の直前に「ここまで読んだ」区切りを表示
+    var readMarkerPostURI: String? = nil
+    /// ポーリング前に保存しておいた先頭投稿の URI
+    private var readingPositionURI: String? = nil
+
     // フィード
     var currentFeed: FeedSource = .following
     var savedFeeds: [GeneratorView] = []
@@ -130,7 +135,7 @@ final class TimelineViewModel {
         isLoading = false
     }
 
-    /// Pull-to-Refresh
+    /// Pull-to-Refresh（手動リフレッシュ時は既読マーカーをクリア）
     @MainActor
     func refresh() async {
         guard !isRefreshing else { return }
@@ -138,6 +143,7 @@ final class TimelineViewModel {
         errorMessage = nil
         cursor = nil
         hasMore = true
+        clearReadMarker()
 
         do {
             let response = try await fetchFeed(cursor: nil)
@@ -183,6 +189,19 @@ final class TimelineViewModel {
         posts.removeAll { $0.post.uri == uri }
     }
 
+    /// 既読位置マーカーをクリアする（ユーザが手動リフレッシュした時）
+    @MainActor
+    func clearReadMarker() {
+        readMarkerPostURI = nil
+        readingPositionURI = nil
+    }
+
+    /// 先頭投稿の URI を既読位置として記録する（ポーリング前に呼ばれる）
+    @MainActor
+    func saveReadingPosition() {
+        readingPositionURI = posts.first?.post.uri
+    }
+
     // MARK: - ポーリング
 
     /// 自動更新ポーリングを開始する（指定間隔で refresh を繰り返す）
@@ -193,8 +212,40 @@ final class TimelineViewModel {
             while !Task.isCancelled {
                 try? await Task.sleep(for: .seconds(intervalSeconds))
                 guard !Task.isCancelled, let self else { break }
-                await self.refresh()
+                await self.pollForNewPosts()
             }
+        }
+    }
+
+    /// ポーリング: 新投稿を先頭に追加し、既読マーカーを設置する
+    @MainActor
+    private func pollForNewPosts() async {
+        do {
+            let response = try await fetchFeed(cursor: nil)
+            let newPosts = filterAndProcessPosts(response.feed)
+            guard !newPosts.isEmpty else { return }
+
+            // 既存先頭投稿の URI（マーカー位置の基準）
+            let previousTopURI = readingPositionURI ?? posts.first?.post.uri
+
+            // 既存に無い新規投稿のみ抽出
+            let existingURIs = Set(posts.map { $0.post.uri })
+            let freshPosts = newPosts.filter { !existingURIs.contains($0.post.uri) }
+
+            guard !freshPosts.isEmpty else { return }
+
+            // 新規投稿を先頭に追加
+            posts = newPosts
+
+            // 既読マーカーを設置（前回の先頭投稿の位置に）
+            if let prevURI = previousTopURI, posts.contains(where: { $0.post.uri == prevURI }) {
+                readMarkerPostURI = prevURI
+            }
+
+            cursor = response.cursor
+            hasMore = response.cursor != nil
+        } catch {
+            // ポーリングエラーはサイレント
         }
     }
 

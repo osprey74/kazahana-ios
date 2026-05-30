@@ -97,7 +97,8 @@ final class ShareATProtoClient {
             uri: url.absoluteString,
             title: title,
             description: description,
-            thumb: thumbBlob
+            thumb: thumbBlob,
+            associatedRefs: nil
         )
     }
 

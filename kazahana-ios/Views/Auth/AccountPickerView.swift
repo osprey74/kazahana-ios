@@ -7,6 +7,9 @@ import SwiftUI
 struct AccountPickerView: View {
 
     @Environment(AuthViewModel.self) private var authVM
+    @Environment(\.dismiss) private var dismiss
+    /// sheet として表示されている場合に true にすると閉じるボタンを表示
+    var showCloseButton: Bool = false
     @State private var showLogin = false
     @State private var removeTarget: Session? = nil
 
@@ -35,7 +38,16 @@ struct AccountPickerView: View {
                 }
             }
             .listStyle(.insetGrouped)
-            .toolbar(.hidden, for: .navigationBar)
+            .toolbar(showCloseButton ? .visible : .hidden, for: .navigationBar)
+            .toolbar {
+                if showCloseButton {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button(String(localized: "common.close")) {
+                            dismiss()
+                        }
+                    }
+                }
+            }
             .safeAreaInset(edge: .top) {
                 VStack(spacing: 12) {
                     Image("AppLogo")

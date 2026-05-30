@@ -24,6 +24,18 @@ struct ContentView: View {
 
 // MARK: - メインタブ画面
 
+/// macOS メニューバーからのタブ切替コマンドを中継する
+@Observable
+final class MenuCommandRelay {
+    static let shared = MenuCommandRelay()
+    /// 切替先タブと一意 ID のペア（ID により同じタブへの連続切替も検出可能）
+    var tabCommand: (tab: MainTabView.Tab, id: UUID)? = nil
+
+    func switchTo(_ tab: MainTabView.Tab) {
+        tabCommand = (tab: tab, id: UUID())
+    }
+}
+
 struct MainTabView: View {
 
     @Environment(AuthViewModel.self) private var authVM
@@ -46,18 +58,21 @@ struct MainTabView: View {
     var body: some View {
         TabView(selection: $selectedTab) {
             TimelineView(client: client)
+                .desktopContent()
                 .tabItem {
                     Label(String(localized: "tab.home"), systemImage: "house")
                 }
                 .tag(Tab.home)
 
             SearchView()
+                .desktopContent()
                 .tabItem {
                     Label(String(localized: "tab.search"), systemImage: "magnifyingglass")
                 }
                 .tag(Tab.search)
 
             NotificationListView()
+                .desktopContent()
                 .tabItem {
                     Label(String(localized: "tab.notifications"), systemImage: "bell")
                 }
@@ -66,6 +81,7 @@ struct MainTabView: View {
             ConversationListView(onUnreadCountChanged: { count in
                 dmUnreadCount = count
             })
+                .desktopContent()
                 .tabItem {
                     Label(String(localized: "tab.messages"), systemImage: "envelope")
                 }
@@ -74,13 +90,19 @@ struct MainTabView: View {
 
             // 自分のプロフィール
             selfProfileView
+                .desktopContent()
                 .tabItem {
                     Label(String(localized: "tab.profile"), systemImage: "person.circle")
                 }
                 .tag(Tab.profile)
         }
+        #if targetEnvironment(macCatalyst)
+        // macOS: タブバーをサイドバー化せず下部タブバーを維持
+        .environment(\.horizontalSizeClass, .compact)
+        #else
         // iPad でも iPhone と同様に下部タブバーを表示するため compact に固定
         .environment(\.horizontalSizeClass, .compact)
+        #endif
         // ディープリンクでプロフィール遷移（home タブに表示）
         .sheet(item: Binding(
             get: { deepLinkProfileActor.map { IdentifiableString(value: $0) } },
@@ -140,6 +162,21 @@ struct MainTabView: View {
                 await MainActor.run { selectedTab = .notifications }
             }
         }
+        // macOS: メニューバーからのタブ切替（MenuCommandRelay 経由）
+        // Catalyst では SwiftUI の TabView selection 変更だけではタブバー UI が
+        // 同期しないため、UITabBarController を先に直接操作してから SwiftUI 状態を遅延更新する
+        .onChange(of: MenuCommandRelay.shared.tabCommand?.id) { _, _ in
+            guard let command = MenuCommandRelay.shared.tabCommand else { return }
+            let target = command.tab
+            let targetIndex = [Tab.home, .search, .notifications, .messages, .profile]
+                .firstIndex(of: target) ?? 0
+            // 1. UITabBarController を直接操作（タブバー UI + 表示コンテンツを即時切替）
+            Self.setTabBarSelectedIndex(targetIndex)
+            // 2. SwiftUI の状態を遅延更新（UIKit の変更が確定した後に同期）
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                selectedTab = target
+            }
+        }
         // バッジをリセット（アプリ起動時）
         .task {
             PushNotificationService.shared.resetBadge()
@@ -196,6 +233,20 @@ struct MainTabView: View {
         } else {
             PlaceholderView(title: String(localized: "tab.profile"), icon: "person.circle")
         }
+    }
+
+    /// UITabBarController を探してプログラマティックにタブを選択する
+    static func setTabBarSelectedIndex(_ index: Int) {
+        guard let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+              let root = scene.windows.first?.rootViewController else { return }
+        func find(in vc: UIViewController?) -> UITabBarController? {
+            if let tbc = vc as? UITabBarController { return tbc }
+            for child in vc?.children ?? [] {
+                if let found = find(in: child) { return found }
+            }
+            return vc?.presentedViewController.flatMap { find(in: $0) }
+        }
+        find(in: root)?.selectedIndex = index
     }
 }
 
@@ -255,6 +306,21 @@ struct PlaceholderView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .navigationTitle(title)
+    }
+}
+
+// MARK: - Desktop コンテンツ幅制約
+
+private extension View {
+    /// macOS Catalyst: コンテンツ幅を最大600pxに制約し中央揃え（Desktop版準拠）
+    /// iOS: そのまま表示
+    func desktopContent() -> some View {
+        #if targetEnvironment(macCatalyst)
+        self.frame(maxWidth: 600)
+            .frame(maxWidth: .infinity)
+        #else
+        self
+        #endif
     }
 }
 
