@@ -399,7 +399,7 @@
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = "Share​Extension​/​Share​Extension​.entitlements";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 13;
+				CURRENT_PROJECT_VERSION = 14;
 				DEVELOPMENT_TEAM = 9L6A9KDH5P;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Share​Extension/Info.plist";
@@ -430,7 +430,7 @@
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = "Share​Extension​/​Share​Extension​.entitlements";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 13;
+				CURRENT_PROJECT_VERSION = 14;
 				DEVELOPMENT_TEAM = 9L6A9KDH5P;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Share​Extension/Info.plist";
@@ -584,7 +584,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = "kazahana​-ios​/kazahana​-ios​.entitlements";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 13;
+				CURRENT_PROJECT_VERSION = 14;
 				DEVELOPMENT_TEAM = 9L6A9KDH5P;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -620,7 +620,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = "kazahana​-ios​/kazahana​-ios​.entitlements";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 13;
+				CURRENT_PROJECT_VERSION = 14;
 				DEVELOPMENT_TEAM = 9L6A9KDH5P;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
