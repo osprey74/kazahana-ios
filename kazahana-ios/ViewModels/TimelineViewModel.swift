@@ -43,6 +43,9 @@ final class TimelineViewModel {
     private let feedService: FeedService
     private let client: ATProtoClient
 
+    /// 避難誘導 ViewModel（外部から設定。nil なら避難誘導転送を行わない）
+    var evacuationVM: EvacuationViewModel?
+
     // MARK: - Init
 
     init(client: ATProtoClient) {
@@ -291,6 +294,9 @@ final class TimelineViewModel {
             let key = BsafService.duplicateKey(parsed)
             let entry = (uri: feedPost.post.uri, handle: feedPost.post.author.handle)
             groups[key, default: []].append(entry)
+
+            // 避難誘導 ViewModel にも転送（bsaf-kikikuru-bot の投稿を検知）
+            evacuationVM?.processPost(tags: parsed)
         }
 
         // 先頭が primary、残りは非表示

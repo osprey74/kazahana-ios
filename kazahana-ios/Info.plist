@@ -18,6 +18,8 @@
 	</array>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>投稿に含まれる画像・動画を写真ライブラリに保存するために使用します。</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>最寄りの避難所を検索し、避難誘導を行うために使用します。</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>

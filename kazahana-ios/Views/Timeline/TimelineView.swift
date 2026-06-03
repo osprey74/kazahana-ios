@@ -8,6 +8,7 @@ struct TimelineView: View {
 
     @Environment(AuthViewModel.self) private var authVM
     @Environment(AppSettings.self) private var settings
+    @Environment(EvacuationViewModel.self) private var evacuationVM: EvacuationViewModel?
     @State private var viewModel: TimelineViewModel
     @State private var showCompose: Bool = false
     @State private var replyToPost: PostView? = nil
@@ -199,6 +200,8 @@ struct TimelineView: View {
             }
         }
         .task {
+            // 避難誘導 ViewModel を接続（BSAF タグ転送用）
+            viewModel.evacuationVM = evacuationVM
             await viewModel.loadInitial()
             await viewModel.loadSavedFeeds()
             let interval = settings.timelinePollingInterval
