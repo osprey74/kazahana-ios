@@ -26821,13 +26821,13 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "この情報は気象庁の危険度情報に基づく補助です。避難の判断は自治体の避難指示や公式情報をご確認ください。"
+            "value": "避難誘導機能は気象庁発令の危険度情報に基づき、国土地理院 指定緊急避難所のデータから最寄りの指定緊急避難所を掲出、避難誘導をサポートする事を目的としています。避難の判断は自治体の避難指示や公式情報をご確認ください。"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "This is supplementary information based on JMA hazard levels. Please check official evacuation orders for decisions."
+            "value": "The Evacuation Assist feature uses JMA hazard level information and GSI Designated Emergency Evacuation Site data to display the nearest designated emergency evacuation sites and support evacuation guidance. Please check official evacuation orders from local authorities for decisions."
           }
         }
       }
@@ -26853,13 +26853,13 @@
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "最新でない場合があります。最新情報は自治体にご確認ください。"
+            "value": "掲載する避難所の情報は最新で無い場合があります。最新情報は各自治体にご確認ください。"
           }
         },
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "May not be up to date. Check with local authorities for the latest."
+            "value": "Shelter information may not be up to date. Please check with your local government for the latest information."
           }
         }
       }
