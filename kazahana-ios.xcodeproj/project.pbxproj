@@ -53,7 +53,7 @@
 		C02EE7592F7F6FA100B135D2 /* HANDOFF-v1.1.0.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = "HANDOFF-v1.1.0.md"; sourceTree = "<group>"; };
 		C0365D4E2F6E520900700B14 /* Share​Extension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = "Share​Extension.appex"; sourceTree = BUILT_PRODUCTS_DIR; };
 		C060067A2F6A412F00EC6BCF /* tasks.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = tasks.md; sourceTree = "<group>"; };
-		C0D362142F6A388000E5A980 /* kazahana-ios.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "kazahana-ios.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		C0D362142F6A388000E5A980 /* kazahana.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = kazahana.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		C0D362232F6A388100E5A980 /* kazahana-iosTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "kazahana-iosTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		C0D3622D2F6A388100E5A980 /* kazahana-iosUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "kazahana-iosUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -161,7 +161,7 @@
 		C0D362152F6A388000E5A980 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				C0D362142F6A388000E5A980 /* kazahana-ios.app */,
+				C0D362142F6A388000E5A980 /* kazahana.app */,
 				C0D362232F6A388100E5A980 /* kazahana-iosTests.xctest */,
 				C0D3622D2F6A388100E5A980 /* kazahana-iosUITests.xctest */,
 				C0365D4E2F6E520900700B14 /* Share​Extension.appex */,
@@ -215,7 +215,7 @@
 			packageProductDependencies = (
 			);
 			productName = "kazahana-ios";
-			productReference = C0D362142F6A388000E5A980 /* kazahana-ios.app */;
+			productReference = C0D362142F6A388000E5A980 /* kazahana.app */;
 			productType = "com.apple.product-type.application";
 		};
 		C0D362222F6A388100E5A980 /* kazahana-iosTests */ = {

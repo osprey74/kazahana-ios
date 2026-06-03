@@ -4,6 +4,13 @@
 
 import Foundation
 
+// MARK: - 認証ステータス
+
+struct VerificationState: Codable {
+    let verifiedStatus: String?
+    let trustedVerifierStatus: String?
+}
+
 // MARK: - 基本プロフィール（投稿カード等で使用）
 
 struct ProfileViewBasic: Codable {
@@ -14,6 +21,7 @@ struct ProfileViewBasic: Codable {
     let viewer: ActorViewerState?
     let labels: [ContentLabel]?
     let createdAt: String?
+    let verification: VerificationState?
 
     /// 表示名（displayName があればそちら、なければ handle）
     var displayNameOrHandle: String {
@@ -38,6 +46,7 @@ struct ProfileView: Codable {
     let labels: [ContentLabel]?
     let createdAt: String?
     let pinnedPost: PinnedPost?
+    let verification: VerificationState?
 
     var displayNameOrHandle: String {
         let name = displayName ?? ""

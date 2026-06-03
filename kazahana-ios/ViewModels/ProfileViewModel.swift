@@ -386,7 +386,8 @@ final class ProfileViewModel {
             viewer: newViewer,
             labels: current.labels,
             createdAt: current.createdAt,
-            pinnedPost: current.pinnedPost
+            pinnedPost: current.pinnedPost,
+            verification: current.verification
         )
     }
 
@@ -429,7 +430,8 @@ final class ProfileViewModel {
             followersCount: current.followersCount, followsCount: current.followsCount,
             postsCount: current.postsCount, viewer: newViewer,
             labels: current.labels, createdAt: current.createdAt,
-            pinnedPost: current.pinnedPost
+            pinnedPost: current.pinnedPost,
+            verification: current.verification
         )
     }
 
@@ -472,7 +474,8 @@ final class ProfileViewModel {
             followersCount: current.followersCount, followsCount: current.followsCount,
             postsCount: current.postsCount, viewer: newViewer,
             labels: current.labels, createdAt: current.createdAt,
-            pinnedPost: current.pinnedPost
+            pinnedPost: current.pinnedPost,
+            verification: current.verification
         )
     }
 }

@@ -61,6 +61,7 @@ struct NotificationItemView: View {
                                     .font(.subheadline.weight(.semibold))
                                     .foregroundStyle(.primary)
                                     .lineLimit(1)
+                                VerificationBadge(profile: notification.author, size: 13)
                                 if isBotAccount(did: notification.author.did, labels: notification.author.labels) {
                                     BotBadge(size: 13)
                                 }

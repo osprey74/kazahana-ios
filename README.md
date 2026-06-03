@@ -26,7 +26,8 @@ Kazahana is designed as a **lightweight companion app** — not a full-featured 
 - **Posts** — Rich text display (mentions, links, hashtags), images, video, external link cards, quote posts
 - **Interactions** — Like, repost, quote post, reply with optimistic UI updates
 - **Thread view** — Parent chain, focused post with stats, replies list; stats tap to show user lists
-- **Notifications** — All notification types including like-via-repost and repost-via-repost
+- **Notifications** — All notification types including like-via-repost, repost-via-repost, and verified/unverified
+- **Verification Badges** — Bluesky verification marks and trusted verifier badges displayed next to display names
 - **Profile** — Author feed (posts/replies/media/likes tabs), pinned post, follow/unfollow, followers/following lists, in-profile search
 - **Search** — Actor search and post search with search history
 - **Compose** — New post, reply, and quote post; image (crop + ALT text) and video attachment; mention autocomplete; threadgate (reply restrictions) and postgate (quote restrictions); draft saving on cancel

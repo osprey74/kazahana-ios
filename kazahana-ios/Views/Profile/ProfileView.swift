@@ -311,6 +311,7 @@ struct ProfileScreenView: View {
                             .font(.subheadline)
                             .fontWeight(.semibold)
                             .lineLimit(1)
+                        VerificationBadge(profile: profile, size: 18)
                         if isBotAccount(did: profile.did, labels: profile.labels) {
                             BotBadge(size: 18)
                         }
@@ -592,6 +593,7 @@ struct ProfileHeaderView: View {
                         Text(profile.displayNameOrHandle)
                             .font(.title3)
                             .fontWeight(.bold)
+                        VerificationBadge(profile: profile, size: 18)
                         if isBotAccount(did: profile.did, labels: profile.labels) {
                             BotBadge(size: 18)
                         }

@@ -279,10 +279,14 @@ final class TimelineViewModel {
             return
         }
 
-        // type|value|time|target でグループ化
+        // 登録済み Bot の DID セットを構築
+        let registeredDids = Set(settings.bsafRegisteredBots.map { $0.definition.bot.did })
+
+        // type|value|time|target でグループ化（登録済み Bot の投稿のみ）
         var groups: [String: [(uri: String, handle: String)]] = [:]
         for feedPost in posts {
-            guard let tags = feedPost.post.record.tags,
+            guard registeredDids.contains(feedPost.post.author.did),
+                  let tags = feedPost.post.record.tags,
                   let parsed = BsafService.parseBsafTags(tags) else { continue }
             let key = BsafService.duplicateKey(parsed)
             let entry = (uri: feedPost.post.uri, handle: feedPost.post.author.handle)

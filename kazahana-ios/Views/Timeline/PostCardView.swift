@@ -59,9 +59,10 @@ struct PostCardView: View {
         ModerationService().moderatePost(post)
     }
 
-    /// BSAF タグのパース結果（BSAF 対応投稿のみ）
+    /// BSAF タグのパース結果（BSAF 有効 かつ 登録済み Bot の投稿のみ）
     private var bsafParsedTags: BsafParsedTags? {
         guard AppSettings.shared.bsafEnabled,
+              AppSettings.shared.findRegisteredBot(did: author.did) != nil,
               let tags = post.record.tags else { return nil }
         return BsafService.parseBsafTags(tags)
     }
@@ -379,6 +380,7 @@ struct PostCardView: View {
                     Text(author.displayNameOrHandle)
                         .font(.subheadline.weight(.semibold))
                         .lineLimit(1)
+                    VerificationBadge(profile: author, size: 14)
                     if isBotAccount(did: author.did, labels: author.labels) {
                         BotBadge(size: 14)
                     }

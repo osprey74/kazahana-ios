@@ -266,6 +266,7 @@ struct ActorRowView: View {
                         .font(.subheadline)
                         .fontWeight(.semibold)
                         .lineLimit(1)
+                    VerificationBadge(profile: actor, size: 14)
                     if isBotAccount(did: actor.did, labels: actor.labels) {
                         BotBadge(size: 14)
                     }

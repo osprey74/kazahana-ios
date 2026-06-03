@@ -48,6 +48,7 @@ struct NotificationListView: View {
     }
 
     /// 通知に対応する投稿 URI を返す（タップ遷移 & subjectPost 表示両用）
+    /// verified / unverified / follow は投稿に紐付かないため nil を返す
     private func notificationPostURI(_ notification: AppNotification, resolvedRepostURIs: [String: String]) -> String? {
         switch notification.reason {
         case "like", "repost":
@@ -57,6 +58,8 @@ struct NotificationListView: View {
             return notification.reasonSubject.flatMap { resolvedRepostURIs[$0] }
         case "reply", "mention", "quote":
             return notification.uri
+        case "follow", "verified", "unverified":
+            return nil
         default:
             return nil
         }
