@@ -420,15 +420,42 @@ struct SettingsView: View {
             }
 
             #if DEBUG
-            // デバッグ: ボット登録スキップで強制有効化
+            // デバッグ: モック Bot 登録で強制有効化
             if !settings.evacuationEnabled {
                 Button {
-                    settings.evacuationEnabled = true
+                    // モック bsaf-kikikuru-bot 定義を登録
+                    let mockDef = BsafBotDefinition(
+                        bsafSchema: "bsaf-bot-v1",
+                        updatedAt: ISO8601DateFormatter().string(from: Date()),
+                        selfUrl: AppSettings.kikikuruBotDefinitionUrl,
+                        bot: BsafBotInfo(
+                            handle: "bsaf-kikikuru-bot.bsky.social",
+                            did: "did:plc:debug-kikikuru-bot",
+                            name: "bsaf-kikikuru-bot",
+                            description: "気象庁キキクル（危険度分布）の情報を BSAF 形式で配信する Bot（デバッグ用モック）",
+                            source: "jma",
+                            sourceUrl: nil
+                        ),
+                        filters: [
+                            BsafFilter(tag: "target", label: "対象地域", options:
+                                Prefecture.allCases.map { BsafFilterOption(value: $0.rawValue, label: $0.displayName) }
+                            ),
+                            BsafFilter(tag: "value", label: "レベル", options: [
+                                BsafFilterOption(value: "level3", label: "レベル3（警報級）"),
+                                BsafFilterOption(value: "level4", label: "レベル4（危険）"),
+                                BsafFilterOption(value: "level5", label: "レベル5（特別警報級）"),
+                            ])
+                        ]
+                    )
+                    if settings.findRegisteredBot(did: mockDef.bot.did) == nil {
+                        settings.registerBot(mockDef)
+                    }
                     settings.bsafEnabled = true
+                    settings.evacuationEnabled = true
                     settings.evacuationPrefectureOverride = "jp-tokyo"
                     evacuationBotError = nil
                 } label: {
-                    Label("Debug: Force Enable (skip bot)", systemImage: "forward.fill")
+                    Label("Debug: Force Enable (mock bot)", systemImage: "forward.fill")
                 }
                 .foregroundStyle(.purple)
             }

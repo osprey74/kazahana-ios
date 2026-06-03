@@ -236,7 +236,7 @@ final class AppSettings {
     // MARK: - 避難誘導機能設定
 
     /// bsaf-kikikuru-bot の BSAF Bot Definition JSON URL
-    static let kikikuruBotDefinitionUrl = "https://github.com/osprey74/bsaf-kikikuru-bot/blob/main/bsaf-bot.json"
+    static let kikikuruBotDefinitionUrl = "https://raw.githubusercontent.com/osprey74/bsaf-kikikuru-bot/main/bot-definition.json"
 
     /// 避難誘導機能の有効/無効（デフォルト false）
     var evacuationEnabled: Bool {
