@@ -106,7 +106,7 @@ HAZARD_HEADER_KEYWORDS = {
 }
 
 
-def detect_hazard_columns(headers: list[str]) -> dict[str, int]:
+def detect_hazard_columns(headers):
     """ヘッダー行から災害種別列のインデックスを自動検出"""
     mapping = {}
     for idx, header in enumerate(headers):
@@ -116,12 +116,12 @@ def detect_hazard_columns(headers: list[str]) -> dict[str, int]:
     return mapping
 
 
-def to_bool(val: str) -> bool:
+def to_bool(val):
     """CSV の値を bool に変換（"1", "○" 等 → True）"""
     return val.strip() in ("1", "○", "true", "True", "TRUE")
 
 
-def detect_encoding(filepath: str) -> str:
+def detect_encoding(filepath):
     """ファイルのエンコーディングを推定"""
     for enc in ["utf-8-sig", "utf-8", "shift_jis", "cp932"]:
         try:
@@ -133,7 +133,7 @@ def detect_encoding(filepath: str) -> str:
     return "utf-8"
 
 
-def detect_prefecture_column(headers: list[str]) -> int | None:
+def detect_prefecture_column(headers):
     """都道府県列を自動検出"""
     for idx, h in enumerate(headers):
         if "都道府県" in h:
@@ -141,7 +141,29 @@ def detect_prefecture_column(headers: list[str]) -> int | None:
     return None
 
 
-def detect_name_column(headers: list[str]) -> int | None:
+def extract_prefecture_name(value):
+    """「北海道札幌市」→「北海道」、「東京都千代田区」→「東京都」のように都道府県名を抽出"""
+    # 「京都府」は「京都」で切れないよう先にチェック
+    if value.startswith("京都府"):
+        return "京都府"
+    import re
+    m = re.match(r'^(.+?[都道府県])', value)
+    if m:
+        return m.group(1)
+    if value.startswith("北海道"):
+        return "北海道"
+    return value
+
+
+def detect_id_column(headers):
+    """共通ID列を自動検出"""
+    for idx, h in enumerate(headers):
+        if "共通ID" in h or "共通ＩＤ" in h:
+            return idx
+    return None
+
+
+def detect_name_column(headers):
     """施設名列を自動検出"""
     for idx, h in enumerate(headers):
         if "施設" in h or "場所" in h or "名称" in h:
@@ -149,7 +171,7 @@ def detect_name_column(headers: list[str]) -> int | None:
     return None
 
 
-def detect_coord_columns(headers: list[str]) -> tuple[int | None, int | None]:
+def detect_coord_columns(headers):
     """緯度・経度列を自動検出"""
     lat_col = None
     lng_col = None
@@ -161,7 +183,7 @@ def detect_coord_columns(headers: list[str]) -> tuple[int | None, int | None]:
     return lat_col, lng_col
 
 
-def convert(input_path: str, output_path: str):
+def convert(input_path, output_path):
     encoding = detect_encoding(input_path)
     print(f"Detected encoding: {encoding}")
 
@@ -170,6 +192,7 @@ def convert(input_path: str, output_path: str):
         headers = next(reader)
 
     # 列の自動検出
+    id_col = detect_id_column(headers)
     pref_col = detect_prefecture_column(headers)
     name_col = detect_name_column(headers)
     lat_col, lng_col = detect_coord_columns(headers)
@@ -200,7 +223,8 @@ def convert(input_path: str, output_path: str):
 
         for row_num, row in enumerate(reader, start=2):
             try:
-                pref_name = row[pref_col].strip()
+                pref_raw = row[pref_col].strip()
+                pref_name = extract_prefecture_name(pref_raw)
                 pref_code = PREFECTURE_MAP.get(pref_name)
                 if not pref_code:
                     skipped += 1
@@ -228,13 +252,29 @@ def convert(input_path: str, output_path: str):
                     else:
                         hazards[hazard_key] = False
 
+                # 共通IDがあればそれを使う、なければ連番
+                shelter_id = row[id_col].strip() if id_col is not None and id_col < len(row) else f"{pref_code}-{row_num}"
+                # hazards をビットマスクに変換
+                # flood=1, landslide=2, stormSurge=4, earthquake=8,
+                # tsunami=16, fire=32, inlandFlood=64, volcano=128
+                hm = 0
+                if hazards.get("flood"):       hm |= 1
+                if hazards.get("landslide"):   hm |= 2
+                if hazards.get("stormSurge"):  hm |= 4
+                if hazards.get("earthquake"):  hm |= 8
+                if hazards.get("tsunami"):     hm |= 16
+                if hazards.get("fire"):        hm |= 32
+                if hazards.get("inlandFlood"): hm |= 64
+                if hazards.get("volcano"):     hm |= 128
+
+                # 短縮キー + 座標5桁丸め + ビットマスク
                 shelter = {
-                    "id": f"{pref_code}-{row_num}",
-                    "name": name,
-                    "lat": lat,
-                    "lng": lng,
-                    "prefecture": pref_code,
-                    "hazards": hazards,
+                    "i": shelter_id,
+                    "n": name,
+                    "a": round(lat, 5),
+                    "o": round(lng, 5),
+                    "p": pref_code,
+                    "h": hm,
                 }
                 shelters.append(shelter)
 
@@ -242,22 +282,32 @@ def convert(input_path: str, output_path: str):
                 print(f"WARNING: Skipping row {row_num}: {e}")
                 skipped += 1
 
-    # 出力
+    # 出力（raw deflate 圧縮 — Apple の COMPRESSION_ZLIB / NSData.decompressed(using: .zlib) 互換）
+    import zlib
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
-    with open(output_path, "w", encoding="utf-8") as f:
-        json.dump(shelters, f, ensure_ascii=False, separators=(",", ":"))
+    json_bytes = json.dumps(shelters, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+    json_size = len(json_bytes)
 
-    file_size = os.path.getsize(output_path)
+    # wbits=-15 で raw deflate（zlib/gzip ヘッダーなし）を出力
+    compressor = zlib.compressobj(9, zlib.DEFLATED, -15)
+    compressed = compressor.compress(json_bytes) + compressor.flush()
+
+    out_path = output_path
+    with open(out_path, "wb") as f:
+        f.write(compressed)
+
+    file_size = os.path.getsize(out_path)
     pref_counts = {}
     for s in shelters:
-        pref_counts[s["prefecture"]] = pref_counts.get(s["prefecture"], 0) + 1
+        pref_counts[s["p"]] = pref_counts.get(s["p"], 0) + 1
 
     print(f"\nConversion complete:")
     print(f"  Total shelters: {len(shelters)}")
     print(f"  Skipped rows: {skipped}")
     print(f"  Prefectures: {len(pref_counts)}")
-    print(f"  Output size: {file_size / 1024 / 1024:.2f} MB")
-    print(f"  Output: {output_path}")
+    print(f"  JSON size: {json_size / 1024 / 1024:.2f} MB")
+    print(f"  Compressed: {file_size / 1024 / 1024:.2f} MB ({json_size / file_size:.1f}x compression)")
+    print(f"  Output: {out_path}")
 
     if len(pref_counts) < 47:
         print(f"\n  WARNING: Only {len(pref_counts)}/47 prefectures found!")
@@ -274,7 +324,7 @@ if __name__ == "__main__":
 
     input_path = sys.argv[1]
     script_dir = Path(__file__).parent
-    default_output = script_dir.parent / "kazahana-ios" / "Resources" / "shelters.json"
+    default_output = script_dir.parent / "kazahana-ios" / "Resources" / "shelters.zlib"
     output_path = sys.argv[2] if len(sys.argv) > 2 else str(default_output)
 
     convert(input_path, output_path)

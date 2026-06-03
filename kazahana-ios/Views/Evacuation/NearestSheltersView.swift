@@ -8,7 +8,7 @@ import CoreLocation
 struct NearestSheltersView: View {
 
     @Environment(AppSettings.self) private var settings
-    @Environment(LocationService.self) private var locationService
+    @Environment(LocationService.self) private var locationService: LocationService?
 
     /// 都道府県別避難所インデックス（呼び出し元から渡す）
     let shelterIndex: [String: [Shelter]]
@@ -34,13 +34,13 @@ struct NearestSheltersView: View {
             }
 
             // 位置情報の状態
-            if !locationService.isAuthorized {
+            if locationService?.isAuthorized != true {
                 Section {
                     VStack(alignment: .leading, spacing: 8) {
                         Label(String(localized: "evacuation.locationRequired"),
                               systemImage: "location.slash")
                         Button(String(localized: "evacuation.requestLocation")) {
-                            locationService.requestPermission()
+                            locationService?.requestPermission()
                         }
                         .buttonStyle(.borderedProminent)
                     }
@@ -53,7 +53,7 @@ struct NearestSheltersView: View {
                 Section {
                     HStack { Spacer(); ProgressView(); Spacer() }
                 }
-            } else if results.isEmpty && locationService.currentLocation != nil {
+            } else if results.isEmpty && (locationService?.currentLocation != nil || settings.evacuationPrefectureOverride != nil) {
                 Section {
                     ContentUnavailableView {
                         Label(String(localized: "evacuation.noSheltersFound"),
@@ -96,15 +96,17 @@ struct NearestSheltersView: View {
         .navigationTitle(String(localized: "evacuation.nearestShelters"))
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
-            if locationService.isAuthorized {
+            if let locationService, locationService.isAuthorized {
                 locationService.requestLocation()
             }
-        }
-        .onChange(of: locationService.currentLocation?.latitude) {
+            // 位置情報なしでも都道府県手動設定があれば検索実行
             search()
         }
-        .onChange(of: locationService.authorizationStatus) {
-            if locationService.isAuthorized {
+        .onChange(of: locationService?.currentLocation?.latitude) {
+            search()
+        }
+        .onChange(of: locationService?.authorizationStatus) {
+            if let locationService, locationService.isAuthorized {
                 locationService.requestLocation()
             }
         }
@@ -113,36 +115,42 @@ struct NearestSheltersView: View {
     // MARK: - 検索
 
     private func search() {
-        guard let location = locationService.currentLocation else { return }
         isSearching = true
 
         let prefecture = settings.evacuationPrefectureOverride
             ?? resolvedPrefecture
-
         let hazardFilters = selectedHazard.keyPaths
 
-        if let prefecture {
-            results = ShelterService.findNearest(
-                shelterIndex: shelterIndex,
-                prefecture: prefecture,
-                from: location,
-                hazardFilters: hazardFilters,
-                limit: 10
-            )
-        } else {
-            // 都道府県不明時: 全検索（遅い可能性あり）
-            results = ShelterService.findNearestAll(
-                shelterIndex: shelterIndex,
-                from: location,
-                hazardFilters: hazardFilters,
-                limit: 10
-            )
-            // バックグラウンドで都道府県を解決
-            Task {
-                if let pref = await ShelterService.resolvePrefecture(from: location) {
-                    await MainActor.run { resolvedPrefecture = pref }
+        if let location = locationService?.currentLocation {
+            // 位置情報あり: 距離順で検索
+            if let prefecture {
+                results = ShelterService.findNearest(
+                    shelterIndex: shelterIndex,
+                    prefecture: prefecture,
+                    from: location,
+                    hazardFilters: hazardFilters,
+                    limit: 10
+                )
+            } else {
+                results = ShelterService.findNearestAll(
+                    shelterIndex: shelterIndex,
+                    from: location,
+                    hazardFilters: hazardFilters,
+                    limit: 10
+                )
+                Task {
+                    if let pref = await ShelterService.resolvePrefecture(from: location) {
+                        await MainActor.run { resolvedPrefecture = pref }
+                    }
                 }
             }
+        } else if let prefecture {
+            // 位置情報なし・都道府県手動設定あり: 該当都道府県の避難所を先頭から表示
+            let shelters = shelterIndex[prefecture] ?? []
+            results = shelters
+                .filter { shelter in hazardFilters.contains { shelter.hazards[keyPath: $0] } }
+                .prefix(20)
+                .map { ShelterWithDistance(shelter: $0, distance: 0) }
         }
 
         isSearching = false

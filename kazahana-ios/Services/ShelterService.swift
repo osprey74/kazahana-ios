@@ -10,13 +10,59 @@ struct ShelterService {
 
     // MARK: - データ読み込み
 
-    /// Bundle 同梱の避難所データを読み込み、都道府県別にインデックスして返す
+    /// Bundle 同梱の避難所データ（zlib 圧縮 + compact JSON）を読み込み、都道府県別にインデックスして返す
     static func loadShelters() -> [String: [Shelter]] {
-        guard let url = Bundle.main.url(forResource: "shelters", withExtension: "json"),
-              let data = try? Data(contentsOf: url),
-              let shelters = try? JSONDecoder().decode([Shelter].self, from: data)
-        else { return [:] }
-        return Dictionary(grouping: shelters, by: \.prefecture)
+        guard let url = Bundle.main.url(forResource: "shelters", withExtension: "zlib") else {
+            print("[ShelterService] shelters.zlib not found in bundle")
+            return [:]
+        }
+        guard let compressed = try? Data(contentsOf: url) else {
+            print("[ShelterService] Failed to read shelters.zlib")
+            return [:]
+        }
+        print("[ShelterService] Compressed data: \(compressed.count) bytes")
+        guard let decompressed = try? (compressed as NSData).decompressed(using: .zlib) as Data else {
+            print("[ShelterService] Failed to decompress zlib data")
+            return [:]
+        }
+        print("[ShelterService] Decompressed data: \(decompressed.count) bytes")
+        guard let compactShelters = try? JSONDecoder().decode([CompactShelter].self, from: decompressed) else {
+            print("[ShelterService] Failed to decode JSON")
+            // デバッグ: 先頭を表示
+            let preview = String(data: decompressed.prefix(200), encoding: .utf8) ?? "non-utf8"
+            print("[ShelterService] JSON preview: \(preview)")
+            return [:]
+        }
+        let shelters = compactShelters.map { $0.toShelter() }
+        let index = Dictionary(grouping: shelters, by: \.prefecture)
+        print("[ShelterService] Loaded \(shelters.count) shelters in \(index.count) prefectures")
+        return index
+    }
+
+    /// compact JSON 形式（短縮キー + hazard ビットマスク）
+    private struct CompactShelter: Codable {
+        let i: String   // id
+        let n: String   // name
+        let a: Double   // lat
+        let o: Double   // lng
+        let p: String   // prefecture
+        let h: Int      // hazards bitmask
+
+        func toShelter() -> Shelter {
+            Shelter(
+                id: i, name: n, lat: a, lng: o, prefecture: p,
+                hazards: ShelterHazards(
+                    flood:       h & 1   != 0,
+                    landslide:   h & 2   != 0,
+                    stormSurge:  h & 4   != 0,
+                    earthquake:  h & 8   != 0,
+                    tsunami:     h & 16  != 0,
+                    fire:        h & 32  != 0,
+                    inlandFlood: h & 64  != 0,
+                    volcano:     h & 128 != 0
+                )
+            )
+        }
     }
 
     // MARK: - 最近傍探索
