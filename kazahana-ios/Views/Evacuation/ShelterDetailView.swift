@@ -15,6 +15,7 @@ struct ShelterDetailView: View {
     @Environment(AppSettings.self) private var settings
     @State private var isOnline = true
     @State private var pathMonitor: NWPathMonitor?
+    @State private var showCompassNav = false
 
     var body: some View {
         List {
@@ -61,10 +62,10 @@ struct ShelterDetailView: View {
                 }
                 .disabled(!isOnline)
 
-                // 簡易コンパスナビ
+                // 簡易コンパスナビ（フルスクリーン表示 — スワイプダウンで閉じない）
                 #if !targetEnvironment(macCatalyst)
-                NavigationLink {
-                    CompassNavView(shelter: shelter)
+                Button {
+                    showCompassNav = true
                 } label: {
                     HStack {
                         Label(String(localized: "evacuation.compassNav"), systemImage: "location.north.fill")
@@ -107,6 +108,18 @@ struct ShelterDetailView: View {
         }
         .navigationTitle(shelter.name)
         .navigationBarTitleDisplayMode(.inline)
+        .fullScreenCover(isPresented: $showCompassNav) {
+            NavigationStack {
+                CompassNavView(shelter: shelter)
+                    .toolbar {
+                        ToolbarItem(placement: .cancellationAction) {
+                            Button(String(localized: "evacuation.closeCompass")) {
+                                showCompassNav = false
+                            }
+                        }
+                    }
+            }
+        }
         .onAppear { startNetworkMonitor() }
         .onDisappear { stopNetworkMonitor() }
     }

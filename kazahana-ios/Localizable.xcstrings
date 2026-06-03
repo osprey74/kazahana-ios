@@ -26991,6 +26991,22 @@
           }
         }
       }
+    },
+    "evacuation.closeCompass": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ナビを閉じる"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Close Nav"
+          }
+        }
+      }
     }
   },
   "version": "1.1"
