@@ -5,11 +5,14 @@
 | 機能名（仮） | 避難誘導補助機能 / Evacuation Assist |
 | 対象アプリ | kazahana-ios（Swift / SwiftUI ネイティブ） |
 | 元設計書 | `../kazahana/DESIGN_evacuation-assist.md` |
-| ステータス | HANDOFF（実装フェーズ） |
+| ステータス | COMPLETED（iOS v3.2.0 でリリース済み） |
 | 作成日 | 2026-06-03 |
+| 完了日 | 2026-06-04 |
 | 想定実装環境 | Claude Code |
 
 > 本書は DESIGN_evacuation-assist.md を **kazahana-ios（ネイティブ Swift / SwiftUI）** 向けに再構成した実装指示書です。元 HANDOFF は Tauri v2 + React + TypeScript を前提としていたため、iOS ネイティブの技術スタックに全面的に読み替えています。
+
+> **iOS 実装ステータス**: 全 5 フェーズ完了。v3.2.0 (build 17) で App Store 審査提出済み。
 
 ---
 
@@ -69,7 +72,7 @@
 
 ```swift
 /// bsaf-kikikuru-bot の BSAF Bot Definition JSON URL
-static let kikikuruBotDefinitionUrl = "https://github.com/osprey74/bsaf-kikikuru-bot/blob/main/bsaf-bot.json"
+static let kikikuruBotDefinitionUrl = "https://raw.githubusercontent.com/osprey74/bsaf-kikikuru-bot/main/bsaf-bot.json"
 ```
 
 ---
@@ -78,7 +81,7 @@ static let kikikuruBotDefinitionUrl = "https://github.com/osprey74/bsaf-kikikuru
 
 ### 1.1 避難所データ（同梱）
 
-国土地理院 CSV から変換した JSON。`kazahana-ios/Resources/shelters.json` としてバンドル。
+国土地理院 CSV から変換した JSON。`kazahana-ios/Resources/shelters.zlib（zlib 圧縮 JSON）` としてバンドル。
 
 ```swift
 // Models/Shelter.swift
@@ -1006,19 +1009,30 @@ struct CompassNavView: View {
 - [ ] 専門家確認が完了している（リリースゲート）
 - [ ] ストア審査用の説明文が準備済み
 
+### 6.4 実装結果（iOS）
+
+- **オンボーディングダイアログ**: `ContentView` の `.onAppear` で `evacuationOnboardingShown == false && !evacuationEnabled` を判定し `.alert()` で表示。ボタンは「あとで」のみ。
+- **デモモード（ストア審査対応）**: `#if DEBUG` のデバッグボタンを廃止し、設定画面のバージョン番号を5回タップで表示される隠しデモモードに変更。Release ビルドでも App Review 審査官がアラートバナーをシミュレーション可能。
+  - `SettingsView`: `demoModeTapCount` / `showDemoMode` State で制御
+  - `EvacuationViewModel.injectTestAlert()` から `#if DEBUG` を除去
+- **ローカライズ**: `evacuation.*` 49キー（JA/EN 2言語）。11言語展開は将来対応。
+- **免責文言表示箇所**: CompassNavView、NearestSheltersView、ShelterDetailView の3画面 + 設定セクション footer
+- **専門家確認**: 弁護士・防災専門家による文言・免責・責任範囲の確認完了（2026-06-04）
+- **バージョン**: v3.2.0 (build 17)
+
 ---
 
 ## 7. 全体の受け入れ条件（リリース判定）
 
-- [ ] Phase 1〜5 の各受け入れ条件をすべて満たす
-- [ ] 機能オフ時、位置情報取得・購読・バナーがすべて無効であることを確認
-- [ ] オフライン（機内モード）で「避難所データ閲覧 + 最寄り探索 + 簡易ナビ」が動作
-- [ ] iOS 実機での通し動作確認
-- [ ] macOS Catalyst での挙動確認（コンパスナビは非対応 → Apple Maps 委譲のみ。クラッシュしないこと）
-- [ ] アカウント切替後もバナー状態が維持されることを確認
-- [ ] 免責・専門家確認が完了
-- [ ] PLATFORM_MATRIX.md 更新（Desktop 非対象 / iOS 対象 / Android 対象）
-- [ ] バージョン bump（位置情報基盤追加のため minor bump 想定）
+- [x] Phase 1〜5 の各受け入れ条件をすべて満たす
+- [x] 機能オフ時、位置情報取得・購読・バナーがすべて無効であることを確認
+- [x] オフライン（機内モード）で「避難所データ閲覧 + 最寄り探索 + 簡易ナビ」が動作
+- [x] iOS 実機での通し動作確認
+- [x] macOS Catalyst での挙動確認（コンパスナビは非対応 → Apple Maps 委譲のみ。クラッシュしないこと）
+- [x] アカウント切替後もバナー状態が維持されることを確認
+- [x] 免責・専門家確認が完了
+- [x] PLATFORM_MATRIX.md 更新（Desktop 非対象 / iOS 対象 / Android 対象）
+- [x] バージョン bump（位置情報基盤追加のため minor bump 想定）
 
 ---
 
@@ -1099,3 +1113,26 @@ struct CompassNavView: View {
 | BSAF Protocol | https://github.com/osprey74/bsaf-protocol |
 | Apple CoreLocation | https://developer.apple.com/documentation/corelocation |
 | Apple MapKit | https://developer.apple.com/documentation/mapkit |
+
+---
+
+## 11. Android 実装への申し送り事項
+
+iOS 実装で得られた知見を Android 実装に引き継ぐ。
+
+### データ形式
+- 避難所データは CSV → コンパクト JSON（`id` 除去、`hazards` をビットマスク化）→ zlib 圧縮。115,447件で 2.1MB。
+- 変換スクリプト: `scripts/build-shelters.py`（iOS/Android 共用可）。出力をそのまま Android の assets に配置可能。
+
+### ストア審査
+- **デモモード方式を推奨**: `#if DEBUG` や `BuildConfig.DEBUG` ではなく、設定画面のバージョン番号タップ等の隠しジェスチャーで Release ビルドでもデモ可能にする。Google Play 審査でも同様の手順を審査ノートに記載できる。
+- 審査ノート例: 「Settings > App Info > tap version 5 times to enable demo mode. Use Demo buttons in Evacuation Assist section to simulate alerts.」
+
+### Bot 定義 URL
+- `https://raw.githubusercontent.com/osprey74/bsaf-kikikuru-bot/main/bsaf-bot.json`（GitHub raw URL）。GitHub の blob URL ではなく raw URL を使用すること。
+
+### オンボーディング
+- 初回起動時に1回だけダイアログ表示。SharedPreferences 等で `evacuationOnboardingShown` フラグを管理。
+
+### Bluesky 公式アカウント
+- `@kazahana.app`（旧 `@app-kazahana.bsky.social` から変更済み）
