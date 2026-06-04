@@ -1,6 +1,6 @@
 # kazahana-ios 開発タスク・進捗記録
 
-最終更新: 2026-05-10 (standard.site 長文投稿サービス連携・v2.3.0 リリース)
+最終更新: 2026-06-04 (避難誘導補助機能・v3.2.0)
 
 ---
 
@@ -15,6 +15,7 @@
 - Phase 6 (UX補完・モデレーション強化): 自動メンション・DM リンク化・ハッシュタグ検索・ミュート/ブロック/リスト管理 完了
 - Phase 7 (マルチアカウント): 7/7 ✅ 完了（v1.1.0）
 - Phase 8 (standard.site 連携): 6/6 ✅ 完了（v2.3.0）
+- Phase 9 (避難誘導補助): 全5フェーズ ✅ 完了（v3.2.0）
 - App Store 準備: バージョン 1.1.0・Bundle ID 統一（Keychain/IAP/BGTask/CFBundleURLName）・プライバシーポリシー公開・審査用アカウント作成・v1.0 リリース完了 ✅
 
 ---
@@ -601,6 +602,41 @@
 - [x] **[I-4] SafariView ラッパ** — `Views/Common/SafariView.swift` 新規作成（`SFSafariViewController` の `UIViewControllerRepresentable` ラッパ、`.sheet` で表示）
 - [x] **[I-5] ローカライズ** — `Localizable.xcstrings` に4キー追加（`compose.longform.button` / `settings.longformServiceUrl` / `settings.longformServiceUrlDelete` / `settings.longformServiceUrlFooter`、JA/EN）
 - [x] **バージョン更新** — v2.3.0 (build 11)
+
+---
+
+## Phase 9: 避難誘導補助（Evacuation Assist）（2026-06-04）— 完了 ✅
+
+> ハンドオフ文書: `Documentation/HANDOFF-evacuation-assist.md`
+
+### 9-1: データ基盤・設定（Phase 1）— 完了 ✅
+- [x] **避難所データ変換** — 国土地理院 CSV → コンパクト JSON → zlib 圧縮（115,447件、2.1MB）
+- [x] **設定トグル** — `AppSettings.evacuationEnabled` / `evacuationPrefectureOverride` / `evacuationOnboardingShown`
+- [x] **bsaf-kikikuru-bot 自動登録** — 有効化時に確認ダイアログ → Bot 定義 fetch → BSAF 登録 + フォロー
+
+### 9-2: 位置情報・最寄り避難所・OS ナビ委譲（Phase 2）— 完了 ✅
+- [x] **LocationService** — CoreLocation ラッパ（位置・方位・認可ステータス）
+- [x] **ShelterService** — Haversine 距離計算、最寄り検索、方位角計算、都道府県判定
+- [x] **NearestSheltersView** — 災害種別フィルタ、位置情報要求、出典・免責表示
+- [x] **ShelterDetailView** — 避難所情報、対応災害種別、Apple Maps 委譲
+
+### 9-3: BSAF 連携・バナー（Phase 3）— 完了 ✅
+- [x] **EvacuationAlertService** — BSAF タグから災害カテゴリ・レベル判定
+- [x] **EvacuationViewModel** — バナー状態管理、アラート昇格・解除・タイムアウト
+- [x] **EvacuationBannerView** — レベル別色分け、複数アラート表示、タップで避難所一覧
+
+### 9-4: コンパスナビ・オフライン（Phase 4）— 完了 ✅
+- [x] **CompassNavView** — 方位角矢印、直線距離リアルタイム更新、キャリブレーション警告
+- [x] **macOS Catalyst 対応** — コンパス非対応時は Apple Maps 委譲のみ
+- [x] **オフライン完全動作** — 避難所データ同梱、通信不要
+
+### 9-5: 免責・審査・ローカライズ（Phase 5）— 完了 ✅
+- [x] **免責文言表示** — バナー近傍・設定画面・避難所詳細・コンパスナビに免責・出典・注記
+- [x] **ローカライズ** — `evacuation.*` 46キー × JA/EN
+- [x] **オンボーディングダイアログ** — 初回起動時に機能案内
+- [x] **専門家確認** — 弁護士・防災専門家による文言・免責・責任範囲の確認完了
+- [x] **NSLocationWhenInUseUsageDescription** — Info.plist に日英で記載
+- [x] **バージョン更新** — v3.2.0 (build 17)
 
 ---
 
