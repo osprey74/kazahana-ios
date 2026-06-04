@@ -35,6 +35,7 @@ Kazahana is designed as a **lightweight companion app** — not a full-featured 
 - **Content Moderation** — Label-based filtering (hide/warn/ignore), adult content toggle, post reporting
 - **Settings** — Theme, post language, auto-refresh interval, via attribution, Claude API key for ALT text generation
 - **Sharing** — Share any post via the iOS share sheet; open `kazahana://` deep links from other apps
+- **Evacuation Assist** — Nearest shelter search based on JMA hazard level information (bsaf-kikikuru-bot), compass-based offline navigation, alert banner with auto-detection via BSAF
 - **Background Refresh** — Periodic background notification polling with local push notifications
 
 ## Tech Stack

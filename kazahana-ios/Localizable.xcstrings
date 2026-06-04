@@ -27007,6 +27007,54 @@
           }
         }
       }
+    },
+    "evacuation.onboarding.title": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "避難誘導機能について"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "About Evacuation Assist"
+          }
+        }
+      }
+    },
+    "evacuation.onboarding.message": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "気象警報時に最寄りの避難所を案内する機能が利用できます。設定からいつでもオンにできます。"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A feature to guide you to the nearest shelter during weather warnings is available. You can enable it anytime in Settings."
+          }
+        }
+      }
+    },
+    "evacuation.onboarding.dismiss": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "あとで"
+          }
+        },
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Later"
+          }
+        }
+      }
     }
   },
   "version": "1.1"

@@ -22,6 +22,9 @@ struct ContentView: View {
     /// バナータップで避難所一覧を表示
     @State private var showEvacuationShelters = false
 
+    /// 避難誘導オンボーディングダイアログ
+    @State private var showEvacuationOnboarding = false
+
     var body: some View {
         Group {
             if authVM.isLoggedIn {
@@ -61,6 +64,14 @@ struct ContentView: View {
                     }
             }
         }
+        // 避難誘導オンボーディング（初回のみ表示）
+        .alert(String(localized: "evacuation.onboarding.title"), isPresented: $showEvacuationOnboarding) {
+            Button(String(localized: "evacuation.onboarding.dismiss")) {
+                settings.evacuationOnboardingShown = true
+            }
+        } message: {
+            Text(String(localized: "evacuation.onboarding.message"))
+        }
         // 避難誘導関連を environment で配布
         .environment(locationService)
         .environment(shelterStore)
@@ -75,6 +86,10 @@ struct ContentView: View {
         .onAppear {
             if settings.evacuationEnabled {
                 initializeEvacuationIfNeeded()
+            }
+            // 初回のみオンボーディングダイアログを表示
+            if !settings.evacuationOnboardingShown && !settings.evacuationEnabled {
+                showEvacuationOnboarding = true
             }
         }
         // フォアグラウンド復帰時にタイムアウト済みアラートを即座に除去
