@@ -10,11 +10,17 @@ struct SettingsView: View {
     @Environment(AuthViewModel.self) private var authVM
     @Environment(AppSettings.self) private var settings
     @Environment(\.dismiss) private var dismiss
+
+    @Environment(ShelterStore.self) private var shelterStore: ShelterStore?
+    @Environment(EvacuationViewModel.self) private var evacuationVM: EvacuationViewModel?
     @State private var showRestartAlert = false
     @State private var showRevokeApiKeyAlert = false
     @State private var iapService = IAPService.shared
     @State private var showAddAccount = false
     @State private var removeAccountTarget: Session? = nil
+    @State private var showEvacuationBotConfirm = false
+    @State private var evacuationBotRegistering = false
+    @State private var evacuationBotError: String? = nil
 
     var body: some View {
         @Bindable var settings = settings
@@ -191,6 +197,9 @@ struct SettingsView: View {
                     Text(String(localized: "bsaf.title"))
                 }
 
+                // MARK: - 避難誘導機能
+                evacuationSection
+
                 // MARK: - サポーターバッジ
                 Section {
                     // 有効期限表示
@@ -310,7 +319,7 @@ struct SettingsView: View {
                 // MARK: - アプリ情報
                 Section(String(localized: "settings.appInfo")) {
                     LabeledContent(String(localized: "settings.version"), value: appVersion)
-                    LabeledContent("Bluesky", value: "@app-kazahana.bsky.social")
+                    LabeledContent("Bluesky", value: "@kazahana.app")
                 }
             }
             .navigationTitle(String(localized: "settings.title"))
@@ -364,6 +373,195 @@ struct SettingsView: View {
         let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
         let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1"
         return "\(version) (\(build))"
+    }
+
+    // MARK: - 避難誘導セクション
+
+    @ViewBuilder
+    private var evacuationSection: some View {
+        Section {
+            Toggle(String(localized: "evacuation.enable"), isOn: Binding(
+                get: { settings.evacuationEnabled },
+                set: { newValue in
+                    if newValue {
+                        // bsaf-kikikuru-bot が未登録なら確認ダイアログを表示
+                        if !isKikikuruBotRegistered {
+                            showEvacuationBotConfirm = true
+                        } else {
+                            settings.evacuationEnabled = true
+                            settings.bsafEnabled = true
+                        }
+                    } else {
+                        settings.evacuationEnabled = false
+                    }
+                }
+            ))
+            .disabled(evacuationBotRegistering)
+
+            if settings.evacuationEnabled {
+                Picker(String(localized: "evacuation.prefectureOverride"),
+                       selection: Binding(
+                        get: { settings.evacuationPrefectureOverride },
+                        set: { settings.evacuationPrefectureOverride = $0 }
+                       )) {
+                    Text(String(localized: "evacuation.prefectureAuto")).tag(nil as String?)
+                    ForEach(Prefecture.allCases, id: \.self) { pref in
+                        Text(pref.displayName).tag(pref.rawValue as String?)
+                    }
+                }
+
+                NavigationLink {
+                    NearestSheltersView(shelterIndex: shelterStore?.index ?? [:])
+                        .environment(settings)
+                } label: {
+                    Label(String(localized: "evacuation.nearestShelters"),
+                          systemImage: "building.2")
+                }
+            }
+
+            #if DEBUG
+            // デバッグ: モック Bot 登録で強制有効化
+            if !settings.evacuationEnabled {
+                Button {
+                    // モック bsaf-kikikuru-bot 定義を登録
+                    let mockDef = BsafBotDefinition(
+                        bsafSchema: "bsaf-bot-v1",
+                        updatedAt: ISO8601DateFormatter().string(from: Date()),
+                        selfUrl: AppSettings.kikikuruBotDefinitionUrl,
+                        bot: BsafBotInfo(
+                            handle: "bsaf-kikikuru-bot.bsky.social",
+                            did: "did:plc:debug-kikikuru-bot",
+                            name: "bsaf-kikikuru-bot",
+                            description: "気象庁キキクル（危険度分布）の情報を BSAF 形式で配信する Bot（デバッグ用モック）",
+                            source: "jma",
+                            sourceUrl: nil
+                        ),
+                        filters: [
+                            BsafFilter(tag: "target", label: "対象地域", options:
+                                Prefecture.allCases.map { BsafFilterOption(value: $0.rawValue, label: $0.displayName) }
+                            ),
+                            BsafFilter(tag: "value", label: "レベル", options: [
+                                BsafFilterOption(value: "level3", label: "レベル3（警報級）"),
+                                BsafFilterOption(value: "level4", label: "レベル4（危険）"),
+                                BsafFilterOption(value: "level5", label: "レベル5（特別警報級）"),
+                            ])
+                        ]
+                    )
+                    if settings.findRegisteredBot(did: mockDef.bot.did) == nil {
+                        settings.registerBot(mockDef)
+                    }
+                    settings.bsafEnabled = true
+                    settings.evacuationEnabled = true
+                    settings.evacuationPrefectureOverride = "jp-tokyo"
+                    evacuationBotError = nil
+                } label: {
+                    Label("Debug: Force Enable (mock bot)", systemImage: "forward.fill")
+                }
+                .foregroundStyle(.purple)
+            }
+
+            // デバッグ: アラートシミュレーション
+            if let evacuationVM {
+                Button {
+                    evacuationVM.injectTestAlert(level: .level3)
+                } label: {
+                    Label("Debug: Level 3 Alert", systemImage: "ant")
+                }
+                .foregroundStyle(.orange)
+
+                Button {
+                    evacuationVM.injectTestAlert(level: .level4, type: "flood-warning")
+                } label: {
+                    Label("Debug: Level 4 Alert", systemImage: "ant.fill")
+                }
+                .foregroundStyle(.red)
+
+                Button {
+                    evacuationVM.injectTestAlert(level: .level5, type: "landslide-warning")
+                } label: {
+                    Label("Debug: Level 5 Alert", systemImage: "ant.circle.fill")
+                }
+                .foregroundStyle(.pink)
+
+                if evacuationVM.bannerVisible {
+                    Button(role: .destructive) {
+                        evacuationVM.clearAll()
+                    } label: {
+                        Label("Debug: Clear All Alerts", systemImage: "trash")
+                    }
+                }
+            }
+            #endif
+
+            if evacuationBotRegistering {
+                HStack { Spacer(); ProgressView(); Spacer() }
+            }
+
+            if let error = evacuationBotError {
+                Label(error, systemImage: "exclamationmark.triangle")
+                    .font(.caption)
+                    .foregroundStyle(.red)
+            }
+        } header: {
+            Text(String(localized: "evacuation.title"))
+        } footer: {
+            Text(String(localized: "evacuation.footer"))
+        }
+        .alert(String(localized: "evacuation.botConfirm.title"), isPresented: $showEvacuationBotConfirm) {
+            Button(String(localized: "evacuation.botConfirm.enable")) {
+                Task { await registerKikikuruBotAndEnable() }
+            }
+            Button(String(localized: "common.cancel"), role: .cancel) {}
+        } message: {
+            Text(String(localized: "evacuation.botConfirm.message"))
+        }
+    }
+
+    /// bsaf-kikikuru-bot が登録済みかチェック
+    private var isKikikuruBotRegistered: Bool {
+        settings.bsafRegisteredBots.contains { bot in
+            bot.definition.selfUrl == AppSettings.kikikuruBotDefinitionUrl
+                || BsafService.toRawUrl(bot.definition.selfUrl) == BsafService.toRawUrl(AppSettings.kikikuruBotDefinitionUrl)
+        }
+    }
+
+    /// bsaf-kikikuru-bot を自動登録して避難誘導機能を有効化
+    private func registerKikikuruBotAndEnable() async {
+        evacuationBotRegistering = true
+        evacuationBotError = nil
+        do {
+            let definition = try await BsafService.fetchBotDefinition(
+                from: AppSettings.kikikuruBotDefinitionUrl
+            )
+
+            // 重複チェック
+            if settings.findRegisteredBot(did: definition.bot.did) != nil {
+                // 既に登録済みならそのまま有効化
+                await MainActor.run {
+                    settings.bsafEnabled = true
+                    settings.evacuationEnabled = true
+                    evacuationBotRegistering = false
+                }
+                return
+            }
+
+            await MainActor.run {
+                settings.registerBot(definition)
+                settings.bsafEnabled = true
+                settings.evacuationEnabled = true
+            }
+
+            // 自動フォロー（BsafBotsView と同じパターン）
+            let graphService = GraphService(client: authVM.client)
+            _ = try await graphService.follow(did: definition.bot.did)
+        } catch {
+            await MainActor.run {
+                evacuationBotError = error.localizedDescription
+            }
+        }
+        await MainActor.run {
+            evacuationBotRegistering = false
+        }
     }
 }
 

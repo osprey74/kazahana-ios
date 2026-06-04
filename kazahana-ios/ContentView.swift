@@ -7,18 +7,114 @@ import SwiftUI
 struct ContentView: View {
 
     @Environment(AuthViewModel.self) private var authVM
+    @Environment(AppSettings.self) private var settings
+    @Environment(\.scenePhase) private var scenePhase
+
+    /// 避難誘導用 LocationService（機能有効時のみ生成）
+    @State private var locationService: LocationService?
+
+    /// 避難所データストア
+    @State private var shelterStore = ShelterStore()
+
+    /// 避難誘導バナー状態管理（MainTabView の外で保持 → アカウント切替でも消えない）
+    @State private var evacuationVM = EvacuationViewModel(settings: .shared)
+
+    /// バナータップで避難所一覧を表示
+    @State private var showEvacuationShelters = false
+
+    /// 避難誘導オンボーディングダイアログ
+    @State private var showEvacuationOnboarding = false
 
     var body: some View {
-        if authVM.isLoggedIn {
-            MainTabView(client: authVM.client)
-                // アカウント切替時に全子ビューを再生成
-                .id(authVM.activeAccountDID)
-        } else if !authVM.savedAccounts.isEmpty {
-            // 保存済みアカウントあり（複数 or トークン期限切れ）→ アカウント選択
-            AccountPickerView()
-        } else {
-            LoginView()
+        Group {
+            if authVM.isLoggedIn {
+                MainTabView(client: authVM.client)
+                    // アカウント切替時に全子ビューを再生成
+                    .id(authVM.activeAccountDID)
+            } else if !authVM.savedAccounts.isEmpty {
+                // 保存済みアカウントあり（複数 or トークン期限切れ）→ アカウント選択
+                AccountPickerView()
+            } else {
+                LoginView()
+            }
         }
+        // 避難誘導バナー（MainTabView の外側に overlay）
+        .overlay(alignment: .bottom) {
+            if evacuationVM.bannerVisible, let level = evacuationVM.highestLevel {
+                EvacuationBannerView(
+                    highestLevel: level,
+                    alertCount: evacuationVM.activeAlerts.count,
+                    onTap: { showEvacuationShelters = true }
+                )
+                .padding(.bottom, 50) // タブバーの上に配置
+            }
+        }
+        .animation(.easeInOut(duration: 0.3), value: evacuationVM.bannerVisible)
+        .sheet(isPresented: $showEvacuationShelters) {
+            NavigationStack {
+                NearestSheltersView(shelterIndex: shelterStore.index)
+                    .environment(settings)
+                    .environment(locationService)
+                    .toolbar {
+                        ToolbarItem(placement: .cancellationAction) {
+                            Button(String(localized: "common.close")) {
+                                showEvacuationShelters = false
+                            }
+                        }
+                    }
+            }
+        }
+        // 避難誘導オンボーディング（初回のみ表示）
+        .alert(String(localized: "evacuation.onboarding.title"), isPresented: $showEvacuationOnboarding) {
+            Button(String(localized: "evacuation.onboarding.dismiss")) {
+                settings.evacuationOnboardingShown = true
+            }
+        } message: {
+            Text(String(localized: "evacuation.onboarding.message"))
+        }
+        // 避難誘導関連を environment で配布
+        .environment(locationService)
+        .environment(shelterStore)
+        .environment(evacuationVM)
+        .onChange(of: settings.evacuationEnabled) { _, enabled in
+            if enabled {
+                initializeEvacuationIfNeeded()
+            } else {
+                evacuationVM.clearAll()
+            }
+        }
+        .onAppear {
+            if settings.evacuationEnabled {
+                initializeEvacuationIfNeeded()
+            }
+            // 初回のみオンボーディングダイアログを表示
+            if !settings.evacuationOnboardingShown && !settings.evacuationEnabled {
+                showEvacuationOnboarding = true
+            }
+        }
+        // フォアグラウンド復帰時にタイムアウト済みアラートを即座に除去
+        .onChange(of: scenePhase) { _, newPhase in
+            if newPhase == .active && settings.evacuationEnabled {
+                evacuationVM.expireStaleAlerts()
+            }
+        }
+        // 10分間隔でタイムアウトチェック
+        .task {
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(600))
+                if settings.evacuationEnabled {
+                    evacuationVM.expireStaleAlerts()
+                }
+            }
+        }
+    }
+
+    /// 避難誘導機能の初期化（LocationService + 避難所データ）
+    private func initializeEvacuationIfNeeded() {
+        if locationService == nil {
+            locationService = LocationService()
+        }
+        shelterStore.loadIfNeeded()
     }
 }
 

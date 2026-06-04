@@ -262,17 +262,28 @@ struct MessageBubbleView: View {
 
     /// facets がある場合はリッチテキスト、なければ URL/ハッシュタグを自動検出してリッチテキスト化
     private func richText(for m: ChatMessageView) -> AttributedString {
+        var result: AttributedString
         if let facets = m.facets, !facets.isEmpty {
-            return RichTextParser.attributedString(text: m.text, facets: facets)
+            result = RichTextParser.attributedString(text: m.text, facets: facets)
+        } else {
+            // サーバーが facets を返さない場合はクライアント側で自動検出
+            let detected = RichTextParser.detectFacets(in: m.text)
+            if detected.isEmpty { return AttributedString(m.text) }
+            let builtFacets = RichTextParser.buildFacets(from: detected.filter {
+                if case .mention = $0.kind { return false } // DID 未解決メンションは除外
+                return true
+            })
+            result = RichTextParser.attributedString(text: m.text, facets: builtFacets.isEmpty ? nil : builtFacets)
         }
-        // サーバーが facets を返さない場合はクライアント側で自動検出
-        let detected = RichTextParser.detectFacets(in: m.text)
-        if detected.isEmpty { return AttributedString(m.text) }
-        let builtFacets = RichTextParser.buildFacets(from: detected.filter {
-            if case .mention = $0.kind { return false } // DID 未解決メンションは除外
-            return true
-        })
-        return RichTextParser.attributedString(text: m.text, facets: builtFacets.isEmpty ? nil : builtFacets)
+        // 自分の吹き出し（青背景）ではリンクが埋もれるため白＋下線に変更
+        if isMine {
+            for run in result.runs where run.link != nil {
+                let range = run.range
+                result[range].foregroundColor = .white
+                result[range].underlineStyle = .single
+            }
+        }
+        return result
     }
 }
 

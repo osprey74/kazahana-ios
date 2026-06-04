@@ -42,3 +42,5 @@ fastlane/test_output
 
 # Code Injection
 iOSInjectionProject/
+scripts/mergeFromCity_2.csv
+scripts/mergeFromCity_2.csv

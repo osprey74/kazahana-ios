@@ -233,6 +233,28 @@ final class AppSettings {
         }
     }
 
+    // MARK: - 避難誘導機能設定
+
+    /// bsaf-kikikuru-bot の BSAF Bot Definition JSON URL
+    static let kikikuruBotDefinitionUrl = "https://raw.githubusercontent.com/osprey74/bsaf-kikikuru-bot/main/bot-definition.json"
+
+    /// 避難誘導機能の有効/無効（デフォルト false）
+    var evacuationEnabled: Bool {
+        didSet { defaults.set(evacuationEnabled, forKey: "evacuationEnabled") }
+    }
+
+    /// 手動設定した都道府県（nil = 測位で判定）
+    var evacuationPrefectureOverride: String? {
+        didSet {
+            defaults.set(evacuationPrefectureOverride, forKey: "evacuationPrefectureOverride")
+        }
+    }
+
+    /// 初回案内を表示済みか
+    var evacuationOnboardingShown: Bool {
+        didSet { defaults.set(evacuationOnboardingShown, forKey: "evacuationOnboardingShown") }
+    }
+
     // MARK: - Init
 
     init() {
@@ -279,6 +301,9 @@ final class AppSettings {
         } else {
             self.bsafRegisteredBots = []
         }
+        self.evacuationEnabled = d.object(forKey: "evacuationEnabled") as? Bool ?? false
+        self.evacuationPrefectureOverride = d.string(forKey: "evacuationPrefectureOverride")
+        self.evacuationOnboardingShown = d.object(forKey: "evacuationOnboardingShown") as? Bool ?? false
         self.longFormServiceUrl = d.string(forKey: "longFormServiceUrl") ?? ""
         self.confirmDraftImageQuality = d.object(forKey: "confirmDraftImageQuality") as? Bool ?? true
         self.watermarkSettings = WatermarkSettings.load()
