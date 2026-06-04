@@ -319,7 +319,7 @@ struct SettingsView: View {
                 // MARK: - アプリ情報
                 Section(String(localized: "settings.appInfo")) {
                     LabeledContent(String(localized: "settings.version"), value: appVersion)
-                    LabeledContent("Bluesky", value: "@app-kazahana.bsky.social")
+                    LabeledContent("Bluesky", value: "@kazahana.app")
                 }
             }
             .navigationTitle(String(localized: "settings.title"))
