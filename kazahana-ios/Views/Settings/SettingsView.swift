@@ -21,6 +21,8 @@ struct SettingsView: View {
     @State private var showEvacuationBotConfirm = false
     @State private var evacuationBotRegistering = false
     @State private var evacuationBotError: String? = nil
+    @State private var demoModeTapCount = 0
+    @State private var showDemoMode = false
 
     var body: some View {
         @Bindable var settings = settings
@@ -319,6 +321,13 @@ struct SettingsView: View {
                 // MARK: - アプリ情報
                 Section(String(localized: "settings.appInfo")) {
                     LabeledContent(String(localized: "settings.version"), value: appVersion)
+                        .onTapGesture {
+                            demoModeTapCount += 1
+                            if demoModeTapCount >= 5 {
+                                showDemoMode.toggle()
+                                demoModeTapCount = 0
+                            }
+                        }
                     LabeledContent("Bluesky", value: "@kazahana.app")
                 }
             }
@@ -419,79 +428,79 @@ struct SettingsView: View {
                 }
             }
 
-            #if DEBUG
-            // デバッグ: モック Bot 登録で強制有効化
-            if !settings.evacuationEnabled {
-                Button {
-                    // モック bsaf-kikikuru-bot 定義を登録
-                    let mockDef = BsafBotDefinition(
-                        bsafSchema: "bsaf-bot-v1",
-                        updatedAt: ISO8601DateFormatter().string(from: Date()),
-                        selfUrl: AppSettings.kikikuruBotDefinitionUrl,
-                        bot: BsafBotInfo(
-                            handle: "bsaf-kikikuru-bot.bsky.social",
-                            did: "did:plc:debug-kikikuru-bot",
-                            name: "bsaf-kikikuru-bot",
-                            description: "気象庁キキクル（危険度分布）の情報を BSAF 形式で配信する Bot（デバッグ用モック）",
-                            source: "jma",
-                            sourceUrl: nil
-                        ),
-                        filters: [
-                            BsafFilter(tag: "target", label: "対象地域", options:
-                                Prefecture.allCases.map { BsafFilterOption(value: $0.rawValue, label: $0.displayName) }
+            // デモモード（バージョン番号5回タップで表示）
+            if showDemoMode {
+                // モック Bot 登録で強制有効化
+                if !settings.evacuationEnabled {
+                    Button {
+                        let mockDef = BsafBotDefinition(
+                            bsafSchema: "bsaf-bot-v1",
+                            updatedAt: ISO8601DateFormatter().string(from: Date()),
+                            selfUrl: AppSettings.kikikuruBotDefinitionUrl,
+                            bot: BsafBotInfo(
+                                handle: "bsaf-kikikuru-bot.bsky.social",
+                                did: "did:plc:debug-kikikuru-bot",
+                                name: "bsaf-kikikuru-bot",
+                                description: "気象庁キキクル（危険度分布）の情報を BSAF 形式で配信する Bot（デモ用モック）",
+                                source: "jma",
+                                sourceUrl: nil
                             ),
-                            BsafFilter(tag: "value", label: "レベル", options: [
-                                BsafFilterOption(value: "level3", label: "レベル3（警報級）"),
-                                BsafFilterOption(value: "level4", label: "レベル4（危険）"),
-                                BsafFilterOption(value: "level5", label: "レベル5（特別警報級）"),
-                            ])
-                        ]
-                    )
-                    if settings.findRegisteredBot(did: mockDef.bot.did) == nil {
-                        settings.registerBot(mockDef)
-                    }
-                    settings.bsafEnabled = true
-                    settings.evacuationEnabled = true
-                    settings.evacuationPrefectureOverride = "jp-tokyo"
-                    evacuationBotError = nil
-                } label: {
-                    Label("Debug: Force Enable (mock bot)", systemImage: "forward.fill")
-                }
-                .foregroundStyle(.purple)
-            }
-
-            // デバッグ: アラートシミュレーション
-            if let evacuationVM {
-                Button {
-                    evacuationVM.injectTestAlert(level: .level3)
-                } label: {
-                    Label("Debug: Level 3 Alert", systemImage: "ant")
-                }
-                .foregroundStyle(.orange)
-
-                Button {
-                    evacuationVM.injectTestAlert(level: .level4, type: "flood-warning")
-                } label: {
-                    Label("Debug: Level 4 Alert", systemImage: "ant.fill")
-                }
-                .foregroundStyle(.red)
-
-                Button {
-                    evacuationVM.injectTestAlert(level: .level5, type: "landslide-warning")
-                } label: {
-                    Label("Debug: Level 5 Alert", systemImage: "ant.circle.fill")
-                }
-                .foregroundStyle(.pink)
-
-                if evacuationVM.bannerVisible {
-                    Button(role: .destructive) {
-                        evacuationVM.clearAll()
+                            filters: [
+                                BsafFilter(tag: "target", label: "対象地域", options:
+                                    Prefecture.allCases.map { BsafFilterOption(value: $0.rawValue, label: $0.displayName) }
+                                ),
+                                BsafFilter(tag: "value", label: "レベル", options: [
+                                    BsafFilterOption(value: "level3", label: "レベル3（警報級）"),
+                                    BsafFilterOption(value: "level4", label: "レベル4（危険）"),
+                                    BsafFilterOption(value: "level5", label: "レベル5（特別警報級）"),
+                                ])
+                            ]
+                        )
+                        if settings.findRegisteredBot(did: mockDef.bot.did) == nil {
+                            settings.registerBot(mockDef)
+                        }
+                        settings.bsafEnabled = true
+                        settings.evacuationEnabled = true
+                        settings.evacuationPrefectureOverride = "jp-tokyo"
+                        evacuationBotError = nil
                     } label: {
-                        Label("Debug: Clear All Alerts", systemImage: "trash")
+                        Label("Demo: Force Enable (mock bot)", systemImage: "forward.fill")
+                    }
+                    .foregroundStyle(.purple)
+                }
+
+                // アラートシミュレーション
+                if let evacuationVM {
+                    Button {
+                        evacuationVM.injectTestAlert(level: .level3)
+                    } label: {
+                        Label("Demo: Level 3 Alert", systemImage: "ant")
+                    }
+                    .foregroundStyle(.orange)
+
+                    Button {
+                        evacuationVM.injectTestAlert(level: .level4, type: "flood-warning")
+                    } label: {
+                        Label("Demo: Level 4 Alert", systemImage: "ant.fill")
+                    }
+                    .foregroundStyle(.red)
+
+                    Button {
+                        evacuationVM.injectTestAlert(level: .level5, type: "landslide-warning")
+                    } label: {
+                        Label("Demo: Level 5 Alert", systemImage: "ant.circle.fill")
+                    }
+                    .foregroundStyle(.pink)
+
+                    if evacuationVM.bannerVisible {
+                        Button(role: .destructive) {
+                            evacuationVM.clearAll()
+                        } label: {
+                            Label("Demo: Clear All Alerts", systemImage: "trash")
+                        }
                     }
                 }
             }
-            #endif
 
             if evacuationBotRegistering {
                 HStack { Spacer(); ProgressView(); Spacer() }
