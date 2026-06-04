@@ -92,10 +92,9 @@ final class EvacuationViewModel {
         updateBannerState()
     }
 
-    // MARK: - デバッグ用シミュレーション
+    // MARK: - デモ用アラートシミュレーション
 
-    #if DEBUG
-    /// テスト用アラートを注入（DEBUG ビルドのみ）
+    /// テスト用アラートを注入（設定画面のデモモードから呼び出し）
     @MainActor
     func injectTestAlert(level: AlertLevel, type: String = "heavy-rain-warning") {
         let prefecture = currentPrefecture ?? "jp-tokyo"
@@ -110,7 +109,6 @@ final class EvacuationViewModel {
         activeAlerts.append(alert)
         updateBannerState()
     }
-    #endif
 
     // MARK: - Private
 
