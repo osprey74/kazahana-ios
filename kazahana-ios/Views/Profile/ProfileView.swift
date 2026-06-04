@@ -6,6 +6,7 @@ import SwiftUI
 
 struct ProfileScreenView: View {
     @Environment(AuthViewModel.self) private var authVM
+    @Environment(EvacuationViewModel.self) private var evacuationVM: EvacuationViewModel?
     @Environment(\.dismiss) private var dismiss
     let actor: String
 
@@ -276,7 +277,8 @@ struct ProfileScreenView: View {
                     .shadow(radius: 4, y: 2)
             }
             .padding(.trailing, 20)
-            .padding(.bottom, 24)
+            .padding(.bottom, evacuationVM?.bannerVisible == true ? 94 : 24)
+            .animation(.easeInOut(duration: 0.3), value: evacuationVM?.bannerVisible)
         }
         .overlay(alignment: .topLeading) {
             if !isSelf {

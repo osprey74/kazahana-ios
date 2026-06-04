@@ -66,7 +66,8 @@ struct TimelineView: View {
                         .shadow(color: .black.opacity(0.2), radius: 6, y: 3)
                 }
                 .padding(.trailing, 20)
-                .padding(.bottom, 20)
+                .padding(.bottom, evacuationVM?.bannerVisible == true ? 90 : 20)
+                .animation(.easeInOut(duration: 0.3), value: evacuationVM?.bannerVisible)
             }
             .navigationTitle(
                 viewModel.visibleFeedSources.count > 1
