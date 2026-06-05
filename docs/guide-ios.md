@@ -6,12 +6,77 @@ This guide covers features specific to the iOS version of kazahana. For common f
 
 ## Table of Contents
 
+- [Shelter Navigator (Evacuation Assist)](#shelter-navigator-evacuation-assist)
 - [Push Notifications](#push-notifications)
 - [Share Extension](#share-extension)
 - [Supporter Badge (In-App Purchase)](#supporter-badge)
 - [iOS-Specific Navigation](#ios-specific-navigation)
 - [Deep Links](#deep-links)
 - [Differences from Desktop](#differences-from-desktop)
+
+---
+
+## Shelter Navigator (Evacuation Assist)
+
+Added in v3.2.0. This Japan-specific feature detects weather hazard information from the Japan Meteorological Agency (via bsaf-kikikuru-bot) and guides you to the nearest designated evacuation shelter. Shelter data (from the Geospatial Information Authority of Japan) is bundled with the app, so **it works even without an internet connection**.
+
+> **Important:** This feature provides supplementary information based on JMA hazard levels. It does not represent official municipal evacuation orders. Always check official evacuation instructions from your local municipality.
+
+### Enabling the Feature
+
+Shelter Navigator is off by default. To enable it:
+
+1. Go to the **Profile** tab → tap the **Settings** icon.
+2. Scroll to the **Evacuation Assist** section.
+3. Turn on the **Enable Evacuation Assist** toggle.
+4. If bsaf-kikikuru-bot is not yet registered, a confirmation dialog appears. Tap **Enable** to automatically register and follow bsaf-kikikuru-bot via BSAF.
+
+You can optionally select your **Prefecture (manual)** to specify your area. Leaving it on "Auto (from location)" uses your current location. Manual selection is recommended for offline use.
+
+### Warning Banner
+
+When Evacuation Assist is enabled and a weather warning is received for your configured prefecture (or current location), a banner appears at the bottom of the screen.
+
+![Warning banner display](./images/iOS_evacuation_001.png)
+
+- **Level 3 (yellow):** Weather warning level information issued
+- **Level 4 (red):** Check evacuation information
+- **Level 5 (pink):** Secure safety immediately
+
+Tap **View Shelters** on the banner to open the nearest shelters list. The banner clears automatically when the alert is cancelled or after 6 hours.
+
+### Nearest Shelters List
+
+Shelters are listed in order of distance from your current location. Each entry shows the straight-line distance and supported hazard types (flood, landslide, earthquake, etc.) as tags.
+
+![Nearest shelters list](./images/iOS_evacuation_002.png)
+
+Use the **Hazard Type** picker to filter shelters. The filter is automatically set based on the type of warning received.
+
+Tap a shelter to view its details, where you can choose **Navigate with Maps** (walking directions in Apple Maps) or **Simple Nav (Compass)**.
+
+### Simple Nav (Compass)
+
+A compass-based navigator that works without an internet connection. It uses the device's magnetic sensor to show an arrow pointing toward the selected shelter and displays the straight-line distance in real time.
+
+![Simple Nav (Compass)](./images/iOS_evacuation_003.png)
+
+- Walk in the direction of the arrow — the distance decreases as you get closer.
+- If compass accuracy is low, move your device in a figure-8 pattern to calibrate.
+- When offline, Apple Maps navigation is unavailable, making this the primary navigation method.
+
+### Offline Use
+
+Shelter data is bundled with the app, so the following features work even in airplane mode:
+
+| Feature | Offline |
+|---------|---------|
+| Nearest shelters list | Available |
+| Simple Nav (Compass) | Available |
+| Navigate with Maps | Unavailable (requires internet) |
+| Auto prefecture detection | Unavailable (use manual setting) |
+
+> **Note:** Shelter data is sourced from the Geospatial Information Authority of Japan (GSI) Designated Emergency Evacuation Sites. Data may not be fully up to date. Check with your local municipality for the latest information.
 
 ---
 
@@ -154,6 +219,7 @@ kazahana for iOS responds to `kazahana://` and `https://bsky.app` URLs:
 
 | Feature | Description |
 |---------|-------------|
+| Shelter Navigator | Guides to nearest evacuation shelters during weather warnings (works offline) |
 | Push notifications | Real-time notifications via APNs |
 | Share extension | Share from other apps to kazahana |
 | Supporter Badge | In-app purchase for supporter recognition |
