@@ -78,6 +78,17 @@ Shelter data is bundled with the app, so the following features work even in air
 
 > **Note:** Shelter data is sourced from the Geospatial Information Authority of Japan (GSI) Designated Emergency Evacuation Sites. Data may not be fully up to date. Check with your local municipality for the latest information.
 
+### Demo Mode (Try It Out)
+
+You can try the Shelter Navigator even when no weather warnings are active.
+
+1. Open **Settings**.
+2. **Tap the version number 5 times** at the bottom of the screen.
+3. Demo buttons will appear in the Evacuation Assist section.
+4. Tap a demo button to simulate a warning banner and test the shelter list and navigation flow.
+
+> **Note:** Banners shown in demo mode are for testing purposes only and do not reflect actual weather warnings.
+
 ---
 
 ## Push Notifications
