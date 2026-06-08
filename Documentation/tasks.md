@@ -640,6 +640,37 @@
 
 ---
 
+## Phase 10: Bluesky v1.123 対応（2026-06-09）
+
+> 設計書: `../../HANDOFF_kazahana-bsky-v1.123.md`
+> 背景: 2026-06-06 リリースの Bluesky 公式 v1.123 で `app.bsky.embed.gallery`（写真 10 枚 / 5 枚以上カルーセル）が正式リリース、動画 300MB 化の feature gate も解除された
+> 一次情報: atproto #4827 (merged 2026-06-03) / social-app #10707 #10497 #10683 / lexicon: `app.bsky.embed.gallery`（`maxLength: 20`、ソフト上限 10、`#image.required = ["image", "alt", "aspectRatio"]`）
+> 重要: 動画 lexicon `video.maxSize` は **100MB のまま**。300MB はサーバ受容範囲（トランスコード前提）。`app.bsky.video.getUploadLimits` 応答の尊重を推奨
+
+### Phase A: 受信側 embed.gallery viewer 対応（最優先・3 プラットフォーム同時リリース推奨）
+
+- [ ] **[I-G1] `app.bsky.embed.gallery#view` レンダラ追加** — `ImageGridView.swift` を拡張、または `GalleryCarouselView.swift` を新設。PostCard 等の embed 振り分け箇所で `embed.gallery` ケースを追加
+- [ ] **[I-G2] ≤4 枚グリッド / ≥5 枚カルーセル分岐** — 4 枚以下は既存 1/2/3/4 枚レイアウト維持、5 枚以上は `TabView` + `.tabViewStyle(.page(indexDisplayMode: .always))` でカルーセル
+- [ ] **[I-G3] `recordWithMedia` 内 gallery 対応** — `recordWithMedia.media` の union を `embed.images` / `embed.gallery` / `embed.video` 3 通りで処理
+- [ ] **[I-G4] 未知 union ref のスキップ実装** — `items[]` の将来追加 ref（`#video` 等）を安全にスキップ
+
+### Phase B: 送信側 composer 対応 + 動画 300MB
+
+- [ ] **[I-G5] `PHPicker.maxSelectionCount = 4` → `10` に拡張** — `ComposeView.swift:1143`
+- [ ] **[I-G6] 5 枚以上選択時に `embed.gallery` で送信** — `PostService.swift` の embed 組み立て箇所。≤4 枚は `embed.images`、≥5 枚は `embed.gallery` で自動分岐
+- [ ] **[I-G7] gallery `#image` に alt / aspectRatio 必須付与** — lexicon required を満たす（alt 空文字は許容）
+- [ ] **[I-G8] 動画上限ガード追加 300MB** — 既存は明示上限なし。300MB のクライアントガード追加（サーバ応答も信頼）
+- [ ] **[I-G9] `app.bsky.video.getUploadLimits` 応答尊重** — サーバ応答の `canUpload` / `remainingDailyBytes` をチェックし、超過時はユーザに通知
+- [ ] **[I-G10] alt 入力 UI を 10 枚スクロール対応に** — 既存 alt 入力フローを画像 10 枚に対応
+
+### Phase C: 品質改善（任意）
+
+- [ ] **[I-G11] カルーセル枚数バッジ表示** — social-app PR #10719 互換。"3 / 7" 形式を右上に
+- [ ] **[I-G12] lightbox の 10 枚スクロール最適化** — フルスクリーンビュアが 10 枚で破綻しないか検証・最適化
+- [ ] **[I-G13] 画像上限値の正規化（任意）** — `1_900_000` / `950_000` を仕様書通りの `2_000_000` / `1_000_000` に正規化（リスク低、デバッグ時の混乱回避）
+
+---
+
 ## 既知の課題・TODO
 
 - [x] **ブックマーク**: `app.bsky.bookmark.*` API で実装済み（PostCardView / ThreadView ボタン + プロフィールタブ）
