@@ -20,6 +20,7 @@ struct AccountPickerView: View {
                     accountRow(session: session)
                         .contentShape(Rectangle())
                         .onTapGesture {
+                            guard !authVM.isSwitchingAccount else { return }
                             Task { await authVM.switchAccount(to: session) }
                         }
                         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
@@ -64,6 +65,24 @@ struct AccountPickerView: View {
                 .background(Color(.systemGroupedBackground))
             }
         }
+        .overlay {
+            if authVM.isSwitchingAccount {
+                Color.black.opacity(0.3)
+                    .ignoresSafeArea()
+                VStack(spacing: 12) {
+                    ProgressView()
+                        .scaleEffect(1.3)
+                        .tint(.white)
+                    Text(String(localized: "auth.switchingAccount"))
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(.white)
+                }
+                .padding(.horizontal, 32)
+                .padding(.vertical, 20)
+                .background(.ultraThinMaterial.opacity(0.8), in: RoundedRectangle(cornerRadius: 16))
+            }
+        }
+        .allowsHitTesting(!authVM.isSwitchingAccount)
         .sheet(isPresented: $showLogin) {
             LoginView()
                 .environment(authVM)

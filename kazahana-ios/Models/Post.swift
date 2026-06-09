@@ -92,6 +92,7 @@ struct FacetFeature: Codable {
 /// AT Protocol の embed は $type により多様な形をとるため、既知の型を列挙
 indirect enum PostEmbed: Codable {
     case images(EmbedImages)
+    case gallery(EmbedGallery)
     case external(EmbedExternal)
     case record(EmbedRecord)
     case recordWithMedia(EmbedRecordWithMedia)
@@ -109,6 +110,14 @@ indirect enum PostEmbed: Codable {
         switch type {
         case "app.bsky.embed.images#view":
             self = .images(try EmbedImages(from: decoder))
+        case "app.bsky.embed.gallery#view":
+            // gallery は新しい embed 型のため、デコード失敗時は .unknown にフォールバック
+            do {
+                self = .gallery(try EmbedGallery(from: decoder))
+            } catch {
+                print("[PostEmbed] Failed to decode gallery, falling back to unknown: \(error)")
+                self = .unknown
+            }
         case "app.bsky.embed.external#view":
             self = .external(try EmbedExternal(from: decoder))
         case "app.bsky.embed.record#view":
@@ -125,6 +134,7 @@ indirect enum PostEmbed: Codable {
     func encode(to encoder: Encoder) throws {
         switch self {
         case .images(let v): try v.encode(to: encoder)
+        case .gallery(let v): try v.encode(to: encoder)
         case .external(let v): try v.encode(to: encoder)
         case .record(let v): try v.encode(to: encoder)
         case .recordWithMedia(let v): try v.encode(to: encoder)
@@ -152,6 +162,34 @@ struct EmbedImageView: Codable, Identifiable {
 struct AspectRatio: Codable {
     let width: Int
     let height: Int
+}
+
+// MARK: - ギャラリー埋め込み（5枚以上、app.bsky.embed.gallery）
+
+/// app.bsky.embed.gallery#view — items は #viewImage の配列
+/// 注意: gallery の viewImage は `thumbnail` フィールド（images の viewImage は `thumb`）
+struct EmbedGallery: Codable {
+    let items: [EmbedImageView]
+
+    /// gallery#viewImage の JSON 構造（thumbnail フィールド → EmbedImageView.thumb にマッピング）
+    private struct GalleryViewImage: Codable {
+        let thumbnail: String
+        let fullsize: String
+        let alt: String
+        let aspectRatio: AspectRatio?
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let galleryItems = try container.decode([GalleryViewImage].self, forKey: .items)
+        self.items = galleryItems.map { item in
+            EmbedImageView(thumb: item.thumbnail, fullsize: item.fullsize, alt: item.alt, aspectRatio: item.aspectRatio)
+        }
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case items
+    }
 }
 
 // MARK: - 外部リンク埋め込み（OGP）
@@ -403,21 +441,29 @@ struct ExternalCardCreate: Encodable {
     let associatedRefs: [StrongRef]?
 }
 
-/// 投稿作成時の embed（画像/動画/外部リンク/引用）を統一する enum（Encodable）
+/// 投稿作成時の embed（画像/ギャラリー/動画/外部リンク/引用）を統一する enum（Encodable）
 enum PostEmbedCreate: Encodable {
     case images(ImageEmbedCreate)
+    case gallery(GalleryEmbedCreate)
     case video(VideoEmbedCreate)
     case external(ExternalEmbedCreate)
     case record(QuoteEmbedRecord)
     case recordWithMedia(ImageEmbedCreate, QuoteEmbedRecord)
+    case recordWithGallery(GalleryEmbedCreate, QuoteEmbedRecord)
 
     func encode(to encoder: Encoder) throws {
         switch self {
         case .images(let v): try v.encode(to: encoder)
+        case .gallery(let v): try v.encode(to: encoder)
         case .video(let v): try v.encode(to: encoder)
         case .external(let v): try v.encode(to: encoder)
         case .record(let v): try v.encode(to: encoder)
         case .recordWithMedia(let media, let rec):
+            var container = encoder.container(keyedBy: RecordWithMediaCodingKeys.self)
+            try container.encode("app.bsky.embed.recordWithMedia", forKey: .type)
+            try container.encode(media, forKey: .media)
+            try container.encode(rec, forKey: .record)
+        case .recordWithGallery(let media, let rec):
             var container = encoder.container(keyedBy: RecordWithMediaCodingKeys.self)
             try container.encode("app.bsky.embed.recordWithMedia", forKey: .type)
             try container.encode(media, forKey: .media)
@@ -461,6 +507,30 @@ struct ImageEmbedItem: Encodable {
     let aspectRatio: AspectRatioCreate?
 }
 
+/// ギャラリー embed（app.bsky.embed.gallery）書き込み用 — 5枚以上で使用
+struct GalleryEmbedCreate: Encodable {
+    let type: String = "app.bsky.embed.gallery"
+    let items: [GalleryImageItem]
+
+    enum CodingKeys: String, CodingKey {
+        case type = "$type"
+        case items
+    }
+}
+
+/// ギャラリー内の画像アイテム（alt / aspectRatio は lexicon 上 required）
+struct GalleryImageItem: Encodable {
+    let type: String = "app.bsky.embed.gallery#image"
+    let image: BlobRef
+    let alt: String
+    let aspectRatio: AspectRatioCreate
+
+    enum CodingKeys: String, CodingKey {
+        case type = "$type"
+        case image, alt, aspectRatio
+    }
+}
+
 struct AspectRatioCreate: Encodable {
     let width: Int
     let height: Int
@@ -491,6 +561,16 @@ struct BlobLink: Codable {
     enum CodingKeys: String, CodingKey {
         case link = "$link"
     }
+}
+
+// MARK: - 動画アップロード制限（app.bsky.video.getUploadLimits レスポンス）
+
+struct VideoUploadLimits: Codable {
+    let canUpload: Bool
+    let remainingDailyVideos: Int?
+    let remainingDailyBytes: Int?
+    let error: String?
+    let message: String?
 }
 
 // MARK: - 動画アップロードジョブステータス（app.bsky.video.uploadVideo レスポンス）

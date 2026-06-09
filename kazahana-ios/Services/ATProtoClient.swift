@@ -112,6 +112,14 @@ final class ATProtoClient {
         return try await perform(request: request)
     }
 
+    /// 動画アップロード制限を取得（app.bsky.video.getUploadLimits）
+    func getVideoUploadLimits() async throws -> VideoUploadLimits {
+        let host = currentSession?.pdsHost ?? "https://bsky.social"
+        let url = URL(string: "\(host)/xrpc/app.bsky.video.getUploadLimits")!
+        let request = try buildRequest(url: url, method: "GET", authenticated: true)
+        return try await perform(request: request)
+    }
+
     /// サービス認証トークンを取得（動画アップロード用）
     /// - Parameters:
     ///   - aud: 対象サービスの DID（PDS の did:web:<domain>）

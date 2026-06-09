@@ -37,14 +37,34 @@ final class PostService {
             )
         }
 
-        // embed の組み立て（画像 / 動画 / 外部リンク / 引用 / 画像+引用）
+        // embed の組み立て（画像 / ギャラリー / 動画 / 外部リンク / 引用 / 画像+引用）
+        // 公式互換: ≤4枚 → embed.images、≥5枚 → embed.gallery（auto promote/demote）
         let embed: PostEmbedCreate?
         if let images, !images.isEmpty {
-            let imageEmbed = ImageEmbedCreate(images: images.map { ImageEmbedItem(image: $0.blob, alt: $0.alt, aspectRatio: $0.aspectRatio) })
-            if let quotePost {
-                embed = .recordWithMedia(imageEmbed, QuoteEmbedRecord(uri: quotePost.uri, cid: quotePost.cid))
+            let quoteRecord = quotePost.map { QuoteEmbedRecord(uri: $0.uri, cid: $0.cid) }
+            if images.count >= 5 {
+                // Gallery embed（5枚以上）: alt / aspectRatio は lexicon 上 required
+                let galleryItems = images.map { img in
+                    GalleryImageItem(
+                        image: img.blob,
+                        alt: img.alt,
+                        aspectRatio: img.aspectRatio ?? AspectRatioCreate(width: 1, height: 1)
+                    )
+                }
+                let galleryEmbed = GalleryEmbedCreate(items: galleryItems)
+                if let quoteRecord {
+                    embed = .recordWithGallery(galleryEmbed, quoteRecord)
+                } else {
+                    embed = .gallery(galleryEmbed)
+                }
             } else {
-                embed = .images(imageEmbed)
+                // Images embed（4枚以下）: 既存挙動
+                let imageEmbed = ImageEmbedCreate(images: images.map { ImageEmbedItem(image: $0.blob, alt: $0.alt, aspectRatio: $0.aspectRatio) })
+                if let quoteRecord {
+                    embed = .recordWithMedia(imageEmbed, quoteRecord)
+                } else {
+                    embed = .images(imageEmbed)
+                }
             }
         } else if let video {
             embed = .video(VideoEmbedCreate(video: video.blob, alt: video.alt, aspectRatio: video.aspectRatio))
@@ -68,6 +88,13 @@ final class PostService {
         return try await client.post(nsid: "com.atproto.repo.createRecord", body: body)
     }
 
+    // MARK: - 動画アップロード制限
+
+    /// 動画アップロード可否とサイズ制限を取得する
+    func getVideoUploadLimits() async throws -> VideoUploadLimits {
+        return try await client.getVideoUploadLimits()
+    }
+
     // MARK: - 画像アップロード
 
     func uploadImage(data: Data, mimeType: String) async throws -> BlobRef {
@@ -82,7 +109,8 @@ final class PostService {
     /// 2. video.bsky.app にアップロード
     /// 3. ジョブステータスをポーリングして完了まで待つ
     /// 4. 完了後の BlobRef を返す
-    func uploadVideo(data: Data, mimeType: String) async throws -> BlobRef {
+    /// 動画を video.bsky.app にアップロードし、ジョブ ID とサービストークンを返す（送信フェーズ）
+    func startVideoUpload(data: Data, mimeType: String) async throws -> (jobStatus: VideoUploadJobStatus, serviceToken: String) {
         guard let session = client.currentSession else { throw ATProtoError.unauthorized }
 
         // PDS の did:web を導出（例: https://bsky.social → did:web:bsky.social）
@@ -95,32 +123,36 @@ final class PostService {
         }
         let pdsAud = "did:web:\(pdsDomain)"
 
-        // サービス認証トークンを取得（lxm は com.atproto.repo.uploadBlob）
         let serviceToken = try await client.getServiceAuth(
             aud: pdsAud,
             lxm: "com.atproto.repo.uploadBlob",
             expSecs: 1800
         )
 
-        // video.bsky.app にアップロード
         let ext = mimeType == "video/quicktime" ? "mov" : "mp4"
         let fileName = "\(UUID().uuidString).\(ext)"
-        var jobStatus = try await client.uploadVideoToService(
+        let jobStatus = try await client.uploadVideoToService(
             data: data,
             mimeType: mimeType,
             fileName: fileName,
             serviceToken: serviceToken
         )
 
-        // ジョブ完了までポーリング（最大120秒、2秒間隔）
+        return (jobStatus, serviceToken)
+    }
+
+    /// 動画処理ジョブの完了をポーリングで待ち、最終 BlobRef を返す（変換処理フェーズ）
+    func waitForVideoProcessing(jobId: String, serviceToken: String) async throws -> BlobRef {
+        var jobStatus = try await client.getVideoJobStatus(jobId: jobId, serviceToken: serviceToken)
+
         let maxAttempts = 60
         var attempts = 0
         while jobStatus.state != "JOB_STATE_COMPLETED" && attempts < maxAttempts {
             if let error = jobStatus.error {
                 throw ATProtoError.apiError(code: error, message: jobStatus.message)
             }
-            try await Task.sleep(nanoseconds: 2_000_000_000) // 2秒待機
-            jobStatus = try await client.getVideoJobStatus(jobId: jobStatus.jobId, serviceToken: serviceToken)
+            try await Task.sleep(nanoseconds: 2_000_000_000)
+            jobStatus = try await client.getVideoJobStatus(jobId: jobId, serviceToken: serviceToken)
             attempts += 1
         }
 
@@ -129,6 +161,12 @@ final class PostService {
         }
 
         return blob
+    }
+
+    /// 動画アップロード（一括）— 後方互換用
+    func uploadVideo(data: Data, mimeType: String) async throws -> BlobRef {
+        let (jobStatus, serviceToken) = try await startVideoUpload(data: data, mimeType: mimeType)
+        return try await waitForVideoProcessing(jobId: jobStatus.jobId, serviceToken: serviceToken)
     }
 
     // MARK: - 投稿削除

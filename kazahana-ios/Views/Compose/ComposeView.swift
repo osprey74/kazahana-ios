@@ -34,9 +34,19 @@ struct ComposeView: View {
     @Environment(AppSettings.self) private var appSettings
     @Environment(AuthViewModel.self) private var authVM
 
+    /// アップロード進捗の段階表示
+    enum UploadStage: Equatable {
+        case compressingImages
+        case uploadingImage(current: Int, total: Int)
+        case uploadingVideo
+        case processingVideo
+        case posting
+    }
+
     // テキストは View の @State で直接管理（@Observable ViewModel の TextEditor バインディング問題を回避）
     @State private var text: String = ""
     @State private var isPosting = false
+    @State private var uploadStage: UploadStage? = nil
     @State private var errorMessage: String? = nil
 
     // 画像添付
@@ -246,10 +256,9 @@ struct ComposeView: View {
             }
             .overlay {
                 if isPosting {
-                    Color.black.opacity(0.2)
+                    Color.black.opacity(0.3)
                         .ignoresSafeArea()
-                    ProgressView()
-                        .scaleEffect(1.5)
+                    uploadProgressOverlay
                 }
             }
             // 下書き保存ダイアログ（キャンセル時）
@@ -332,25 +341,34 @@ struct ComposeView: View {
 
     private func uploadAndPost(images: [SelectedImage]) async {
         isPosting = true
+        uploadStage = nil
         errorMessage = nil
 
         do {
             // 画像をアップロード（2 MB 超の場合は自動圧縮・リサイズ。古い PDS は 413 時に 1 MB で再試行）
             var uploadedImages: [(blob: BlobRef, alt: String, aspectRatio: AspectRatioCreate?)] = []
-            for selected in images {
+            let imageTotal = images.count
+            if imageTotal > 0 {
+                uploadStage = .compressingImages
+            }
+            for (index, selected) in images.enumerated() {
                 let img = selected.image
                 let pixW = Int(img.size.width * img.scale)
                 let pixH = Int(img.size.height * img.scale)
                 let aspectRatio = (pixW > 0 && pixH > 0) ? AspectRatioCreate(width: pixW, height: pixH) : nil
                 guard let (imageData, mimeType) = compressImage(img) else { continue }
+                uploadStage = .uploadingImage(current: index + 1, total: imageTotal)
                 let blob = try await uploadImageWithFallback(image: img, data: imageData, mimeType: mimeType)
                 uploadedImages.append((blob: blob, alt: selected.alt, aspectRatio: aspectRatio))
             }
 
-            // 動画をアップロード
+            // 動画をアップロード（送信 → 変換処理の2段階で進捗表示）
             var uploadedVideo: (blob: BlobRef, alt: String?, aspectRatio: AspectRatioCreate?)? = nil
             if let video = selectedVideo {
-                let blob = try await postService.uploadVideo(data: video.data, mimeType: video.mimeType)
+                uploadStage = .uploadingVideo
+                let (jobStatus, serviceToken) = try await postService.startVideoUpload(data: video.data, mimeType: video.mimeType)
+                uploadStage = .processingVideo
+                let blob = try await postService.waitForVideoProcessing(jobId: jobStatus.jobId, serviceToken: serviceToken)
                 let aspectRatio: AspectRatioCreate?
                 if let thumb = video.thumbnail {
                     let w = Int(thumb.size.width)
@@ -371,6 +389,7 @@ struct ComposeView: View {
                 finalLinkPreview = preview
             }
 
+            uploadStage = .posting
             let detected = RichTextParser.detectFacets(in: text)
             let facets = RichTextParser.buildFacets(from: detected, resolvedMentions: resolvedMentions)
             let via = appSettings.showVia ? appSettings.viaName : nil
@@ -398,6 +417,48 @@ struct ComposeView: View {
         }
 
         isPosting = false
+        uploadStage = nil
+    }
+
+    // MARK: - アップロード進捗オーバーレイ
+
+    @ViewBuilder
+    private var uploadProgressOverlay: some View {
+        VStack(spacing: 12) {
+            ProgressView()
+                .scaleEffect(1.3)
+                .tint(.white)
+
+            if let stage = uploadStage {
+                Text(uploadStageText(stage))
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(.white)
+                    .multilineTextAlignment(.center)
+                    .transition(.opacity)
+            }
+        }
+        .padding(.horizontal, 32)
+        .padding(.vertical, 20)
+        .background(.ultraThinMaterial.opacity(0.8), in: RoundedRectangle(cornerRadius: 16))
+        .animation(.easeInOut(duration: 0.2), value: uploadStage)
+    }
+
+    private func uploadStageText(_ stage: UploadStage) -> String {
+        switch stage {
+        case .compressingImages:
+            return String(localized: "compose.upload.compressingImages")
+        case .uploadingImage(let current, let total):
+            if total == 1 {
+                return String(localized: "compose.upload.uploadingImage")
+            }
+            return String(localized: "compose.upload.uploadingImageN \(current) \(total)")
+        case .uploadingVideo:
+            return String(localized: "compose.upload.uploadingVideo")
+        case .processingVideo:
+            return String(localized: "compose.upload.processingVideo")
+        case .posting:
+            return String(localized: "compose.upload.posting")
+        }
     }
 
     // MARK: - 下書き
@@ -453,18 +514,16 @@ struct ComposeView: View {
         DraftService.shared.delete(id: draft.id)
     }
 
-    // Bluesky 画像アップロード制限
-    // サーバー側の実際の制限は 976,562 bytes (976.56KB)
-    // 安全マージンを確保して 950KB に設定（デスクトップ版 OGP_MAX_BYTES と同値）
-    /// 通常アップロード上限（Bluesky は 2 MB まで対応）
-    private static let imageMaxBytes = 1_900_000
+    // Bluesky 画像アップロード制限（公式仕様: 2 MB）
+    /// 通常アップロード上限
+    private static let imageMaxBytes = 2_000_000
     /// 古い PDS が 413 を返した場合のフォールバック上限
-    private static let imageMaxBytesFallback = 950_000
+    private static let imageMaxBytesFallback = 1_000_000
 
     private func loadPickedImages(items: [PhotosPickerItem]) async {
         guard !items.isEmpty else { return }
         var results: [SelectedImage] = []
-        for item in items.prefix(4) {
+        for item in items.prefix(10) {
             guard let data = try? await item.loadTransferable(type: Data.self) else { continue }
             guard let uiImage = UIImage(data: data) else { continue }
             // CGImage バッキングを確立して正規化
@@ -535,12 +594,41 @@ struct ComposeView: View {
         }
     }
 
+    /// 動画アップロード上限（クライアントガード、サーバーが受容する最大サイズ）
+    private static let videoMaxBytes = 300 * 1024 * 1024  // 300 MB
+
     private func loadPickedVideo(item: PhotosPickerItem) async {
         // loadTransferable(type: Data.self) で動画バイナリを直接取得する
         // URL.self は実機の Photos サンドボックスで動作しないため Data.self を使用
         // AVAssetExportSession は写真ピッカー閉時のバックグラウンド遷移で中断されるため使用しない
         // サーバー側トランスコード（video.bsky.app）に任せるため raw data をそのまま使う
         guard let rawData = try? await item.loadTransferable(type: Data.self) else { return }
+
+        // クライアント側サイズガード（300 MB）
+        if rawData.count > Self.videoMaxBytes {
+            let mb = Double(rawData.count) / 1_048_576
+            await MainActor.run {
+                errorMessage = String(localized: "compose.video.tooLarge \(String(format: "%.0f", mb))")
+            }
+            return
+        }
+
+        // サーバー側アップロード制限を確認（ベストエフォート）
+        if let limits = try? await postService.getVideoUploadLimits() {
+            if !limits.canUpload {
+                await MainActor.run {
+                    errorMessage = limits.message ?? String(localized: "compose.video.uploadDisabled")
+                }
+                return
+            }
+            if let remainingBytes = limits.remainingDailyBytes, rawData.count > remainingBytes {
+                let remainingMB = Double(remainingBytes) / 1_048_576
+                await MainActor.run {
+                    errorMessage = String(localized: "compose.video.dailyLimitExceeded \(String(format: "%.0f", remainingMB))")
+                }
+                return
+            }
+        }
 
         // supportedContentTypes から MIME タイプを判定
         let mimeType: String
@@ -1136,19 +1224,19 @@ struct ComposeView: View {
 
     private var bottomBar: some View {
         HStack(spacing: 16) {
-            // フォトピッカー（最大4枚、動画選択済みの場合は無効）
+            // フォトピッカー（最大10枚、動画選択済みの場合は無効）
             // .compatible で HEIC→JPEG 変換を保証
             PhotosPicker(
                 selection: $photoPickerItems,
-                maxSelectionCount: max(0, 4 - selectedImages.count),
+                maxSelectionCount: max(0, 10 - selectedImages.count),
                 matching: .images,
                 preferredItemEncoding: .compatible
             ) {
                 Image(systemName: "photo")
                     .font(.system(size: 20))
-                    .foregroundStyle((selectedImages.count >= 4 || selectedVideo != nil) ? .tertiary : .secondary)
+                    .foregroundStyle((selectedImages.count >= 10 || selectedVideo != nil) ? .tertiary : .secondary)
             }
-            .disabled(selectedImages.count >= 4 || selectedVideo != nil)
+            .disabled(selectedImages.count >= 10 || selectedVideo != nil)
 
             // 動画ピッカー（画像選択済みの場合は無効）
             PhotosPicker(

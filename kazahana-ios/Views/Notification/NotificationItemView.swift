@@ -214,6 +214,8 @@ struct NotificationItemView: View {
         switch embed {
         case .images(let images):
             AnyView(notificationImageThumbnails(images.images))
+        case .gallery(let gallery):
+            AnyView(notificationImageThumbnails(gallery.items))
         case .video(let video):
             AnyView(VideoPlayerView(video: video, thumbnailOnly: true))
         case .external(let ext):

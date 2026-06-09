@@ -663,6 +663,12 @@ struct ThreadView: View {
     private func embedView(_ embed: PostEmbed) -> some View {
         switch embed {
         case .images(let images): ImageGridView(images: images.images)
+        case .gallery(let gallery):
+            if gallery.items.count <= 4 {
+                ImageGridView(images: gallery.items)
+            } else {
+                GalleryCarouselView(images: gallery.items)
+            }
         case .external(let ext): LinkCardView(external: ext.external)
         case .record(let rec):
             if let r = rec.record { QuoteEmbedView(record: r) }

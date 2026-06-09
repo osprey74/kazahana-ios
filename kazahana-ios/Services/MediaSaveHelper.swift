@@ -13,13 +13,15 @@ enum MediaSaveHelper {
         guard let embed else { return false }
         switch embed {
         case .images(let imgs):         return !imgs.images.isEmpty
+        case .gallery(let gallery):     return !gallery.items.isEmpty
         case .video:                    return true
         case .recordWithMedia(let rwm):
             guard let media = rwm.media else { return false }
             switch media {
-            case .images(let imgs): return !imgs.images.isEmpty
-            case .video:            return true
-            default:                return false
+            case .images(let imgs):     return !imgs.images.isEmpty
+            case .gallery(let gallery): return !gallery.items.isEmpty
+            case .video:                return true
+            default:                    return false
             }
         default: return false
         }
@@ -44,6 +46,8 @@ enum MediaSaveHelper {
         switch embed {
         case .images(let imgs):
             count += await saveImages(imgs.images)
+        case .gallery(let gallery):
+            count += await saveImages(gallery.items)
         case .video(let video):
             if let playlist = video.playlist, await saveVideo(playlistURL: playlist) { count += 1 }
         case .recordWithMedia(let rwm):
@@ -51,6 +55,8 @@ enum MediaSaveHelper {
                 switch media {
                 case .images(let imgs):
                     count += await saveImages(imgs.images)
+                case .gallery(let gallery):
+                    count += await saveImages(gallery.items)
                 case .video(let video):
                     if let playlist = video.playlist, await saveVideo(playlistURL: playlist) { count += 1 }
                 default: break

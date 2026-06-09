@@ -12,6 +12,7 @@ final class AuthViewModel {
 
     var isLoggedIn: Bool = false
     var isLoading: Bool = false
+    var isSwitchingAccount: Bool = false
     var errorMessage: String? = nil
 
     /// 保存済みの全アカウント
@@ -104,6 +105,7 @@ final class AuthViewModel {
 
     /// 保存済みアカウントに切り替える
     func switchAccount(to session: Session) async {
+        await MainActor.run { isSwitchingAccount = true }
         // ストアを先に永続化（refreshSession 後のコールバックが古い DID を返さないように）
         sessionStore.activeAccountDID = session.did
         client.updateSession(session)
@@ -118,6 +120,7 @@ final class AuthViewModel {
             savedAccounts = sessionStore.loadAll()
             activeAccountDID = sessionStore.activeAccountDID ?? session.did
             isLoggedIn = client.currentSession != nil
+            isSwitchingAccount = false
         }
         guard client.currentSession != nil else { return }
         // 通知許可を求め、切替先アカウントのデバイストークンをバックエンドに登録
