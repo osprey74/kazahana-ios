@@ -11,18 +11,21 @@ struct SettingsView: View {
     @Environment(AppSettings.self) private var settings
     @Environment(\.dismiss) private var dismiss
 
-    @Environment(ShelterStore.self) private var shelterStore: ShelterStore?
-    @Environment(EvacuationViewModel.self) private var evacuationVM: EvacuationViewModel?
     @State private var showRestartAlert = false
     @State private var showRevokeApiKeyAlert = false
     @State private var iapService = IAPService.shared
     @State private var showAddAccount = false
     @State private var removeAccountTarget: Session? = nil
+
+    #if !targetEnvironment(macCatalyst)
+    @Environment(ShelterStore.self) private var shelterStore: ShelterStore?
+    @Environment(EvacuationViewModel.self) private var evacuationVM: EvacuationViewModel?
     @State private var showEvacuationBotConfirm = false
     @State private var evacuationBotRegistering = false
     @State private var evacuationBotError: String? = nil
     @State private var demoModeTapCount = 0
     @State private var showDemoMode = false
+    #endif
 
     var body: some View {
         @Bindable var settings = settings
@@ -199,8 +202,10 @@ struct SettingsView: View {
                     Text(String(localized: "bsaf.title"))
                 }
 
-                // MARK: - 避難誘導機能
+                // MARK: - 避難誘導機能（iOS のみ）
+                #if !targetEnvironment(macCatalyst)
                 evacuationSection
+                #endif
 
                 // MARK: - サポーターバッジ
                 Section {
@@ -279,18 +284,23 @@ struct SettingsView: View {
                 // MARK: - アカウント管理
                 Section {
                     ForEach(authVM.savedAccounts, id: \.did) { session in
-                        SettingsAccountRow(session: session, isActive: session.did == authVM.activeAccountDID)
+                        HStack {
+                            SettingsAccountRow(session: session, isActive: session.did == authVM.activeAccountDID)
+
+                            // × ボタン（Windows 版と同じパターン）
+                            Button {
+                                removeAccountTarget = session
+                            } label: {
+                                Image(systemName: "xmark")
+                                    .font(.system(size: 12, weight: .medium))
+                                    .foregroundStyle(Color(.tertiaryLabel))
+                            }
+                            .buttonStyle(.borderless)
+                        }
                         .contentShape(Rectangle())
                         .onTapGesture {
                             guard session.did != authVM.activeAccountDID, !authVM.isSwitchingAccount else { return }
                             Task { await authVM.switchAccount(to: session) }
-                        }
-                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                            Button(role: .destructive) {
-                                removeAccountTarget = session
-                            } label: {
-                                Label(String(localized: "auth.accountPicker.removeAccount"), systemImage: "trash")
-                            }
                         }
                     }
 
@@ -320,6 +330,9 @@ struct SettingsView: View {
 
                 // MARK: - アプリ情報
                 Section(String(localized: "settings.appInfo")) {
+                    #if targetEnvironment(macCatalyst)
+                    LabeledContent(String(localized: "settings.version"), value: appVersion)
+                    #else
                     LabeledContent(String(localized: "settings.version"), value: appVersion)
                         .onTapGesture {
                             demoModeTapCount += 1
@@ -328,6 +341,7 @@ struct SettingsView: View {
                                 demoModeTapCount = 0
                             }
                         }
+                    #endif
                     LabeledContent("Bluesky", value: "@kazahana.app")
                 }
             }
@@ -401,6 +415,7 @@ struct SettingsView: View {
         return "\(version) (\(build))"
     }
 
+    #if !targetEnvironment(macCatalyst)
     // MARK: - 避難誘導セクション
 
     @ViewBuilder
@@ -589,6 +604,7 @@ struct SettingsView: View {
             evacuationBotRegistering = false
         }
     }
+    #endif
 }
 
 private struct SettingsAccountRow: View {

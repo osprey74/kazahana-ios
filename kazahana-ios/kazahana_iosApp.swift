@@ -14,8 +14,10 @@ struct kazahana_iosApp: App {
     @State private var appSettings = AppSettings.shared
 
     init() {
+        #if !targetEnvironment(macCatalyst)
         // BGAppRefreshTask タスクを登録（アプリ起動時に必ず呼ぶ必要がある）
         BackgroundRefreshService.shared.registerTasks()
+        #endif
     }
 
     var body: some Scene {
@@ -24,6 +26,7 @@ struct kazahana_iosApp: App {
                 .environment(authViewModel)
                 .environment(appSettings)
                 .preferredColorScheme(appSettings.theme.colorScheme)
+                #if !targetEnvironment(macCatalyst)
                 // バックグラウンド移行時にリフレッシュをスケジュール
                 .onReceive(
                     NotificationCenter.default.publisher(
@@ -40,6 +43,7 @@ struct kazahana_iosApp: App {
                 ) { _ in
                     PushNotificationService.shared.resetBadge()
                 }
+                #endif
         }
     }
 }
@@ -52,8 +56,10 @@ final class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationC
         _ application: UIApplication,
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
     ) -> Bool {
+        #if !targetEnvironment(macCatalyst)
         // フォアグラウンドでもプッシュ通知を表示するためにデリゲートを設定
         UNUserNotificationCenter.current().delegate = self
+        #endif
         return true
     }
 
@@ -123,6 +129,7 @@ final class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationC
     @objc func handleTab5() { MenuCommandRelay.shared.switchTo(.profile) }
     #endif
 
+    #if !targetEnvironment(macCatalyst)
     /// APNs からデバイストークンを受け取ったときに呼ばれる
     func application(
         _ application: UIApplication,
@@ -161,6 +168,7 @@ final class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationC
             userInfo: ["targetDID": targetDID]
         )
     }
+    #endif
 }
 
 // MARK: - macOS ウィンドウサイズ制御・閉じるボタン動作

@@ -46,9 +46,11 @@ final class AuthViewModel {
             if client.currentSession != nil {
                 Task {
                     await refreshSessionOnLaunch()
+                    #if !targetEnvironment(macCatalyst)
                     // 通知許可を求め、保存済みトークンがあれば全アカウントに再登録
                     await PushNotificationService.shared.requestPermission()
                     await PushNotificationService.shared.registerTokenForAllAccounts()
+                    #endif
                 }
             }
         } else if accounts.count > 1 {
@@ -90,10 +92,12 @@ final class AuthViewModel {
                 isLoggedIn = true
                 AppSettings.shared.addHandleHistory(identifier)
             }
+            #if !targetEnvironment(macCatalyst)
             // 通知許可を求め、デバイストークンをバックエンドに登録
             let did = sessionStore.activeAccountDID ?? ""
             await PushNotificationService.shared.requestPermission()
             await PushNotificationService.shared.registerToken(for: did)
+            #endif
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -123,9 +127,11 @@ final class AuthViewModel {
             isSwitchingAccount = false
         }
         guard client.currentSession != nil else { return }
+        #if !targetEnvironment(macCatalyst)
         // 通知許可を求め、切替先アカウントのデバイストークンをバックエンドに登録
         await PushNotificationService.shared.requestPermission()
         await PushNotificationService.shared.registerToken(for: session.did)
+        #endif
     }
 
     // MARK: - アカウント削除
@@ -141,8 +147,10 @@ final class AuthViewModel {
             _ = try? await URLSession.shared.data(for: request)
         }
 
+        #if !targetEnvironment(macCatalyst)
         // プッシュ通知トークンをバックエンドから削除（ベストエフォート）
         await PushNotificationService.shared.unregisterToken(for: did)
+        #endif
 
         let isRemovingActive = (did == (sessionStore.activeAccountDID ?? ""))
         sessionStore.delete(did: did)

@@ -10,6 +10,7 @@ struct ContentView: View {
     @Environment(AppSettings.self) private var settings
     @Environment(\.scenePhase) private var scenePhase
 
+    #if !targetEnvironment(macCatalyst)
     /// 避難誘導用 LocationService（機能有効時のみ生成）
     @State private var locationService: LocationService?
 
@@ -24,8 +25,87 @@ struct ContentView: View {
 
     /// 避難誘導オンボーディングダイアログ
     @State private var showEvacuationOnboarding = false
+    #endif
 
     var body: some View {
+        #if targetEnvironment(macCatalyst)
+        mainContent
+        #else
+        mainContent
+            // 避難誘導バナー（MainTabView の外側に overlay）
+            .overlay(alignment: .bottom) {
+                if evacuationVM.bannerVisible, let level = evacuationVM.highestLevel {
+                    EvacuationBannerView(
+                        highestLevel: level,
+                        alertCount: evacuationVM.activeAlerts.count,
+                        onTap: { showEvacuationShelters = true }
+                    )
+                    .padding(.bottom, 50) // タブバーの上に配置
+                }
+            }
+            .animation(.easeInOut(duration: 0.3), value: evacuationVM.bannerVisible)
+            .sheet(isPresented: $showEvacuationShelters) {
+                NavigationStack {
+                    NearestSheltersView(shelterIndex: shelterStore.index)
+                        .environment(settings)
+                        .environment(locationService)
+                        .toolbar {
+                            ToolbarItem(placement: .cancellationAction) {
+                                Button(String(localized: "common.close")) {
+                                    showEvacuationShelters = false
+                                }
+                            }
+                        }
+                }
+            }
+            // 避難誘導オンボーディング（初回のみ表示）
+            .alert(String(localized: "evacuation.onboarding.title"), isPresented: $showEvacuationOnboarding) {
+                Button(String(localized: "evacuation.onboarding.dismiss")) {
+                    settings.evacuationOnboardingShown = true
+                }
+            } message: {
+                Text(String(localized: "evacuation.onboarding.message"))
+            }
+            // 避難誘導関連を environment で配布
+            .environment(locationService)
+            .environment(shelterStore)
+            .environment(evacuationVM)
+            .onChange(of: settings.evacuationEnabled) { _, enabled in
+                if enabled {
+                    initializeEvacuationIfNeeded()
+                } else {
+                    evacuationVM.clearAll()
+                }
+            }
+            .onAppear {
+                if settings.evacuationEnabled {
+                    initializeEvacuationIfNeeded()
+                }
+                // 初回のみオンボーディングダイアログを表示
+                if !settings.evacuationOnboardingShown && !settings.evacuationEnabled {
+                    showEvacuationOnboarding = true
+                }
+            }
+            // フォアグラウンド復帰時にタイムアウト済みアラートを即座に除去
+            .onChange(of: scenePhase) { _, newPhase in
+                if newPhase == .active && settings.evacuationEnabled {
+                    evacuationVM.expireStaleAlerts()
+                }
+            }
+            // 10分間隔でタイムアウトチェック
+            .task {
+                while !Task.isCancelled {
+                    try? await Task.sleep(for: .seconds(600))
+                    if settings.evacuationEnabled {
+                        evacuationVM.expireStaleAlerts()
+                    }
+                }
+            }
+        #endif
+    }
+
+    /// メインコンテンツ（認証状態に応じた画面切り替え）
+    private var mainContent: some View {
         Group {
             if authVM.isLoggedIn {
                 MainTabView(client: authVM.client)
@@ -38,77 +118,9 @@ struct ContentView: View {
                 LoginView()
             }
         }
-        // 避難誘導バナー（MainTabView の外側に overlay）
-        .overlay(alignment: .bottom) {
-            if evacuationVM.bannerVisible, let level = evacuationVM.highestLevel {
-                EvacuationBannerView(
-                    highestLevel: level,
-                    alertCount: evacuationVM.activeAlerts.count,
-                    onTap: { showEvacuationShelters = true }
-                )
-                .padding(.bottom, 50) // タブバーの上に配置
-            }
-        }
-        .animation(.easeInOut(duration: 0.3), value: evacuationVM.bannerVisible)
-        .sheet(isPresented: $showEvacuationShelters) {
-            NavigationStack {
-                NearestSheltersView(shelterIndex: shelterStore.index)
-                    .environment(settings)
-                    .environment(locationService)
-                    .toolbar {
-                        ToolbarItem(placement: .cancellationAction) {
-                            Button(String(localized: "common.close")) {
-                                showEvacuationShelters = false
-                            }
-                        }
-                    }
-            }
-        }
-        // 避難誘導オンボーディング（初回のみ表示）
-        .alert(String(localized: "evacuation.onboarding.title"), isPresented: $showEvacuationOnboarding) {
-            Button(String(localized: "evacuation.onboarding.dismiss")) {
-                settings.evacuationOnboardingShown = true
-            }
-        } message: {
-            Text(String(localized: "evacuation.onboarding.message"))
-        }
-        // 避難誘導関連を environment で配布
-        .environment(locationService)
-        .environment(shelterStore)
-        .environment(evacuationVM)
-        .onChange(of: settings.evacuationEnabled) { _, enabled in
-            if enabled {
-                initializeEvacuationIfNeeded()
-            } else {
-                evacuationVM.clearAll()
-            }
-        }
-        .onAppear {
-            if settings.evacuationEnabled {
-                initializeEvacuationIfNeeded()
-            }
-            // 初回のみオンボーディングダイアログを表示
-            if !settings.evacuationOnboardingShown && !settings.evacuationEnabled {
-                showEvacuationOnboarding = true
-            }
-        }
-        // フォアグラウンド復帰時にタイムアウト済みアラートを即座に除去
-        .onChange(of: scenePhase) { _, newPhase in
-            if newPhase == .active && settings.evacuationEnabled {
-                evacuationVM.expireStaleAlerts()
-            }
-        }
-        // 10分間隔でタイムアウトチェック
-        .task {
-            while !Task.isCancelled {
-                try? await Task.sleep(for: .seconds(600))
-                if settings.evacuationEnabled {
-                    evacuationVM.expireStaleAlerts()
-                }
-            }
-        }
     }
 
+    #if !targetEnvironment(macCatalyst)
     /// 避難誘導機能の初期化（LocationService + 避難所データ）
     private func initializeEvacuationIfNeeded() {
         if locationService == nil {
@@ -116,6 +128,7 @@ struct ContentView: View {
         }
         shelterStore.loadIfNeeded()
     }
+    #endif
 }
 
 // MARK: - メインタブ画面
@@ -244,6 +257,7 @@ struct MainTabView: View {
         }
         // ホームタブの再タップを UITabBarControllerDelegate で検出
         .background(TabBarDelegateInjector(delegate: tabBarDelegate))
+        #if !targetEnvironment(macCatalyst)
         // プッシュ通知タップ → 対象アカウントに切り替えて通知タブへ遷移
         .onReceive(NotificationCenter.default.publisher(for: .pushNotificationTapped)) { note in
             guard let targetDID = note.userInfo?["targetDID"] as? String else { return }
@@ -256,6 +270,7 @@ struct MainTabView: View {
                 await MainActor.run { selectedTab = .notifications }
             }
         }
+        #endif
         // macOS: メニューバーからのタブ切替（MenuCommandRelay 経由）
         .onChange(of: MenuCommandRelay.shared.tabCommand?.id) { _, _ in
             guard let command = MenuCommandRelay.shared.tabCommand else { return }
@@ -263,10 +278,12 @@ struct MainTabView: View {
             // TabView の id を変更して強制再構築 → タブバー UI が確実に同期
             tabViewRefreshID = UUID()
         }
+        #if !targetEnvironment(macCatalyst)
         // バッジをリセット（アプリ起動時）
         .task {
             PushNotificationService.shared.resetBadge()
         }
+        #endif
     }
 
     /// kazahana:// ディープリンクを処理する
