@@ -170,6 +170,20 @@ struct PostCardView: View {
                                         )
                                         return .handled
                                     }
+                                    // bsky.app/chat/{code} をアプリ内グループ参加画面で処理
+                                    if url.host == "bsky.app",
+                                       url.pathComponents.count >= 3,
+                                       url.pathComponents[1] == "chat" {
+                                        let code = url.pathComponents[2]
+                                        if let deepURL = URL(string: "kazahana://chat/\(code)") {
+                                            NotificationCenter.default.post(
+                                                name: .kazahanaDeepLink,
+                                                object: nil,
+                                                userInfo: ["url": deepURL]
+                                            )
+                                            return .handled
+                                        }
+                                    }
                                     return .systemAction
                                 })
                             }
