@@ -31,7 +31,8 @@ Kazahana is designed as a **lightweight companion app** — not a full-featured 
 - **Profile** — Author feed (posts/replies/media/likes tabs), pinned post, follow/unfollow, followers/following lists, in-profile search
 - **Search** — Actor search and post search with search history
 - **Compose** — New post, reply, and quote post; up to 10 images (crop + ALT text) with gallery embed auto-promotion and video attachment (300 MB, server limit check); upload progress indicator; mention autocomplete; threadgate (reply restrictions) and postgate (quote restrictions); draft saving on cancel
-- **Direct Messages** — Conversation list, message thread, emoji reactions, new conversation creation with search history
+- **Direct Messages & Group Chat** — 1:1 conversations and group chat (up to 50 members); group creation, invite link management, join request approval, member management, lock/unlock; emoji reactions, new conversation creation with search history
+- **Profile QR Code** — Generate and share a QR code for your Bluesky profile; copy link, share via system sheet, or save to Photos
 - **Content Moderation** — Label-based filtering (hide/warn/ignore), adult content toggle, post reporting
 - **Settings** — Theme, post language, auto-refresh interval, via attribution, Claude API key for ALT text generation
 - **Sharing** — Share any post via the iOS share sheet; open `kazahana://` deep links from other apps
@@ -63,7 +64,7 @@ open kazahana-ios.xcodeproj
 
 ## Related Projects
 
-- [kazahana](https://github.com/osprey74/kazahana) — Desktop version (Windows / macOS)
+- [kazahana](https://github.com/osprey74/kazahana) — Desktop version (Windows)
 - [kazahana-android](https://github.com/osprey74/kazahana-android) — Android version
 - [BSAF Protocol](https://github.com/osprey74/bsaf-protocol) — Bluesky Structured Alert Feed specification
 
