@@ -178,6 +178,27 @@ struct ChatMessageView: Codable, Identifiable {
     var sentDate: Date? {
         ISO8601DateFormatter().date(from: sentAt)
     }
+
+    private enum CodingKeys: String, CodingKey {
+        case id, rev, text, sender, sentAt, facets, reactions, embed
+    }
+
+    init(id: String, rev: String, text: String, sender: ChatMessageSender, sentAt: String, facets: [Facet]?, reactions: [ChatReaction]?, embed: ChatMessageEmbed?) {
+        self.id = id; self.rev = rev; self.text = text; self.sender = sender
+        self.sentAt = sentAt; self.facets = facets; self.reactions = reactions; self.embed = embed
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(String.self, forKey: .id)
+        rev = try container.decode(String.self, forKey: .rev)
+        text = (try? container.decode(String.self, forKey: .text)) ?? ""
+        sender = try container.decode(ChatMessageSender.self, forKey: .sender)
+        sentAt = try container.decode(String.self, forKey: .sentAt)
+        facets = try? container.decodeIfPresent([Facet].self, forKey: .facets)
+        reactions = try? container.decodeIfPresent([ChatReaction].self, forKey: .reactions)
+        embed = try? container.decodeIfPresent(ChatMessageEmbed.self, forKey: .embed)
+    }
 }
 
 struct ChatMessageSender: Codable {
@@ -455,6 +476,32 @@ struct GetConvoResponse: Decodable {
 struct GetMessagesResponse: Decodable {
     let messages: [ChatMessageViewOrDeleted]
     let cursor: String?
+
+    private enum CodingKeys: String, CodingKey { case messages, cursor }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        cursor = try container.decodeIfPresent(String.self, forKey: .cursor)
+        // 個別メッセージのデコード失敗をスキップ（配列全体が壊れない）
+        var messagesContainer = try container.nestedUnkeyedContainer(forKey: .messages)
+        var decoded: [ChatMessageViewOrDeleted] = []
+        while !messagesContainer.isAtEnd {
+            if let msg = try? messagesContainer.decode(ChatMessageViewOrDeleted.self) {
+                decoded.append(msg)
+            } else {
+                // デコード失敗したメッセージをスキップ
+                _ = try? messagesContainer.decode(AnyCodable.self)
+            }
+        }
+        messages = decoded
+    }
+}
+
+/// デコード失敗時にスキップ用のダミー型
+private struct AnyCodable: Decodable {
+    init(from decoder: Decoder) throws {
+        _ = try decoder.singleValueContainer()
+    }
 }
 
 struct SendMessageResponse: Decodable {
