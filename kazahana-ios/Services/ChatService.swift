@@ -296,8 +296,8 @@ final class ChatService {
     }
 
     /// 招待リンクを作成する
-    func createJoinLink(convoId: String, requireApproval: Bool? = nil) async throws -> ConvoView {
-        let body = CreateJoinLinkBody(convoId: convoId, requireApproval: requireApproval)
+    func createJoinLink(convoId: String, joinRule: String = "anyone", requireApproval: Bool? = nil) async throws -> ConvoView {
+        let body = CreateJoinLinkBody(convoId: convoId, joinRule: joinRule, requireApproval: requireApproval)
         let response: CreateJoinLinkResponse = try await client.postWithProxy(
             nsid: "chat.bsky.group.createJoinLink",
             body: body
@@ -306,8 +306,8 @@ final class ChatService {
     }
 
     /// 招待リンクの設定を変更する
-    func editJoinLink(convoId: String, requireApproval: Bool? = nil) async throws -> ConvoView {
-        let body = EditJoinLinkBody(convoId: convoId, requireApproval: requireApproval)
+    func editJoinLink(convoId: String, joinRule: String? = nil, requireApproval: Bool? = nil) async throws -> ConvoView {
+        let body = EditJoinLinkBody(convoId: convoId, joinRule: joinRule, requireApproval: requireApproval)
         let response: EditJoinLinkResponse = try await client.postWithProxy(
             nsid: "chat.bsky.group.editJoinLink",
             body: body

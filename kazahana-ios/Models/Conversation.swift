@@ -589,11 +589,13 @@ struct RemoveMembersBody: Encodable {
 
 struct CreateJoinLinkBody: Encodable {
     let convoId: String
+    let joinRule: String        // "anyone" etc.
     let requireApproval: Bool?
 }
 
 struct EditJoinLinkBody: Encodable {
     let convoId: String
+    let joinRule: String?
     let requireApproval: Bool?
 }
 
