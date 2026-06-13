@@ -98,7 +98,19 @@ struct ConversationListView: View {
                 ConversationRowView(
                     convo: convo,
                     myDID: myDID,
-                    onTapAvatar: { did in selectedAuthorDID = IdentifiableString(did) }
+                    onTapAvatar: { did in selectedAuthorDID = IdentifiableString(did) },
+                    onMute: {
+                        Task {
+                            if convo.muted == true {
+                                await vm.unmuteConvo(convo.id)
+                            } else {
+                                await vm.muteConvo(convo.id)
+                            }
+                        }
+                    },
+                    onLeave: {
+                        Task { await vm.leaveConvo(convo.id) }
+                    }
                 )
                 .contentShape(Rectangle())
                 .onTapGesture {
@@ -177,6 +189,8 @@ struct ConversationRowView: View {
     let convo: ConvoView
     let myDID: String
     var onTapAvatar: ((String) -> Void)? = nil
+    var onMute: (() -> Void)? = nil
+    var onLeave: (() -> Void)? = nil
 
     private var isGroup: Bool { convo.isGroup }
     private var member: ChatMember? { convo.otherMember(myDID: myDID) }
@@ -272,6 +286,11 @@ struct ConversationRowView: View {
                             .padding(.vertical, 2)
                             .background(.blue, in: Capsule())
                     }
+
+                    // macOS Catalyst: スワイプが使えないため三点メニューを表示
+                    #if targetEnvironment(macCatalyst)
+                    catalystMenu
+                    #endif
                 }
             }
         }
@@ -291,6 +310,38 @@ struct ConversationRowView: View {
                 .foregroundStyle(.secondary)
         }
     }
+
+    // MARK: - Catalyst Menu
+
+    #if targetEnvironment(macCatalyst)
+    @ViewBuilder
+    private var catalystMenu: some View {
+        Menu {
+            Button {
+                onMute?()
+            } label: {
+                if convo.muted == true {
+                    Label(String(localized: "dm.unmute"), systemImage: "bell")
+                } else {
+                    Label(String(localized: "dm.mute"), systemImage: "bell.slash")
+                }
+            }
+            Divider()
+            Button(role: .destructive) {
+                onLeave?()
+            } label: {
+                Label(String(localized: "dm.leave"), systemImage: "rectangle.portrait.and.arrow.right")
+            }
+        } label: {
+            Image(systemName: "ellipsis")
+                .font(.system(size: 14))
+                .foregroundStyle(.secondary)
+                .frame(width: 28, height: 28)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+    #endif
 
     // MARK: - Helpers
 
