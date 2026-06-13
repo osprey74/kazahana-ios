@@ -664,12 +664,12 @@ struct DisableJoinLinkBody: Encodable {
 
 struct ApproveJoinRequestBody: Encodable {
     let convoId: String
-    let did: String
+    let member: String
 }
 
 struct RejectJoinRequestBody: Encodable {
     let convoId: String
-    let did: String
+    let member: String
 }
 
 struct UpdateJoinRequestsReadBody: Encodable {
@@ -700,30 +700,15 @@ struct GroupOperationResponse: Decodable {
 }
 
 struct JoinRequestView: Decodable, Identifiable {
-    let did: String
-    let handle: String
-    let displayName: String?
-    let avatar: String?
+    let requestedBy: ChatMember
     let requestedAt: String?
 
-    var id: String { did }
-    var displayNameOrHandle: String {
-        let name = displayName ?? ""
-        return name.isEmpty ? handle : name
-    }
+    var id: String { requestedBy.did }
 }
 
 struct ListJoinRequestsResponse: Decodable {
     let requests: [JoinRequestView]
     let cursor: String?
-}
-
-struct ApproveJoinRequestResponse: Decodable {
-    let convo: ConvoView?
-}
-
-struct RejectJoinRequestResponse: Decodable {
-    let convo: ConvoView?
 }
 
 // MARK: - チャットプライバシー設定（Phase 4）

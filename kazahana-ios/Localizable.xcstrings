@@ -28280,6 +28280,22 @@
           }
         }
       }
+    },
+    "dm.groupSettings.noJoinRequests" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No pending requests"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "保留中の申請はありません"
+          }
+        }
+      }
     }
   },
   "version" : "1.1"

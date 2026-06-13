@@ -41,7 +41,7 @@ struct GroupSettingsView: View {
             }
 
             // 参加申請（owner のみ）
-            if isOwner, let count = group?.joinRequestCount, count > 0 {
+            if isOwner {
                 joinRequestsSection
             }
 
@@ -298,15 +298,20 @@ struct GroupSettingsView: View {
         Section(String(localized: "dm.groupSettings.joinRequests")) {
             if isLoadingRequests {
                 HStack { Spacer(); ProgressView(); Spacer() }
+            } else if joinRequests.isEmpty {
+                Text(String(localized: "dm.groupSettings.noJoinRequests"))
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
             } else {
                 ForEach(joinRequests) { request in
+                    let user = request.requestedBy
                     HStack(spacing: 12) {
-                        AvatarView(url: request.avatar, size: 36)
+                        AvatarView(url: user.avatar, size: 36)
                         VStack(alignment: .leading, spacing: 1) {
-                            Text(request.displayNameOrHandle)
+                            Text(user.displayNameOrHandle)
                                 .font(.callout)
                                 .fontWeight(.medium)
-                            Text("@\(request.handle)")
+                            Text("@\(user.handle)")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
@@ -485,17 +490,16 @@ struct GroupSettingsView: View {
 
     @MainActor private func approveRequest(_ request: JoinRequestView) async {
         do {
-            try await chatService.approveJoinRequest(convoId: convo.id, did: request.did)
-            joinRequests.removeAll { $0.did == request.did }
-            // convo を再取得してメンバー一覧を更新
+            try await chatService.approveJoinRequest(convoId: convo.id, member: request.requestedBy.did)
+            joinRequests.removeAll { $0.id == request.id }
             convo = try await chatService.getConvo(convoId: convo.id)
         } catch { errorMessage = error.localizedDescription }
     }
 
     @MainActor private func rejectRequest(_ request: JoinRequestView) async {
         do {
-            try await chatService.rejectJoinRequest(convoId: convo.id, did: request.did)
-            joinRequests.removeAll { $0.did == request.did }
+            try await chatService.rejectJoinRequest(convoId: convo.id, member: request.requestedBy.did)
+            joinRequests.removeAll { $0.id == request.id }
         } catch { errorMessage = error.localizedDescription }
     }
 

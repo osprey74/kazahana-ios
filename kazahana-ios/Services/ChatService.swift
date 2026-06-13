@@ -346,18 +346,18 @@ final class ChatService {
     }
 
     /// 参加申請を承認する
-    func approveJoinRequest(convoId: String, did: String) async throws {
-        let body = ApproveJoinRequestBody(convoId: convoId, did: did)
-        let _: ApproveJoinRequestResponse = try await client.postWithProxy(
+    func approveJoinRequest(convoId: String, member: String) async throws {
+        let body = ApproveJoinRequestBody(convoId: convoId, member: member)
+        let _: GroupOperationResponse = try await client.postWithProxy(
             nsid: "chat.bsky.group.approveJoinRequest",
             body: body
         )
     }
 
     /// 参加申請を拒否する
-    func rejectJoinRequest(convoId: String, did: String) async throws {
-        let body = RejectJoinRequestBody(convoId: convoId, did: did)
-        let _: RejectJoinRequestResponse = try await client.postWithProxy(
+    func rejectJoinRequest(convoId: String, member: String) async throws {
+        let body = RejectJoinRequestBody(convoId: convoId, member: member)
+        let _: GroupOperationResponse = try await client.postWithProxy(
             nsid: "chat.bsky.group.rejectJoinRequest",
             body: body
         )
