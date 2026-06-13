@@ -216,9 +216,9 @@ struct GroupSettingsView: View {
     @ViewBuilder
     private var joinLinkSection: some View {
         Section(String(localized: "dm.groupSettings.joinLink")) {
-            if let joinLink = group?.joinLink {
+            if let joinLink = group?.joinLink, let code = joinLink.code {
                 // リンク URL + コピー
-                let linkURL = "https://bsky.app/chat/\(joinLink.code)"
+                let linkURL = "https://bsky.app/chat/\(code)"
                 HStack {
                     Text(linkURL)
                         .font(.caption)

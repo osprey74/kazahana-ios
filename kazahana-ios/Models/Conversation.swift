@@ -98,12 +98,31 @@ struct GroupConvo: Codable {
     let joinLink: JoinLinkView?
     let joinRequestCount: Int?          // owner のみ
     let unreadJoinRequestCount: Int?    // owner のみ
+
+    private enum CodingKeys: String, CodingKey {
+        case createdAt, name, memberCount, memberLimit, lockStatus
+        case lockStatusModerationOverride, joinLink, joinRequestCount, unreadJoinRequestCount
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        createdAt = try container.decodeIfPresent(String.self, forKey: .createdAt)
+        name = (try? container.decode(String.self, forKey: .name)) ?? ""
+        memberCount = (try? container.decode(Int.self, forKey: .memberCount)) ?? 0
+        memberLimit = try container.decodeIfPresent(Int.self, forKey: .memberLimit)
+        lockStatus = (try? container.decode(String.self, forKey: .lockStatus)) ?? "unlocked"
+        lockStatusModerationOverride = try container.decodeIfPresent(Bool.self, forKey: .lockStatusModerationOverride)
+        // joinLink のデコード失敗を許容
+        joinLink = try? container.decodeIfPresent(JoinLinkView.self, forKey: .joinLink)
+        joinRequestCount = try container.decodeIfPresent(Int.self, forKey: .joinRequestCount)
+        unreadJoinRequestCount = try container.decodeIfPresent(Int.self, forKey: .unreadJoinRequestCount)
+    }
 }
 
 // MARK: - JoinLinkView
 
 struct JoinLinkView: Codable {
-    let code: String
+    let code: String?
     let disabled: Bool?
     let enabledStatus: String?  // "enabled" | "disabled"
     let requireApproval: Bool?
@@ -112,6 +131,19 @@ struct JoinLinkView: Codable {
     var isEnabled: Bool {
         if let status = enabledStatus { return status == "enabled" }
         return disabled != true
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case code, disabled, enabledStatus, requireApproval, joinRule
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        code = try container.decodeIfPresent(String.self, forKey: .code)
+        disabled = try container.decodeIfPresent(Bool.self, forKey: .disabled)
+        enabledStatus = try container.decodeIfPresent(String.self, forKey: .enabledStatus)
+        requireApproval = try container.decodeIfPresent(Bool.self, forKey: .requireApproval)
+        joinRule = try container.decodeIfPresent(String.self, forKey: .joinRule)
     }
 }
 
