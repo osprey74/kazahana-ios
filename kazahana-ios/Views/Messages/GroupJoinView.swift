@@ -181,7 +181,7 @@ struct GroupJoinView: View {
         do {
             let chatService = ChatService(client: authVM.client)
             let response = try await chatService.getJoinLinkPreviews(codes: [code])
-            if let first = response.previews.first {
+            if let first = response.joinLinkPreviews.first {
                 switch first {
                 case .active(let active):
                     preview = active
@@ -194,6 +194,8 @@ struct GroupJoinView: View {
                 linkInvalid = true
             }
         } catch {
+            print("[GroupJoinView] getJoinLinkPreviews error: \(error)")
+            errorMessage = error.localizedDescription
             linkInvalid = true
         }
         isLoading = false

@@ -462,7 +462,7 @@ struct ListConvoRequestsResponse: Decodable {
 }
 
 struct GetJoinLinkPreviewsResponse: Decodable {
-    let previews: [JoinLinkPreviewItem]
+    let joinLinkPreviews: [JoinLinkPreviewItem]
 }
 
 /// getJoinLinkPreviews が返す各プレビュー（$type で active/disabled/invalid を判別）
