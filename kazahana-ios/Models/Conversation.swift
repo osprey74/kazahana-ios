@@ -565,6 +565,121 @@ struct UnlockConvoBody: Encodable {
     let convoId: String
 }
 
+// MARK: - グループ管理 body 型（Phase 3）
+
+struct CreateGroupBody: Encodable {
+    let name: String
+    let members: [String]   // DID の配列（≤49）
+}
+
+struct EditGroupBody: Encodable {
+    let convoId: String
+    let name: String
+}
+
+struct AddMembersBody: Encodable {
+    let convoId: String
+    let members: [String]
+}
+
+struct RemoveMembersBody: Encodable {
+    let convoId: String
+    let members: [String]
+}
+
+struct CreateJoinLinkBody: Encodable {
+    let convoId: String
+    let requireApproval: Bool?
+}
+
+struct EditJoinLinkBody: Encodable {
+    let convoId: String
+    let requireApproval: Bool?
+}
+
+struct EnableJoinLinkBody: Encodable {
+    let convoId: String
+}
+
+struct DisableJoinLinkBody: Encodable {
+    let convoId: String
+}
+
+struct ApproveJoinRequestBody: Encodable {
+    let convoId: String
+    let did: String
+}
+
+struct RejectJoinRequestBody: Encodable {
+    let convoId: String
+    let did: String
+}
+
+struct UpdateJoinRequestsReadBody: Encodable {
+    let convoId: String
+}
+
+// MARK: - グループ管理レスポンス型（Phase 3）
+
+struct CreateGroupResponse: Decodable {
+    let convo: ConvoView
+}
+
+struct EditGroupResponse: Decodable {
+    let convo: ConvoView
+}
+
+struct AddMembersResponse: Decodable {
+    let convo: ConvoView
+}
+
+struct RemoveMembersResponse: Decodable {
+    let convo: ConvoView
+}
+
+struct CreateJoinLinkResponse: Decodable {
+    let convo: ConvoView
+}
+
+struct EditJoinLinkResponse: Decodable {
+    let convo: ConvoView
+}
+
+struct EnableJoinLinkResponse: Decodable {
+    let convo: ConvoView
+}
+
+struct DisableJoinLinkResponse: Decodable {
+    let convo: ConvoView
+}
+
+struct JoinRequestView: Decodable, Identifiable {
+    let did: String
+    let handle: String
+    let displayName: String?
+    let avatar: String?
+    let requestedAt: String?
+
+    var id: String { did }
+    var displayNameOrHandle: String {
+        let name = displayName ?? ""
+        return name.isEmpty ? handle : name
+    }
+}
+
+struct ListJoinRequestsResponse: Decodable {
+    let requests: [JoinRequestView]
+    let cursor: String?
+}
+
+struct ApproveJoinRequestResponse: Decodable {
+    let convo: ConvoView?
+}
+
+struct RejectJoinRequestResponse: Decodable {
+    let convo: ConvoView?
+}
+
 // MARK: - 削除レスポンス
 
 struct DeleteMessageForSelfResponse: Decodable {

@@ -13,6 +13,7 @@ struct ChatThreadView: View {
     @State private var messageText = ""
     @State private var scrollProxy: ScrollViewProxy?
     @State private var selectedAuthorDID: IdentifiableString? = nil
+    @State private var showGroupSettings = false
 
     private var myDID: String { authVM.client.currentSession?.did ?? "" }
     private var isGroup: Bool { convo.isGroup }
@@ -100,6 +101,10 @@ struct ChatThreadView: View {
             ProfileScreenView(actor: item.value)
                 .environment(authVM)
         }
+        .navigationDestination(isPresented: $showGroupSettings) {
+            GroupSettingsView(chatService: chatService, convo: convo)
+                .environment(authVM)
+        }
         .task {
             let vm = ChatThreadViewModel(chatService: chatService, convoId: convo.id)
             viewModel = vm
@@ -130,7 +135,7 @@ struct ChatThreadView: View {
 
     @ViewBuilder
     private var groupHeaderButton: some View {
-        // Phase 3 でグループ設定画面への遷移を追加
+        Button { showGroupSettings = true } label: {
         VStack(spacing: 1) {
             HStack(spacing: 4) {
                 if convo.isLocked {
@@ -149,6 +154,8 @@ struct ChatThreadView: View {
                     .foregroundStyle(.secondary)
             }
         }
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: - Input Bar

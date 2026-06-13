@@ -214,6 +214,126 @@ final class ChatService {
         )
     }
 
+    // MARK: - グループ作成・管理（Phase 3）
+
+    /// グループを作成する
+    func createGroup(name: String, memberDIDs: [String]) async throws -> ConvoView {
+        let body = CreateGroupBody(name: name, members: memberDIDs)
+        let response: CreateGroupResponse = try await client.postWithProxy(
+            nsid: "chat.bsky.group.createGroup",
+            body: body
+        )
+        return response.convo
+    }
+
+    /// グループ名を編集する
+    func editGroup(convoId: String, name: String) async throws -> ConvoView {
+        let body = EditGroupBody(convoId: convoId, name: name)
+        let response: EditGroupResponse = try await client.postWithProxy(
+            nsid: "chat.bsky.group.editGroup",
+            body: body
+        )
+        return response.convo
+    }
+
+    /// メンバーを追加する
+    func addMembers(convoId: String, memberDIDs: [String]) async throws -> ConvoView {
+        let body = AddMembersBody(convoId: convoId, members: memberDIDs)
+        let response: AddMembersResponse = try await client.postWithProxy(
+            nsid: "chat.bsky.group.addMembers",
+            body: body
+        )
+        return response.convo
+    }
+
+    /// メンバーを削除する（kick）
+    func removeMembers(convoId: String, memberDIDs: [String]) async throws -> ConvoView {
+        let body = RemoveMembersBody(convoId: convoId, members: memberDIDs)
+        let response: RemoveMembersResponse = try await client.postWithProxy(
+            nsid: "chat.bsky.group.removeMembers",
+            body: body
+        )
+        return response.convo
+    }
+
+    /// 招待リンクを作成する
+    func createJoinLink(convoId: String, requireApproval: Bool? = nil) async throws -> ConvoView {
+        let body = CreateJoinLinkBody(convoId: convoId, requireApproval: requireApproval)
+        let response: CreateJoinLinkResponse = try await client.postWithProxy(
+            nsid: "chat.bsky.group.createJoinLink",
+            body: body
+        )
+        return response.convo
+    }
+
+    /// 招待リンクの設定を変更する
+    func editJoinLink(convoId: String, requireApproval: Bool? = nil) async throws -> ConvoView {
+        let body = EditJoinLinkBody(convoId: convoId, requireApproval: requireApproval)
+        let response: EditJoinLinkResponse = try await client.postWithProxy(
+            nsid: "chat.bsky.group.editJoinLink",
+            body: body
+        )
+        return response.convo
+    }
+
+    /// 招待リンクを有効化する
+    func enableJoinLink(convoId: String) async throws -> ConvoView {
+        let body = EnableJoinLinkBody(convoId: convoId)
+        let response: EnableJoinLinkResponse = try await client.postWithProxy(
+            nsid: "chat.bsky.group.enableJoinLink",
+            body: body
+        )
+        return response.convo
+    }
+
+    /// 招待リンクを無効化する
+    func disableJoinLink(convoId: String) async throws -> ConvoView {
+        let body = DisableJoinLinkBody(convoId: convoId)
+        let response: DisableJoinLinkResponse = try await client.postWithProxy(
+            nsid: "chat.bsky.group.disableJoinLink",
+            body: body
+        )
+        return response.convo
+    }
+
+    /// 参加申請一覧を取得する（owner 用）
+    func listJoinRequests(convoId: String, cursor: String? = nil, limit: Int = 20) async throws -> ListJoinRequestsResponse {
+        var params: [String: String] = ["convoId": convoId, "limit": "\(limit)"]
+        if let cursor { params["cursor"] = cursor }
+        return try await client.getWithProxy(
+            nsid: "chat.bsky.group.listJoinRequests",
+            params: params
+        )
+    }
+
+    /// 参加申請を承認する
+    func approveJoinRequest(convoId: String, did: String) async throws {
+        let body = ApproveJoinRequestBody(convoId: convoId, did: did)
+        let _: ApproveJoinRequestResponse = try await client.postWithProxy(
+            nsid: "chat.bsky.group.approveJoinRequest",
+            body: body
+        )
+    }
+
+    /// 参加申請を拒否する
+    func rejectJoinRequest(convoId: String, did: String) async throws {
+        let body = RejectJoinRequestBody(convoId: convoId, did: did)
+        let _: RejectJoinRequestResponse = try await client.postWithProxy(
+            nsid: "chat.bsky.group.rejectJoinRequest",
+            body: body
+        )
+    }
+
+    /// 参加申請を既読にする
+    func updateJoinRequestsRead(convoId: String) async throws {
+        let body = UpdateJoinRequestsReadBody(convoId: convoId)
+        struct EmptyResponse: Decodable {}
+        let _: EmptyResponse = try await client.postWithProxy(
+            nsid: "chat.bsky.group.updateJoinRequestsRead",
+            body: body
+        )
+    }
+
     // MARK: - グループロック
 
     /// グループ会話をロックする（投稿停止）

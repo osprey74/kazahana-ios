@@ -12,6 +12,7 @@ struct ConversationListView: View {
     @State private var selectedConvo: ConvoView?
     @State private var selectedAuthorDID: IdentifiableString? = nil
     @State private var showNewConversation = false
+    @State private var showCreateGroup = false
 
     var body: some View {
         NavigationStack {
@@ -26,8 +27,17 @@ struct ConversationListView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        showNewConversation = true
+                    Menu {
+                        Button {
+                            showNewConversation = true
+                        } label: {
+                            Label(String(localized: "dm.newConversation"), systemImage: "bubble.left")
+                        }
+                        Button {
+                            showCreateGroup = true
+                        } label: {
+                            Label(String(localized: "dm.createGroup.title"), systemImage: "person.3")
+                        }
                     } label: {
                         Image(systemName: "square.and.pencil")
                     }
@@ -47,6 +57,15 @@ struct ConversationListView: View {
                 if let svc = chatService {
                     NewConversationView(chatService: svc) { convo in
                         showNewConversation = false
+                        selectedConvo = convo
+                    }
+                    .environment(authVM)
+                }
+            }
+            .sheet(isPresented: $showCreateGroup) {
+                if let svc = chatService {
+                    CreateGroupView(chatService: svc) { convo in
+                        showCreateGroup = false
                         selectedConvo = convo
                     }
                     .environment(authVM)
