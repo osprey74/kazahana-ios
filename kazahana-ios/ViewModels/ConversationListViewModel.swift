@@ -12,6 +12,7 @@ final class ConversationListViewModel {
     var isRefreshing = false
     var errorMessage: String?
     var unreadCount = 0
+    var unreadJoinRequestCount = 0
 
     private var cursor: String?
     private var hasMore = true
@@ -105,6 +106,14 @@ final class ConversationListViewModel {
         } catch {
             // 未読数取得失敗は無視
         }
+        aggregateJoinRequestCount()
+    }
+
+    /// 全グループの未読参加申請件数を集計する
+    private func aggregateJoinRequestCount() {
+        unreadJoinRequestCount = conversations.reduce(0) { sum, convo in
+            sum + (convo.groupConvo?.unreadJoinRequestCount ?? 0)
+        }
     }
 
     // MARK: - ミュート・退出
@@ -166,6 +175,7 @@ final class ConversationListViewModel {
             cursor = response.cursor
             hasMore = response.cursor != nil
             unreadCount = try await chatService.getUnreadCount()
+            aggregateJoinRequestCount()
         } catch {
             // バックグラウンドポーリングエラーは無視
         }

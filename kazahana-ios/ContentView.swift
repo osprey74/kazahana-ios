@@ -151,6 +151,7 @@ struct MainTabView: View {
     let client: ATProtoClient
     @State private var selectedTab: Tab = .home
     @State private var dmUnreadCount = 0
+    @State private var dmJoinRequestCount = 0
     /// Catalyst でプログラマティックなタブ切替時に TabView を強制再構築するための ID
     @State private var tabViewRefreshID = UUID()
     private let tabBarDelegate = TabBarDelegate()
@@ -191,14 +192,15 @@ struct MainTabView: View {
                 }
                 .tag(Tab.notifications)
 
-            ConversationListView(onUnreadCountChanged: { count in
-                dmUnreadCount = count
-            })
+            ConversationListView(
+                onUnreadCountChanged: { count in dmUnreadCount = count },
+                onJoinRequestCountChanged: { count in dmJoinRequestCount = count }
+            )
                 .desktopContent()
                 .tabItem {
                     Label(String(localized: "tab.messages"), systemImage: "envelope")
                 }
-                .badge(dmUnreadCount > 0 ? dmUnreadCount : 0)
+                .badge(dmUnreadCount + dmJoinRequestCount > 0 ? dmUnreadCount + dmJoinRequestCount : 0)
                 .tag(Tab.messages)
 
             // 自分のプロフィール

@@ -7,6 +7,7 @@ import SwiftUI
 struct ConversationListView: View {
     @Environment(AuthViewModel.self) private var authVM
     var onUnreadCountChanged: ((Int) -> Void)? = nil
+    var onJoinRequestCountChanged: ((Int) -> Void)? = nil
     @State private var viewModel: ConversationListViewModel?
     @State private var chatService: ChatService?
     @State private var selectedConvo: ConvoView?
@@ -82,6 +83,9 @@ struct ConversationListView: View {
         }
         .onChange(of: viewModel?.unreadCount) { _, newCount in
             onUnreadCountChanged?(newCount ?? 0)
+        }
+        .onChange(of: viewModel?.unreadJoinRequestCount) { _, newCount in
+            onJoinRequestCountChanged?(newCount ?? 0)
         }
     }
 

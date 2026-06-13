@@ -6,6 +6,7 @@ import SwiftUI
 
 struct ChatThreadView: View {
     @Environment(AuthViewModel.self) private var authVM
+    @Environment(EvacuationViewModel.self) private var evacuationVM: EvacuationViewModel?
     let convo: ConvoView
     let chatService: ChatService
 
@@ -180,6 +181,8 @@ struct ChatThreadView: View {
             .padding(.bottom, 10)
         }
         .padding(.horizontal, 12)
+        .padding(.bottom, evacuationVM?.bannerVisible == true ? 56 : 0)
+        .animation(.easeInOut(duration: 0.3), value: evacuationVM?.bannerVisible)
         .background(.bar)
     }
 
@@ -197,6 +200,8 @@ struct ChatThreadView: View {
         }
         .foregroundStyle(.secondary)
         .padding(.vertical, 12)
+        .padding(.bottom, evacuationVM?.bannerVisible == true ? 56 : 0)
+        .animation(.easeInOut(duration: 0.3), value: evacuationVM?.bannerVisible)
         .frame(maxWidth: .infinity)
         .background(.bar)
     }
