@@ -55,6 +55,14 @@ struct GroupSettingsView: View {
         .listStyle(.insetGrouped)
         .navigationTitle(String(localized: "dm.groupSettings.title"))
         .navigationBarTitleDisplayMode(.inline)
+        .alert(String(localized: "common.error"), isPresented: .init(
+            get: { errorMessage != nil },
+            set: { if !$0 { errorMessage = nil } }
+        )) {
+            Button(String(localized: "common.ok")) { errorMessage = nil }
+        } message: {
+            if let msg = errorMessage { Text(msg) }
+        }
         .alert(String(localized: "dm.createGroup.namePlaceholder"), isPresented: $isEditingName) {
             TextField("", text: $editedName)
             Button(String(localized: "common.ok")) {
@@ -364,7 +372,10 @@ struct GroupSettingsView: View {
     @MainActor private func createJoinLink() async {
         do {
             convo = try await chatService.createJoinLink(convoId: convo.id)
-        } catch { errorMessage = error.localizedDescription }
+        } catch {
+            print("[GroupSettings] createJoinLink error: \(error)")
+            errorMessage = error.localizedDescription
+        }
     }
 
     @MainActor private func enableJoinLink() async {
