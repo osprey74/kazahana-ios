@@ -21,6 +21,7 @@ struct ChatThreadView: View {
 
     var body: some View {
         VStack(spacing: 0) {
+            Divider()
             // メッセージリスト
             ScrollViewReader { proxy in
                 ScrollView {
