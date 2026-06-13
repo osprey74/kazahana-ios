@@ -21,6 +21,7 @@ struct ProfileScreenView: View {
     @State private var quotePost: PostView? = nil
     @State private var replyToPost: PostView? = nil
     @State private var showAddToList = false
+    @State private var showQRSheet = false
     @State private var showMuteConfirm = false
     @State private var showBlockConfirm = false
     @State private var reportTarget: ReportTarget? = nil
@@ -85,6 +86,14 @@ struct ProfileScreenView: View {
         .sheet(item: $replyToPost) { replyTo in
             ComposeView(postService: PostService(client: authVM.client), replyTo: replyTo)
                 .environment(AppSettings.shared)
+        }
+        .sheet(isPresented: $showQRSheet) {
+            if let profile = viewModel?.profile {
+                ProfileQRSheet(
+                    handle: profile.handle,
+                    displayName: profile.displayNameOrHandle
+                )
+            }
         }
         .sheet(isPresented: $showAddToList) {
             if viewModel != nil {
@@ -160,6 +169,7 @@ struct ProfileScreenView: View {
                         onTapFollowers: { userListType = .followers(actor: actor) },
                         onTapFollowing: { userListType = .following(actor: actor) },
                         onTapSettings: { showSettings = true },
+                        onTapQR: { showQRSheet = true },
                         onTapMute: { showMuteConfirm = true },
                         onTapBlock: { showBlockConfirm = true },
                         onTapAddToList: { showAddToList = true },
@@ -328,6 +338,13 @@ struct ProfileScreenView: View {
             Spacer()
 
             if isSelf {
+                Button {
+                    showQRSheet = true
+                } label: {
+                    Image(systemName: "qrcode")
+                        .font(.system(size: 18))
+                        .foregroundStyle(.primary)
+                }
                 Button {
                     showSettings = true
                 } label: {
@@ -530,6 +547,7 @@ struct ProfileHeaderView: View {
     var onTapFollowers: (() -> Void)? = nil
     var onTapFollowing: (() -> Void)? = nil
     var onTapSettings: (() -> Void)? = nil
+    var onTapQR: (() -> Void)? = nil
     var onTapMute: (() -> Void)? = nil
     var onTapBlock: (() -> Void)? = nil
     var onTapAddToList: (() -> Void)? = nil
@@ -566,14 +584,25 @@ struct ProfileHeaderView: View {
                 Spacer()
 
                 if isSelf {
-                    Button {
-                        onTapSettings?()
-                    } label: {
-                        Image(systemName: "gearshape")
-                            .font(.system(size: 18))
-                            .foregroundStyle(.primary)
-                            .frame(width: 36, height: 36)
-                            .background(Color(.systemGray5), in: Circle())
+                    HStack(spacing: 8) {
+                        Button {
+                            onTapQR?()
+                        } label: {
+                            Image(systemName: "qrcode")
+                                .font(.system(size: 18))
+                                .foregroundStyle(.primary)
+                                .frame(width: 36, height: 36)
+                                .background(Color(.systemGray5), in: Circle())
+                        }
+                        Button {
+                            onTapSettings?()
+                        } label: {
+                            Image(systemName: "gearshape")
+                                .font(.system(size: 18))
+                                .foregroundStyle(.primary)
+                                .frame(width: 36, height: 36)
+                                .background(Color(.systemGray5), in: Circle())
+                        }
                     }
                     .padding(.trailing, 16)
                     .padding(.top, 8)
