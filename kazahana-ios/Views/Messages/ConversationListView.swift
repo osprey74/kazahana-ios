@@ -231,9 +231,17 @@ struct ConversationRowView: View {
                     }
                 }
 
-                // 2行目: メンバー数（グループ）or プレビュー + バッジ
+                // 2行目: 参加申請 + メンバー数 + プレビュー + バッジ
                 HStack {
                     VStack(alignment: .leading, spacing: 1) {
+                        // 未読参加申請（owner のみ・青文字テキスト）
+                        if let unreadRequests = convo.groupConvo?.unreadJoinRequestCount, unreadRequests > 0 {
+                            Text(String(localized: "dm.group.joinRequestsBadge \(unreadRequests)"))
+                                .font(.caption)
+                                .fontWeight(.bold)
+                                .foregroundStyle(.blue)
+                        }
+
                         if isGroup, let group = convo.groupConvo {
                             Text(String(localized: "dm.group.memberCount \(group.memberCount)"))
                                 .font(.caption2)
@@ -254,17 +262,6 @@ struct ConversationRowView: View {
                     }
 
                     Spacer()
-
-                    // 未読参加申請バッジ（owner のみ）
-                    if let unreadRequests = convo.groupConvo?.unreadJoinRequestCount, unreadRequests > 0 {
-                        Text("\(min(unreadRequests, 99))")
-                            .font(.caption2)
-                            .fontWeight(.bold)
-                            .foregroundStyle(.white)
-                            .padding(.horizontal, 5)
-                            .padding(.vertical, 2)
-                            .background(.orange, in: Capsule())
-                    }
 
                     if convo.unreadCount > 0 {
                         Text("\(min(convo.unreadCount, 99))")

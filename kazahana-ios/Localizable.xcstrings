@@ -28296,6 +28296,22 @@
           }
         }
       }
+    },
+    "dm.group.joinRequestsBadge %lld" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld pending join requests"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld 件の参加申請"
+          }
+        }
+      }
     }
   },
   "version" : "1.1"
