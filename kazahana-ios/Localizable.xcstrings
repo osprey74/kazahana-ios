@@ -28216,6 +28216,70 @@
           }
         }
       }
+    },
+    "dm.groupSettings.joinRule" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Who can join"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "参加できる人"
+          }
+        }
+      }
+    },
+    "dm.groupSettings.joinRule.anyone" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Anyone"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "誰でも"
+          }
+        }
+      }
+    },
+    "dm.groupSettings.joinRule.followedByOwner" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "People followed by owner"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "管理者がフォロー中の人"
+          }
+        }
+      }
+    },
+    "dm.groupSettings.requireApproval" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Require approval to join"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "参加に承認を必須にする"
+          }
+        }
+      }
     }
   },
   "version" : "1.1"

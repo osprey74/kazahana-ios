@@ -217,6 +217,7 @@ struct GroupSettingsView: View {
     private var joinLinkSection: some View {
         Section(String(localized: "dm.groupSettings.joinLink")) {
             if let joinLink = group?.joinLink {
+                // リンク URL + コピー
                 let linkURL = "https://bsky.app/chat/\(joinLink.code)"
                 HStack {
                     Text(linkURL)
@@ -233,8 +234,9 @@ struct GroupSettingsView: View {
                     }
                 }
 
+                // 有効 / 無効切替
                 Toggle(String(localized: "dm.groupSettings.joinLinkEnabled"), isOn: .init(
-                    get: { joinLink.disabled != true },
+                    get: { joinLink.isEnabled },
                     set: { enabled in
                         Task {
                             if enabled {
@@ -243,6 +245,25 @@ struct GroupSettingsView: View {
                                 await disableJoinLink()
                             }
                         }
+                    }
+                ))
+
+                // 参加ルール
+                Picker(String(localized: "dm.groupSettings.joinRule"), selection: Binding(
+                    get: { joinLink.joinRule ?? "anyone" },
+                    set: { newValue in
+                        Task { await editJoinLink(joinRule: newValue, requireApproval: nil) }
+                    }
+                )) {
+                    Text(String(localized: "dm.groupSettings.joinRule.anyone")).tag("anyone")
+                    Text(String(localized: "dm.groupSettings.joinRule.followedByOwner")).tag("followedByOwner")
+                }
+
+                // 承認必須
+                Toggle(String(localized: "dm.groupSettings.requireApproval"), isOn: .init(
+                    get: { joinLink.requireApproval == true },
+                    set: { newValue in
+                        Task { await editJoinLink(joinRule: nil, requireApproval: newValue) }
                     }
                 ))
             } else {
@@ -374,6 +395,15 @@ struct GroupSettingsView: View {
             convo = try await chatService.createJoinLink(convoId: convo.id)
         } catch {
             print("[GroupSettings] createJoinLink error: \(error)")
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    @MainActor private func editJoinLink(joinRule: String?, requireApproval: Bool?) async {
+        do {
+            convo = try await chatService.editJoinLink(convoId: convo.id, joinRule: joinRule, requireApproval: requireApproval)
+        } catch {
+            print("[GroupSettings] editJoinLink error: \(error)")
             errorMessage = error.localizedDescription
         }
     }

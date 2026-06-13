@@ -298,41 +298,41 @@ final class ChatService {
     /// 招待リンクを作成する
     func createJoinLink(convoId: String, joinRule: String = "anyone", requireApproval: Bool? = nil) async throws -> ConvoView {
         let body = CreateJoinLinkBody(convoId: convoId, joinRule: joinRule, requireApproval: requireApproval)
-        let response: CreateJoinLinkResponse = try await client.postWithProxy(
+        let _: GroupOperationResponse = try await client.postWithProxy(
             nsid: "chat.bsky.group.createJoinLink",
             body: body
         )
-        return response.convo
+        return try await getConvo(convoId: convoId)
     }
 
     /// 招待リンクの設定を変更する
     func editJoinLink(convoId: String, joinRule: String? = nil, requireApproval: Bool? = nil) async throws -> ConvoView {
         let body = EditJoinLinkBody(convoId: convoId, joinRule: joinRule, requireApproval: requireApproval)
-        let response: EditJoinLinkResponse = try await client.postWithProxy(
+        let _: GroupOperationResponse = try await client.postWithProxy(
             nsid: "chat.bsky.group.editJoinLink",
             body: body
         )
-        return response.convo
+        return try await getConvo(convoId: convoId)
     }
 
     /// 招待リンクを有効化する
     func enableJoinLink(convoId: String) async throws -> ConvoView {
         let body = EnableJoinLinkBody(convoId: convoId)
-        let response: EnableJoinLinkResponse = try await client.postWithProxy(
+        let _: GroupOperationResponse = try await client.postWithProxy(
             nsid: "chat.bsky.group.enableJoinLink",
             body: body
         )
-        return response.convo
+        return try await getConvo(convoId: convoId)
     }
 
     /// 招待リンクを無効化する
     func disableJoinLink(convoId: String) async throws -> ConvoView {
         let body = DisableJoinLinkBody(convoId: convoId)
-        let response: DisableJoinLinkResponse = try await client.postWithProxy(
+        let _: GroupOperationResponse = try await client.postWithProxy(
             nsid: "chat.bsky.group.disableJoinLink",
             body: body
         )
-        return response.convo
+        return try await getConvo(convoId: convoId)
     }
 
     /// 参加申請一覧を取得する（owner 用）

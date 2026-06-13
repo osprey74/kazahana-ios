@@ -105,7 +105,14 @@ struct GroupConvo: Codable {
 struct JoinLinkView: Codable {
     let code: String
     let disabled: Bool?
+    let enabledStatus: String?  // "enabled" | "disabled"
     let requireApproval: Bool?
+    let joinRule: String?       // "anyone" | "followedByOwner"
+
+    var isEnabled: Bool {
+        if let status = enabledStatus { return status == "enabled" }
+        return disabled != true
+    }
 }
 
 // MARK: - ChatMember
@@ -639,20 +646,9 @@ struct RemoveMembersResponse: Decodable {
     let convo: ConvoView
 }
 
-struct CreateJoinLinkResponse: Decodable {
-    let convo: ConvoView
-}
-
-struct EditJoinLinkResponse: Decodable {
-    let convo: ConvoView
-}
-
-struct EnableJoinLinkResponse: Decodable {
-    let convo: ConvoView
-}
-
-struct DisableJoinLinkResponse: Decodable {
-    let convo: ConvoView
+/// グループ操作の汎用レスポンス（convo が含まれない場合もある）
+struct GroupOperationResponse: Decodable {
+    let convo: ConvoView?
 }
 
 struct JoinRequestView: Decodable, Identifiable {
