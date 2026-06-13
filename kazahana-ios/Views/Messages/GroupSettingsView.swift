@@ -411,13 +411,19 @@ struct GroupSettingsView: View {
     @MainActor private func enableJoinLink() async {
         do {
             convo = try await chatService.enableJoinLink(convoId: convo.id)
-        } catch { errorMessage = error.localizedDescription }
+        } catch {
+            print("[GroupSettings] enableJoinLink error: \(error)")
+            errorMessage = error.localizedDescription
+        }
     }
 
     @MainActor private func disableJoinLink() async {
         do {
             convo = try await chatService.disableJoinLink(convoId: convo.id)
-        } catch { errorMessage = error.localizedDescription }
+        } catch {
+            print("[GroupSettings] disableJoinLink error: \(error), joinLink: \(String(describing: group?.joinLink))")
+            errorMessage = error.localizedDescription
+        }
     }
 
     @MainActor private func lockGroup() async {

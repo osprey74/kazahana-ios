@@ -598,12 +598,28 @@ struct CreateJoinLinkBody: Encodable {
     let convoId: String
     let joinRule: String        // "anyone" etc.
     let requireApproval: Bool?
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(convoId, forKey: .convoId)
+        try container.encode(joinRule, forKey: .joinRule)
+        try container.encodeIfPresent(requireApproval, forKey: .requireApproval)
+    }
+    private enum CodingKeys: String, CodingKey { case convoId, joinRule, requireApproval }
 }
 
 struct EditJoinLinkBody: Encodable {
     let convoId: String
     let joinRule: String?
     let requireApproval: Bool?
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(convoId, forKey: .convoId)
+        try container.encodeIfPresent(joinRule, forKey: .joinRule)
+        try container.encodeIfPresent(requireApproval, forKey: .requireApproval)
+    }
+    private enum CodingKeys: String, CodingKey { case convoId, joinRule, requireApproval }
 }
 
 struct EnableJoinLinkBody: Encodable {
