@@ -680,6 +680,49 @@ struct RejectJoinRequestResponse: Decodable {
     let convo: ConvoView?
 }
 
+// MARK: - チャットプライバシー設定（Phase 4）
+
+struct ChatDeclaration: Codable {
+    var allowIncoming: String
+    var allowGroupInvites: String
+
+    enum CodingKeys: String, CodingKey {
+        case allowIncoming, allowGroupInvites
+    }
+
+    init(allowIncoming: String = "all", allowGroupInvites: String = "all") {
+        self.allowIncoming = allowIncoming
+        self.allowGroupInvites = allowGroupInvites
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        allowIncoming = try container.decodeIfPresent(String.self, forKey: .allowIncoming) ?? "all"
+        allowGroupInvites = try container.decodeIfPresent(String.self, forKey: .allowGroupInvites) ?? "all"
+    }
+}
+
+struct ListMutualGroupsResponse: Decodable {
+    let groups: [ConvoView]?
+}
+
+enum ChatServiceError: Error {
+    case notLoggedIn
+}
+
+// MARK: - putRecord ヘルパー型
+
+struct PutRecordBody {
+    let repo: String
+    let collection: String
+    let rkey: String
+    let record: any Encodable
+}
+
+struct PutRecordResponse: Decodable {
+    let uri: String?
+}
+
 // MARK: - 削除レスポンス
 
 struct DeleteMessageForSelfResponse: Decodable {

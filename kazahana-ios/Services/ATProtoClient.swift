@@ -71,6 +71,29 @@ final class ATProtoClient {
         )
     }
 
+    /// com.atproto.repo.putRecord — レコードを作成または更新する
+    func putRecord(repo: String, collection: String, rkey: String, record: any Encodable) async throws {
+        let wrapper = PutRecordBody(repo: repo, collection: collection, rkey: rkey, record: record)
+        let bodyData = try encodePutRecordBody(wrapper)
+        let host = currentSession?.pdsHost ?? "https://bsky.social"
+        let url = URL(string: "\(host)/xrpc/com.atproto.repo.putRecord")!
+        var request = try buildRequest(url: url, method: "POST", authenticated: true)
+        request.httpBody = bodyData
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        let _: PutRecordResponse = try await perform(request: request)
+    }
+
+    private func encodePutRecordBody(_ body: PutRecordBody) throws -> Data {
+        var dict: [String: Any] = [
+            "repo": body.repo,
+            "collection": body.collection,
+            "rkey": body.rkey,
+        ]
+        let recordData = try encoder.encode(body.record)
+        dict["record"] = try JSONSerialization.jsonObject(with: recordData)
+        return try JSONSerialization.data(withJSONObject: dict)
+    }
+
     /// GET リクエスト（配列パラメータ対応）
     func getWithArrayParams<T: Decodable>(
         nsid: String,

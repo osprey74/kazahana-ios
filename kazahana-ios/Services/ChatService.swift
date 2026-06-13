@@ -185,6 +185,45 @@ final class ChatService {
         )
     }
 
+    // MARK: - チャットプライバシー設定（Phase 4）
+
+    /// chat.bsky.actor.declaration を取得する
+    func getChatDeclaration() async throws -> ChatDeclaration {
+        guard let did = client.currentSession?.did else { throw ChatServiceError.notLoggedIn }
+        struct RecordResponse: Decodable {
+            let value: ChatDeclaration?
+        }
+        do {
+            let response: RecordResponse = try await client.get(
+                nsid: "com.atproto.repo.getRecord",
+                params: ["repo": did, "collection": "chat.bsky.actor.declaration", "rkey": "self"]
+            )
+            return response.value ?? ChatDeclaration()
+        } catch {
+            // レコードが存在しない場合はデフォルト値
+            return ChatDeclaration()
+        }
+    }
+
+    /// chat.bsky.actor.declaration を更新する
+    func updateChatDeclaration(_ declaration: ChatDeclaration) async throws {
+        guard let did = client.currentSession?.did else { throw ChatServiceError.notLoggedIn }
+        try await client.putRecord(
+            repo: did,
+            collection: "chat.bsky.actor.declaration",
+            rkey: "self",
+            record: declaration
+        )
+    }
+
+    /// 相手と共通のグループ一覧を取得する
+    func listMutualGroups(did: String) async throws -> ListMutualGroupsResponse {
+        return try await client.getWithProxy(
+            nsid: "chat.bsky.group.listMutualGroups",
+            params: ["did": did]
+        )
+    }
+
     // MARK: - グループ参加（Phase 2）
 
     /// 招待リンクのプレビューを取得する

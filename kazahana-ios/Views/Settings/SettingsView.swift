@@ -16,6 +16,8 @@ struct SettingsView: View {
     @State private var iapService = IAPService.shared
     @State private var showAddAccount = false
     @State private var removeAccountTarget: Session? = nil
+    @State private var chatDeclaration: ChatDeclaration?
+    @State private var isLoadingChatSettings = false
 
     #if !targetEnvironment(macCatalyst)
     @Environment(ShelterStore.self) private var shelterStore: ShelterStore?
@@ -201,6 +203,9 @@ struct SettingsView: View {
                 } header: {
                     Text(String(localized: "bsaf.title"))
                 }
+
+                // MARK: - チャット設定
+                chatSettingsSection
 
                 // MARK: - 避難誘導機能（iOS のみ）
                 #if !targetEnvironment(macCatalyst)
@@ -407,6 +412,55 @@ struct SettingsView: View {
                 Text(behavior.displayName).tag(behavior)
             }
         }
+    }
+
+    // MARK: - チャット設定セクション
+
+    @ViewBuilder
+    private var chatSettingsSection: some View {
+        Section {
+            if isLoadingChatSettings {
+                HStack { Spacer(); ProgressView(); Spacer() }
+            } else {
+                Picker(String(localized: "settings.allowGroupInvites"), selection: Binding(
+                    get: { chatDeclaration?.allowGroupInvites ?? "all" },
+                    set: { newValue in
+                        chatDeclaration?.allowGroupInvites = newValue
+                        Task { await saveChatDeclaration() }
+                    }
+                )) {
+                    Text(String(localized: "settings.allowGroupInvites.all")).tag("all")
+                    Text(String(localized: "settings.allowGroupInvites.following")).tag("following")
+                    Text(String(localized: "settings.allowGroupInvites.none")).tag("none")
+                }
+            }
+        } header: {
+            Text(String(localized: "settings.chatSection"))
+        } footer: {
+            Text(String(localized: "settings.allowGroupInvitesHint"))
+        }
+        .task {
+            await loadChatDeclaration()
+        }
+    }
+
+    @MainActor
+    private func loadChatDeclaration() async {
+        isLoadingChatSettings = true
+        let svc = ChatService(client: authVM.client)
+        do {
+            chatDeclaration = try await svc.getChatDeclaration()
+        } catch {
+            chatDeclaration = ChatDeclaration()
+        }
+        isLoadingChatSettings = false
+    }
+
+    @MainActor
+    private func saveChatDeclaration() async {
+        guard let declaration = chatDeclaration else { return }
+        let svc = ChatService(client: authVM.client)
+        try? await svc.updateChatDeclaration(declaration)
     }
 
     private var appVersion: String {
