@@ -17,9 +17,25 @@ final class ConversationListViewModel {
     private var hasMore = true
     private let chatService: ChatService
     private var pollingTask: Task<Void, Never>?
+    private var refreshObserver: Any?
 
     init(chatService: ChatService) {
         self.chatService = chatService
+        refreshObserver = NotificationCenter.default.addObserver(
+            forName: .conversationListNeedsRefresh,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in
+                await self?.silentRefresh()
+            }
+        }
+    }
+
+    deinit {
+        if let observer = refreshObserver {
+            NotificationCenter.default.removeObserver(observer)
+        }
     }
 
     // MARK: - 読み込み
