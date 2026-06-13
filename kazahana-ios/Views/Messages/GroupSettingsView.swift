@@ -18,6 +18,7 @@ struct GroupSettingsView: View {
     @State private var kickTarget: ChatMember?
     @State private var joinRequests: [JoinRequestView] = []
     @State private var isLoadingRequests = false
+    @State private var isJoinLinkOperating = false
     @State private var errorMessage: String?
     @State private var toastMessage: String?
 
@@ -247,6 +248,7 @@ struct GroupSettingsView: View {
                         }
                     }
                 ))
+                .disabled(isJoinLinkOperating)
 
                 // 参加ルール
                 Picker(String(localized: "dm.groupSettings.joinRule"), selection: Binding(
@@ -258,6 +260,7 @@ struct GroupSettingsView: View {
                     Text(String(localized: "dm.groupSettings.joinRule.anyone")).tag("anyone")
                     Text(String(localized: "dm.groupSettings.joinRule.followedByOwner")).tag("followedByOwner")
                 }
+                .disabled(isJoinLinkOperating)
 
                 // 承認必須
                 Toggle(String(localized: "dm.groupSettings.requireApproval"), isOn: .init(
@@ -266,10 +269,24 @@ struct GroupSettingsView: View {
                         Task { await editJoinLink(joinRule: nil, requireApproval: newValue) }
                     }
                 ))
-            } else {
-                Button(String(localized: "dm.groupSettings.createJoinLink")) {
-                    Task { await createJoinLink() }
+                .disabled(isJoinLinkOperating)
+
+                if isJoinLinkOperating {
+                    HStack { Spacer(); ProgressView().scaleEffect(0.8); Spacer() }
                 }
+            } else {
+                Button {
+                    Task { await createJoinLink() }
+                } label: {
+                    HStack {
+                        Text(String(localized: "dm.groupSettings.createJoinLink"))
+                        if isJoinLinkOperating {
+                            Spacer()
+                            ProgressView().scaleEffect(0.8)
+                        }
+                    }
+                }
+                .disabled(isJoinLinkOperating)
             }
         }
     }
@@ -391,39 +408,43 @@ struct GroupSettingsView: View {
     }
 
     @MainActor private func createJoinLink() async {
+        isJoinLinkOperating = true
         do {
             convo = try await chatService.createJoinLink(convoId: convo.id)
         } catch {
-            print("[GroupSettings] createJoinLink error: \(error)")
             errorMessage = error.localizedDescription
         }
+        isJoinLinkOperating = false
     }
 
     @MainActor private func editJoinLink(joinRule: String?, requireApproval: Bool?) async {
+        isJoinLinkOperating = true
         do {
             convo = try await chatService.editJoinLink(convoId: convo.id, joinRule: joinRule, requireApproval: requireApproval)
         } catch {
-            print("[GroupSettings] editJoinLink error: \(error)")
             errorMessage = error.localizedDescription
         }
+        isJoinLinkOperating = false
     }
 
     @MainActor private func enableJoinLink() async {
+        isJoinLinkOperating = true
         do {
             convo = try await chatService.enableJoinLink(convoId: convo.id)
         } catch {
-            print("[GroupSettings] enableJoinLink error: \(error)")
             errorMessage = error.localizedDescription
         }
+        isJoinLinkOperating = false
     }
 
     @MainActor private func disableJoinLink() async {
+        isJoinLinkOperating = true
         do {
             convo = try await chatService.disableJoinLink(convoId: convo.id)
         } catch {
-            print("[GroupSettings] disableJoinLink error: \(error), joinLink: \(String(describing: group?.joinLink))")
             errorMessage = error.localizedDescription
         }
+        isJoinLinkOperating = false
     }
 
     @MainActor private func lockGroup() async {
