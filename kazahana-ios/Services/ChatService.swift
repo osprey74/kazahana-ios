@@ -172,4 +172,38 @@ final class ChatService {
         )
         return response.count
     }
+
+    // MARK: - メッセージリクエスト（グループ招待含む）
+
+    /// 会話リクエスト一覧を取得する（incoming + outgoing）
+    func listConvoRequests(cursor: String? = nil, limit: Int = 20) async throws -> ListConvoRequestsResponse {
+        var params: [String: String] = ["limit": "\(limit)"]
+        if let cursor { params["cursor"] = cursor }
+        return try await client.getWithProxy(
+            nsid: "chat.bsky.convo.listConvoRequests",
+            params: params
+        )
+    }
+
+    // MARK: - グループロック
+
+    /// グループ会話をロックする（投稿停止）
+    func lockConvo(convoId: String) async throws -> ConvoView {
+        let body = LockConvoBody(convoId: convoId)
+        let response: LockConvoResponse = try await client.postWithProxy(
+            nsid: "chat.bsky.convo.lockConvo",
+            body: body
+        )
+        return response.convo
+    }
+
+    /// グループ会話のロックを解除する
+    func unlockConvo(convoId: String) async throws -> ConvoView {
+        let body = UnlockConvoBody(convoId: convoId)
+        let response: UnlockConvoResponse = try await client.postWithProxy(
+            nsid: "chat.bsky.convo.unlockConvo",
+            body: body
+        )
+        return response.convo
+    }
 }

@@ -15,16 +15,97 @@ struct ConvoView: Codable, Identifiable {
     let muted: Bool?
     let opened: Bool?
     let status: String?
+    let kind: ConvoKind?
 
     /// 自分以外のメンバーを返す（1対1チャットで相手を取得）
     func otherMember(myDID: String) -> ChatMember? {
         members.first { $0.did != myDID }
+    }
+
+    /// 自分以外の全メンバーを返す（グループチャット用）
+    func otherMembers(myDID: String) -> [ChatMember] {
+        members.filter { $0.did != myDID }
+    }
+
+    /// グループ会話かどうか
+    var isGroup: Bool {
+        if case .group = kind { return true }
+        return false
+    }
+
+    /// グループ会話の場合、GroupConvo を返す
+    var groupConvo: GroupConvo? {
+        if case .group(let g) = kind { return g }
+        return nil
+    }
+
+    /// 表示名（グループ名 or 相手のハンドル）
+    func displayName(myDID: String) -> String {
+        if let group = groupConvo { return group.name }
+        return otherMember(myDID: myDID)?.displayNameOrHandle ?? ""
+    }
+
+    /// ロック状態かどうか
+    var isLocked: Bool {
+        guard let g = groupConvo else { return false }
+        return g.lockStatus == "locked" || g.lockStatus == "locked-permanently"
     }
 }
 
 extension ConvoView: Hashable {
     static func == (lhs: ConvoView, rhs: ConvoView) -> Bool { lhs.id == rhs.id }
     func hash(into hasher: inout Hasher) { hasher.combine(id) }
+}
+
+// MARK: - ConvoKind（1:1 / グループ判別）
+
+enum ConvoKind: Codable {
+    case direct
+    case group(GroupConvo)
+
+    private enum TypeKey: String, CodingKey { case type = "$type" }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: TypeKey.self)
+        let type_ = try container.decode(String.self, forKey: .type)
+        if type_.hasSuffix("#groupConvo") {
+            self = .group(try GroupConvo(from: decoder))
+        } else {
+            self = .direct
+        }
+    }
+
+    func encode(to encoder: Encoder) throws {
+        switch self {
+        case .direct:
+            var container = encoder.container(keyedBy: TypeKey.self)
+            try container.encode("chat.bsky.convo.defs#directConvo", forKey: .type)
+        case .group(let g):
+            try g.encode(to: encoder)
+        }
+    }
+}
+
+// MARK: - GroupConvo
+
+struct GroupConvo: Codable {
+    let createdAt: String?
+    let name: String
+    let memberCount: Int
+    let memberLimit: Int?
+    let lockStatus: String          // "unlocked" | "locked" | "locked-permanently"
+    let lockStatusModerationOverride: Bool?
+    let joinLink: JoinLinkView?
+    let joinRequestCount: Int?          // owner のみ
+    let unreadJoinRequestCount: Int?    // owner のみ
+}
+
+// MARK: - JoinLinkView
+
+struct JoinLinkView: Codable {
+    let code: String
+    let disabled: Bool?
+    let requireApproval: Bool?
 }
 
 // MARK: - ChatMember
@@ -53,6 +134,7 @@ struct ChatMessageView: Codable, Identifiable {
     let sentAt: String
     let facets: [Facet]?
     let reactions: [ChatReaction]?
+    let embed: ChatMessageEmbed?
 
     var sentDate: Date? {
         ISO8601DateFormatter().date(from: sentAt)
@@ -70,6 +152,200 @@ struct ChatReaction: Codable {
     let sender: ChatMessageSender
 }
 
+// MARK: - ChatMessageEmbed（メッセージ内埋め込み）
+
+enum ChatMessageEmbed: Codable {
+    case joinLink(JoinLinkEmbedData)
+    case unknown
+
+    private enum TypeKey: String, CodingKey { case type = "$type" }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: TypeKey.self)
+        let type_ = try container.decodeIfPresent(String.self, forKey: .type) ?? ""
+        if type_.contains("joinLink") {
+            self = .joinLink(try JoinLinkEmbedData(from: decoder))
+        } else {
+            self = .unknown
+        }
+    }
+
+    func encode(to encoder: Encoder) throws {
+        switch self {
+        case .joinLink(let v): try v.encode(to: encoder)
+        case .unknown: break
+        }
+    }
+}
+
+// MARK: - JoinLinkEmbedData
+
+struct JoinLinkEmbedData: Codable {
+    let joinLinkPreview: JoinLinkPreview?
+
+    enum JoinLinkPreview: Codable {
+        case active(JoinLinkPreviewActive)
+        case disabled
+        case invalid
+
+        private enum TypeKey: String, CodingKey { case type = "$type" }
+
+        init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: TypeKey.self)
+            let type_ = try container.decodeIfPresent(String.self, forKey: .type) ?? ""
+            if type_.contains("disabledJoinLinkPreview") {
+                self = .disabled
+            } else if type_.contains("invalidJoinLinkPreview") {
+                self = .invalid
+            } else {
+                self = .active(try JoinLinkPreviewActive(from: decoder))
+            }
+        }
+
+        func encode(to encoder: Encoder) throws {
+            if case .active(let a) = self { try a.encode(to: encoder) }
+        }
+    }
+}
+
+struct JoinLinkPreviewActive: Codable {
+    let code: String?
+    let name: String?
+    let memberCount: Int?
+    let owner: ChatMember?
+}
+
+// MARK: - SystemMessageView
+
+struct SystemMessageView: Codable, Identifiable {
+    let id: String
+    let rev: String
+    let sentAt: String
+    let data: SystemMessageData
+
+    var sentDate: Date? {
+        ISO8601DateFormatter().date(from: sentAt)
+    }
+}
+
+// MARK: - SystemMessageData（14 種のシステムメッセージ）
+
+enum SystemMessageData: Codable {
+    case addMember(actor: ChatMember?, subject: ChatMember?)
+    case removeMember(actor: ChatMember?, subject: ChatMember?)
+    case memberJoin(actor: ChatMember?)
+    case memberLeave(actor: ChatMember?)
+    case lockConvo(actor: ChatMember?)
+    case unlockConvo(actor: ChatMember?)
+    case lockConvoPermanently
+    case editGroup(actor: ChatMember?)
+    case createJoinLink(actor: ChatMember?)
+    case editJoinLink(actor: ChatMember?)
+    case enableJoinLink(actor: ChatMember?)
+    case disableJoinLink(actor: ChatMember?)
+    case unknown
+
+    private enum TypeKey: String, CodingKey { case type = "$type" }
+    private enum DataKeys: String, CodingKey {
+        case actor, subject, member, addedBy, removedBy, lockedBy, unlockedBy
+    }
+
+    init(from decoder: Decoder) throws {
+        let typeContainer = try decoder.container(keyedBy: TypeKey.self)
+        let type_ = try typeContainer.decodeIfPresent(String.self, forKey: .type) ?? ""
+        let container = try decoder.container(keyedBy: DataKeys.self)
+
+        if type_.hasSuffix("AddMember") || type_.hasSuffix("addMember") {
+            let subject = try container.decodeIfPresent(ChatMember.self, forKey: .member)
+                ?? container.decodeIfPresent(ChatMember.self, forKey: .subject)
+            let actor = try container.decodeIfPresent(ChatMember.self, forKey: .addedBy)
+                ?? container.decodeIfPresent(ChatMember.self, forKey: .actor)
+            self = .addMember(actor: actor, subject: subject)
+        } else if type_.hasSuffix("RemoveMember") || type_.hasSuffix("removeMember") {
+            let subject = try container.decodeIfPresent(ChatMember.self, forKey: .member)
+                ?? container.decodeIfPresent(ChatMember.self, forKey: .subject)
+            let actor = try container.decodeIfPresent(ChatMember.self, forKey: .removedBy)
+                ?? container.decodeIfPresent(ChatMember.self, forKey: .actor)
+            self = .removeMember(actor: actor, subject: subject)
+        } else if type_.hasSuffix("MemberJoin") || type_.hasSuffix("memberJoin") {
+            let actor = try container.decodeIfPresent(ChatMember.self, forKey: .member)
+                ?? container.decodeIfPresent(ChatMember.self, forKey: .actor)
+            self = .memberJoin(actor: actor)
+        } else if type_.hasSuffix("MemberLeave") || type_.hasSuffix("memberLeave") {
+            let actor = try container.decodeIfPresent(ChatMember.self, forKey: .member)
+                ?? container.decodeIfPresent(ChatMember.self, forKey: .actor)
+            self = .memberLeave(actor: actor)
+        } else if type_.hasSuffix("LockConvoPermanently") || type_.hasSuffix("lockConvoPermanently") {
+            self = .lockConvoPermanently
+        } else if type_.hasSuffix("LockConvo") || type_.hasSuffix("lockConvo") {
+            let actor = try container.decodeIfPresent(ChatMember.self, forKey: .lockedBy)
+                ?? container.decodeIfPresent(ChatMember.self, forKey: .actor)
+            self = .lockConvo(actor: actor)
+        } else if type_.hasSuffix("UnlockConvo") || type_.hasSuffix("unlockConvo") {
+            let actor = try container.decodeIfPresent(ChatMember.self, forKey: .unlockedBy)
+                ?? container.decodeIfPresent(ChatMember.self, forKey: .actor)
+            self = .unlockConvo(actor: actor)
+        } else if type_.hasSuffix("EditGroup") || type_.hasSuffix("editGroup") {
+            let actor = try container.decodeIfPresent(ChatMember.self, forKey: .actor)
+            self = .editGroup(actor: actor)
+        } else if type_.hasSuffix("CreateJoinLink") || type_.hasSuffix("createJoinLink") {
+            let actor = try container.decodeIfPresent(ChatMember.self, forKey: .actor)
+            self = .createJoinLink(actor: actor)
+        } else if type_.hasSuffix("EditJoinLink") || type_.hasSuffix("editJoinLink") {
+            let actor = try container.decodeIfPresent(ChatMember.self, forKey: .actor)
+            self = .editJoinLink(actor: actor)
+        } else if type_.hasSuffix("EnableJoinLink") || type_.hasSuffix("enableJoinLink") {
+            let actor = try container.decodeIfPresent(ChatMember.self, forKey: .actor)
+            self = .enableJoinLink(actor: actor)
+        } else if type_.hasSuffix("DisableJoinLink") || type_.hasSuffix("disableJoinLink") {
+            let actor = try container.decodeIfPresent(ChatMember.self, forKey: .actor)
+            self = .disableJoinLink(actor: actor)
+        } else {
+            self = .unknown
+        }
+    }
+
+    func encode(to encoder: Encoder) throws {
+        // 受信専用のため encode は最低限
+    }
+
+    /// 表示用テキスト
+    func displayText() -> String {
+        switch self {
+        case .addMember(_, let subject):
+            let name = subject?.displayNameOrHandle ?? "?"
+            return String(localized: "dm.system.addMember \(name)")
+        case .removeMember(_, let subject):
+            let name = subject?.displayNameOrHandle ?? "?"
+            return String(localized: "dm.system.removeMember \(name)")
+        case .memberJoin(let actor):
+            let name = actor?.displayNameOrHandle ?? "?"
+            return String(localized: "dm.system.memberJoin \(name)")
+        case .memberLeave(let actor):
+            let name = actor?.displayNameOrHandle ?? "?"
+            return String(localized: "dm.system.memberLeave \(name)")
+        case .lockConvo:
+            return String(localized: "dm.system.lockConvo")
+        case .unlockConvo:
+            return String(localized: "dm.system.unlockConvo")
+        case .lockConvoPermanently:
+            return String(localized: "dm.system.lockConvoPermanently")
+        case .editGroup:
+            return String(localized: "dm.system.editGroup")
+        case .createJoinLink:
+            return String(localized: "dm.system.createJoinLink")
+        case .editJoinLink:
+            return String(localized: "dm.system.editJoinLink")
+        case .enableJoinLink:
+            return String(localized: "dm.system.enableJoinLink")
+        case .disableJoinLink:
+            return String(localized: "dm.system.disableJoinLink")
+        case .unknown:
+            return ""
+        }
+    }
+}
+
 // MARK: - DeletedMessageView
 
 struct DeletedMessageView: Codable {
@@ -84,6 +360,7 @@ struct DeletedMessageView: Codable {
 enum ChatMessageViewOrDeleted: Codable {
     case message(ChatMessageView)
     case deleted(DeletedMessageView)
+    case system(SystemMessageView)
 
     private enum TypeKey: String, CodingKey { case type = "$type" }
 
@@ -92,6 +369,8 @@ enum ChatMessageViewOrDeleted: Codable {
         let type_ = try container.decode(String.self, forKey: .type)
         if type_.hasSuffix("deletedMessageView") {
             self = .deleted(try DeletedMessageView(from: decoder))
+        } else if type_.hasSuffix("systemMessageView") {
+            self = .system(try SystemMessageView(from: decoder))
         } else {
             self = .message(try ChatMessageView(from: decoder))
         }
@@ -101,6 +380,7 @@ enum ChatMessageViewOrDeleted: Codable {
         switch self {
         case .message(let m): try m.encode(to: encoder)
         case .deleted(let d): try d.encode(to: encoder)
+        case .system(let s): try s.encode(to: encoder)
         }
     }
 
@@ -109,6 +389,7 @@ enum ChatMessageViewOrDeleted: Codable {
         switch self {
         case .message(let m): return m.text
         case .deleted: return nil
+        case .system(let s): return s.data.displayText()
         }
     }
 
@@ -116,6 +397,7 @@ enum ChatMessageViewOrDeleted: Codable {
         switch self {
         case .message(let m): return m.sentAt
         case .deleted(let d): return d.sentAt
+        case .system(let s): return s.sentAt
         }
     }
 }
@@ -174,6 +456,11 @@ struct GetUnreadCountResponse: Decodable {
     let count: Int
 }
 
+struct ListConvoRequestsResponse: Decodable {
+    let convos: [ConvoView]
+    let cursor: String?
+}
+
 // MARK: - API リクエスト body 型
 
 struct SendMessageBody: Encodable {
@@ -224,6 +511,14 @@ struct RemoveReactionBody: Encodable {
     let value: String
 }
 
+struct LockConvoBody: Encodable {
+    let convoId: String
+}
+
+struct UnlockConvoBody: Encodable {
+    let convoId: String
+}
+
 // MARK: - 削除レスポンス
 
 struct DeleteMessageForSelfResponse: Decodable {
@@ -247,4 +542,12 @@ struct LeaveConvoResponse: Decodable {
 
 struct AcceptConvoResponse: Decodable {
     let rev: String
+}
+
+struct LockConvoResponse: Decodable {
+    let convo: ConvoView
+}
+
+struct UnlockConvoResponse: Decodable {
+    let convo: ConvoView
 }

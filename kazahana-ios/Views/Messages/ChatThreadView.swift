@@ -1,6 +1,6 @@
 // ChatThreadView.swift
 // kazahana-ios
-// DM メッセージスレッド画面
+// DM メッセージスレッド画面（1:1 + グループチャット対応）
 
 import SwiftUI
 
@@ -15,7 +15,7 @@ struct ChatThreadView: View {
     @State private var selectedAuthorDID: IdentifiableString? = nil
 
     private var myDID: String { authVM.client.currentSession?.did ?? "" }
-    private var otherMember: ChatMember? { convo.otherMember(myDID: myDID) }
+    private var isGroup: Bool { convo.isGroup }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -45,17 +45,25 @@ struct ChatThreadView: View {
                         }
 
                         ForEach(Array((viewModel?.messages ?? []).enumerated()), id: \.offset) { _, msg in
-                            MessageBubbleView(
-                                message: msg,
-                                myDID: myDID,
-                                onDelete: { msgId in
-                                    Task { await viewModel?.deleteMessage(messageId: msgId) }
-                                },
-                                onReaction: { msgId, emoji in
-                                    Task { await viewModel?.toggleReaction(messageId: msgId, emoji: emoji, myDID: myDID) }
-                                }
-                            )
-                            .id(messageID(msg))
+                            switch msg {
+                            case .system(let sysMsg):
+                                SystemMessageBubbleView(message: sysMsg)
+                                    .id(sysMsg.id)
+                            case .message, .deleted:
+                                MessageBubbleView(
+                                    message: msg,
+                                    myDID: myDID,
+                                    isGroup: isGroup,
+                                    members: convo.members,
+                                    onDelete: { msgId in
+                                        Task { await viewModel?.deleteMessage(messageId: msgId) }
+                                    },
+                                    onReaction: { msgId, emoji in
+                                        Task { await viewModel?.toggleReaction(messageId: msgId, emoji: emoji, myDID: myDID) }
+                                    }
+                                )
+                                .id(messageID(msg))
+                            }
                         }
                     }
                     .padding(.horizontal, 12)
@@ -71,22 +79,21 @@ struct ChatThreadView: View {
 
             Divider()
 
-            // 送信ボックス
-            inputBar
+            // 送信ボックス or ロック通知
+            if convo.isLocked {
+                lockedNotice
+            } else {
+                inputBar
+            }
         }
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .principal) {
-                Button {
-                    if let did = otherMember?.did {
-                        selectedAuthorDID = IdentifiableString(did)
-                    }
-                } label: {
-                    Text(otherMember?.displayNameOrHandle ?? "")
-                        .font(.headline)
-                        .foregroundStyle(.primary)
+                if isGroup {
+                    groupHeaderButton
+                } else {
+                    directHeaderButton
                 }
-                .buttonStyle(.plain)
             }
         }
         .navigationDestination(item: $selectedAuthorDID) { item in
@@ -101,6 +108,46 @@ struct ChatThreadView: View {
         }
         .onDisappear {
             viewModel?.stopPolling()
+        }
+    }
+
+    // MARK: - Header
+
+    @ViewBuilder
+    private var directHeaderButton: some View {
+        let otherMember = convo.otherMember(myDID: myDID)
+        Button {
+            if let did = otherMember?.did {
+                selectedAuthorDID = IdentifiableString(did)
+            }
+        } label: {
+            Text(otherMember?.displayNameOrHandle ?? "")
+                .font(.headline)
+                .foregroundStyle(.primary)
+        }
+        .buttonStyle(.plain)
+    }
+
+    @ViewBuilder
+    private var groupHeaderButton: some View {
+        // Phase 3 でグループ設定画面への遷移を追加
+        VStack(spacing: 1) {
+            HStack(spacing: 4) {
+                if convo.isLocked {
+                    Image(systemName: convo.groupConvo?.lockStatus == "locked-permanently" ? "lock.fill" : "lock")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+                Text(convo.groupConvo?.name ?? "")
+                    .font(.headline)
+                    .foregroundStyle(.primary)
+                    .lineLimit(1)
+            }
+            if let group = convo.groupConvo {
+                Text(String(localized: "dm.group.memberCount \(group.memberCount)"))
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
         }
     }
 
@@ -129,12 +176,31 @@ struct ChatThreadView: View {
         .background(.bar)
     }
 
+    // MARK: - Locked Notice
+
+    private var lockedNotice: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "lock.fill")
+                .font(.caption)
+            Text(convo.groupConvo?.lockStatus == "locked-permanently"
+                 ? String(localized: "dm.group.lockedPermanently")
+                 : String(localized: "dm.group.locked"))
+                .font(.caption)
+                .italic()
+        }
+        .foregroundStyle(.secondary)
+        .padding(.vertical, 12)
+        .frame(maxWidth: .infinity)
+        .background(.bar)
+    }
+
     // MARK: - Helpers
 
     private func messageID(_ msg: ChatMessageViewOrDeleted) -> String {
         switch msg {
         case .message(let m): return m.id
         case .deleted(let d): return d.id
+        case .system(let s): return s.id
         }
     }
 
@@ -146,6 +212,23 @@ struct ChatThreadView: View {
     }
 }
 
+// MARK: - SystemMessageBubbleView（システムメッセージ表示）
+
+struct SystemMessageBubbleView: View {
+    let message: SystemMessageView
+
+    var body: some View {
+        Text(message.data.displayText())
+            .font(.caption)
+            .foregroundStyle(.secondary)
+            .italic()
+            .multilineTextAlignment(.center)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 6)
+            .frame(maxWidth: .infinity)
+    }
+}
+
 // MARK: - MessageBubbleView
 
 /// リアクション絵文字のプリセット（デスクトップ版と同じ6種）
@@ -154,6 +237,8 @@ private let reactionPresets = ["❤️", "👍", "😂", "😮", "😢", "🎉"]
 struct MessageBubbleView: View {
     let message: ChatMessageViewOrDeleted
     let myDID: String
+    let isGroup: Bool
+    let members: [ChatMember]
     let onDelete: (String) -> Void
     let onReaction: (String, String) -> Void  // (messageId, emoji)
 
@@ -163,45 +248,67 @@ struct MessageBubbleView: View {
         switch message {
         case .message(let m): return m.sender.did == myDID
         case .deleted(let d): return d.sender.did == myDID
+        case .system: return false
         }
+    }
+
+    /// グループ内の送信者名を取得
+    private var senderName: String? {
+        guard isGroup, !isMine else { return nil }
+        let did: String
+        switch message {
+        case .message(let m): did = m.sender.did
+        case .deleted(let d): did = d.sender.did
+        case .system: return nil
+        }
+        return members.first { $0.did == did }?.displayNameOrHandle
     }
 
     var body: some View {
         HStack(alignment: .bottom, spacing: 0) {
             if isMine { Spacer(minLength: 40) }
-            bubbleContent
-                .contextMenu {
-                    if case .message(let m) = message {
-                        // リアクション追加
-                        Button {
-                            showEmojiPicker = true
-                        } label: {
-                            Label(String(localized: "dm.addReaction"), systemImage: "face.smiling")
-                        }
-                        Divider()
-                        if isMine {
-                            Button(role: .destructive) {
-                                onDelete(m.id)
+            VStack(alignment: isMine ? .trailing : .leading, spacing: 2) {
+                // グループ会話では送信者名を表示（自分以外）
+                if let name = senderName {
+                    Text(name)
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 4)
+                }
+                bubbleContent
+                    .contextMenu {
+                        if case .message(let m) = message {
+                            // リアクション追加
+                            Button {
+                                showEmojiPicker = true
                             } label: {
-                                Label(String(localized: "dm.deleteMessage"), systemImage: "trash")
+                                Label(String(localized: "dm.addReaction"), systemImage: "face.smiling")
+                            }
+                            Divider()
+                            if isMine {
+                                Button(role: .destructive) {
+                                    onDelete(m.id)
+                                } label: {
+                                    Label(String(localized: "dm.deleteMessage"), systemImage: "trash")
+                                }
                             }
                         }
                     }
-                }
-                .popover(isPresented: $showEmojiPicker) {
-                    if case .message(let m) = message {
-                        EmojiPickerView(
-                            messageId: m.id,
-                            myDID: myDID,
-                            reactions: m.reactions ?? [],
-                            onSelect: { emoji in
-                                showEmojiPicker = false
-                                onReaction(m.id, emoji)
-                            }
-                        )
-                        .presentationCompactAdaptation(.popover)
+                    .popover(isPresented: $showEmojiPicker) {
+                        if case .message(let m) = message {
+                            EmojiPickerView(
+                                messageId: m.id,
+                                myDID: myDID,
+                                reactions: m.reactions ?? [],
+                                onSelect: { emoji in
+                                    showEmojiPicker = false
+                                    onReaction(m.id, emoji)
+                                }
+                            )
+                            .presentationCompactAdaptation(.popover)
+                        }
                     }
-                }
+            }
             if !isMine { Spacer(minLength: 40) }
         }
     }
@@ -211,24 +318,33 @@ struct MessageBubbleView: View {
         switch message {
         case .message(let m):
             VStack(alignment: isMine ? .trailing : .leading, spacing: 4) {
-                Text(richText(for: m))
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
-                    .background(isMine ? Color.blue : Color(.systemGray5))
-                    .foregroundStyle(isMine ? .white : .primary)
-                    .tint(isMine ? .white : .accentColor)
-                    .environment(\.openURL, OpenURLAction { url in
-                        if url.scheme == "kazahana" {
-                            NotificationCenter.default.post(
-                                name: .kazahanaDeepLink,
-                                object: nil,
-                                userInfo: ["url": url]
-                            )
-                            return .handled
-                        }
-                        return .systemAction
-                    })
-                    .clipShape(RoundedRectangle(cornerRadius: 16))
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(richText(for: m))
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+
+                    // JoinLink embed 表示
+                    if case .joinLink(let embedData) = m.embed {
+                        JoinLinkEmbedView(embed: embedData)
+                            .padding(.horizontal, 8)
+                            .padding(.bottom, 8)
+                    }
+                }
+                .background(isMine ? Color.blue : Color(.systemGray5))
+                .foregroundStyle(isMine ? .white : .primary)
+                .tint(isMine ? .white : .accentColor)
+                .environment(\.openURL, OpenURLAction { url in
+                    if url.scheme == "kazahana" {
+                        NotificationCenter.default.post(
+                            name: .kazahanaDeepLink,
+                            object: nil,
+                            userInfo: ["url": url]
+                        )
+                        return .handled
+                    }
+                    return .systemAction
+                })
+                .clipShape(RoundedRectangle(cornerRadius: 16))
 
                 // リアクション表示
                 if let reactions = m.reactions, !reactions.isEmpty {
@@ -257,6 +373,9 @@ struct MessageBubbleView: View {
                 .padding(.vertical, 8)
                 .background(Color(.systemGray6))
                 .clipShape(RoundedRectangle(cornerRadius: 16))
+
+        case .system:
+            EmptyView() // SystemMessageBubbleView で別途描画
         }
     }
 

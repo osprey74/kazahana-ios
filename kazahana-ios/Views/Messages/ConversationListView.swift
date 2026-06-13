@@ -1,6 +1,6 @@
 // ConversationListView.swift
 // kazahana-ios
-// DM 会話一覧画面
+// DM 会話一覧画面（1:1 + グループチャット対応）
 
 import SwiftUI
 
@@ -155,26 +155,46 @@ struct ConversationRowView: View {
     let myDID: String
     var onTapAvatar: ((String) -> Void)? = nil
 
+    private var isGroup: Bool { convo.isGroup }
     private var member: ChatMember? { convo.otherMember(myDID: myDID) }
 
     var body: some View {
         HStack(spacing: 12) {
-            Button {
-                if let did = member?.did { onTapAvatar?(did) }
-            } label: {
-                AvatarView(url: member?.avatar, size: 44)
+            // アバター（グループ / 1:1）
+            if isGroup {
+                groupAvatar
+            } else {
+                Button {
+                    if let did = member?.did { onTapAvatar?(did) }
+                } label: {
+                    AvatarView(url: member?.avatar, size: 44)
+                }
+                .buttonStyle(.plain)
             }
-            .buttonStyle(.plain)
 
             VStack(alignment: .leading, spacing: 2) {
+                // 1行目: 名前 + ミュート + ロック + 時刻
                 HStack {
-                    Text(member?.displayNameOrHandle ?? "")
-                        .font(.callout)
-                        .fontWeight(.semibold)
-                        .lineLimit(1)
+                    if isGroup {
+                        Text(convo.groupConvo?.name ?? "")
+                            .font(.callout)
+                            .fontWeight(.semibold)
+                            .lineLimit(1)
+                    } else {
+                        Text(member?.displayNameOrHandle ?? "")
+                            .font(.callout)
+                            .fontWeight(.semibold)
+                            .lineLimit(1)
+                    }
 
                     if convo.muted == true {
                         Image(systemName: "bell.slash.fill")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+
+                    if convo.isLocked {
+                        Image(systemName: convo.groupConvo?.lockStatus == "locked-permanently" ? "lock.fill" : "lock")
                             .font(.caption2)
                             .foregroundStyle(.secondary)
                     }
@@ -188,20 +208,40 @@ struct ConversationRowView: View {
                     }
                 }
 
+                // 2行目: メンバー数（グループ）or プレビュー + バッジ
                 HStack {
-                    if let preview = convo.lastMessage?.previewText {
-                        Text(preview)
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                            .lineLimit(1)
-                    } else if convo.lastMessage != nil {
-                        Text(String(localized: "dm.deletedMessage"))
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                            .italic()
+                    VStack(alignment: .leading, spacing: 1) {
+                        if isGroup, let group = convo.groupConvo {
+                            Text(String(localized: "dm.group.memberCount \(group.memberCount)"))
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
+
+                        if let preview = convo.lastMessage?.previewText {
+                            Text(preview)
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                        } else if convo.lastMessage != nil {
+                            Text(String(localized: "dm.deletedMessage"))
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                                .italic()
+                        }
                     }
 
                     Spacer()
+
+                    // 未読参加申請バッジ（owner のみ）
+                    if let unreadRequests = convo.groupConvo?.unreadJoinRequestCount, unreadRequests > 0 {
+                        Text("\(min(unreadRequests, 99))")
+                            .font(.caption2)
+                            .fontWeight(.bold)
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 2)
+                            .background(.orange, in: Capsule())
+                    }
 
                     if convo.unreadCount > 0 {
                         Text("\(min(convo.unreadCount, 99))")
@@ -217,6 +257,22 @@ struct ConversationRowView: View {
         }
         .padding(.vertical, 10)
     }
+
+    // MARK: - Group Avatar
+
+    @ViewBuilder
+    private var groupAvatar: some View {
+        ZStack {
+            Circle()
+                .fill(Color(.systemGray5))
+                .frame(width: 44, height: 44)
+            Image(systemName: "person.3.fill")
+                .font(.system(size: 16))
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    // MARK: - Helpers
 
     private func relativeTimeString(from isoString: String) -> String {
         guard let date = ISO8601DateFormatter().date(from: isoString) else { return "" }

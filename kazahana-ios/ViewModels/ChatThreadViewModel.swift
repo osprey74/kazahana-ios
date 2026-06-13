@@ -89,7 +89,8 @@ final class ChatThreadViewModel {
                 sender: response.sender,
                 sentAt: response.sentAt,
                 facets: response.facets,
-                reactions: response.reactions
+                reactions: response.reactions,
+                embed: nil
             )
             messages.append(.message(newMessage))
         } catch {
@@ -109,6 +110,7 @@ final class ChatThreadViewModel {
                 switch $0 {
                 case .message(let m): return m.id == messageId
                 case .deleted(let d): return d.id == messageId
+                case .system(let s): return s.id == messageId
                 }
             }) {
                 let deletedView = DeletedMessageView(
@@ -135,10 +137,10 @@ final class ChatThreadViewModel {
             let response: ChatMessageView
             if hasReaction {
                 let r = try await chatService.removeReaction(convoId: convoId, messageId: messageId, value: emoji)
-                response = ChatMessageView(id: r.id, rev: r.rev, text: r.text, sender: r.sender, sentAt: r.sentAt, facets: r.facets, reactions: r.reactions)
+                response = ChatMessageView(id: r.id, rev: r.rev, text: r.text, sender: r.sender, sentAt: r.sentAt, facets: r.facets, reactions: r.reactions, embed: nil)
             } else {
                 let r = try await chatService.addReaction(convoId: convoId, messageId: messageId, value: emoji)
-                response = ChatMessageView(id: r.id, rev: r.rev, text: r.text, sender: r.sender, sentAt: r.sentAt, facets: r.facets, reactions: r.reactions)
+                response = ChatMessageView(id: r.id, rev: r.rev, text: r.text, sender: r.sender, sentAt: r.sentAt, facets: r.facets, reactions: r.reactions, embed: nil)
             }
             // メッセージリストを更新
             if let idx = messages.firstIndex(where: {
@@ -203,12 +205,14 @@ final class ChatThreadViewModel {
                 switch msg {
                 case .message(let m): return m.id
                 case .deleted(let d): return d.id
+                case .system(let s): return s.id
                 }
             })
             let toAdd = newMessages.filter { msg -> Bool in
                 switch msg {
                 case .message(let m): return !existingIDs.contains(m.id)
                 case .deleted(let d): return !existingIDs.contains(d.id)
+                case .system(let s): return !existingIDs.contains(s.id)
                 }
             }
             // リアクション変化を反映（既存メッセージを更新）
