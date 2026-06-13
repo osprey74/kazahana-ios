@@ -25,6 +25,8 @@ extension Notification.Name {
     static let searchHashtag = Notification.Name("searchHashtag")
     /// プッシュ通知タップ通知 — userInfo["targetDID"] に通知先アカウントの DID が入る
     static let pushNotificationTapped = Notification.Name("pushNotificationTapped")
+    /// グループ設定変更通知 — 会話一覧をリフレッシュさせる
+    static let conversationListNeedsRefresh = Notification.Name("conversationListNeedsRefresh")
     /// macOS メニューバー: 新規投稿
     static let composeNewPost = Notification.Name("composeNewPost")
     /// macOS メニューバー: タイムライン再読み込み

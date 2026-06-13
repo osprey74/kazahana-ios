@@ -83,6 +83,9 @@ struct ConversationListView: View {
         .onChange(of: viewModel?.unreadCount) { _, newCount in
             onUnreadCountChanged?(newCount ?? 0)
         }
+        .onReceive(NotificationCenter.default.publisher(for: .conversationListNeedsRefresh)) { _ in
+            Task { await viewModel?.refresh() }
+        }
     }
 
     // MARK: - List Content

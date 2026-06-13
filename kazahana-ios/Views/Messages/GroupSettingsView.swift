@@ -493,6 +493,7 @@ struct GroupSettingsView: View {
             try await chatService.approveJoinRequest(convoId: convo.id, member: request.requestedBy.did)
             joinRequests.removeAll { $0.id == request.id }
             convo = try await chatService.getConvo(convoId: convo.id)
+            NotificationCenter.default.post(name: .conversationListNeedsRefresh, object: nil)
         } catch { errorMessage = error.localizedDescription }
     }
 
@@ -500,6 +501,7 @@ struct GroupSettingsView: View {
         do {
             try await chatService.rejectJoinRequest(convoId: convo.id, member: request.requestedBy.did)
             joinRequests.removeAll { $0.id == request.id }
+            NotificationCenter.default.post(name: .conversationListNeedsRefresh, object: nil)
         } catch { errorMessage = error.localizedDescription }
     }
 
