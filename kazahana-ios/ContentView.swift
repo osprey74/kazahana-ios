@@ -161,6 +161,8 @@ struct MainTabView: View {
     @State private var deepLinkPostURI: IdentifiableString? = nil
     // ディープリンクで開く投稿作成画面の初期テキスト（kazahana://compose?text=...）
     @State private var deepLinkComposeText: IdentifiableString? = nil
+    // ディープリンクで開くグループ参加画面の招待コード（kazahana://chat/{code}）
+    @State private var deepLinkJoinCode: IdentifiableString? = nil
 
     enum Tab {
         case home, search, notifications, messages, profile
@@ -236,6 +238,11 @@ struct MainTabView: View {
                     .environment(authVM)
                     .environment(AppSettings.shared)
             }
+        }
+        // ディープリンクでグループ参加画面を開く
+        .sheet(item: $deepLinkJoinCode) { item in
+            GroupJoinView(code: item.value)
+                .environment(authVM)
         }
         .onOpenURL { url in
             handleDeepLink(url)
@@ -321,6 +328,11 @@ struct MainTabView: View {
             let components = URLComponents(url: url, resolvingAgainstBaseURL: false)
             let text = components?.queryItems?.first(where: { $0.name == "text" })?.value ?? ""
             deepLinkComposeText = IdentifiableString(value: text)
+        case "chat":
+            // グループ招待リンク: kazahana://chat/{code}
+            if let code = path.first, !code.isEmpty {
+                deepLinkJoinCode = IdentifiableString(value: code)
+            }
         default:
             break
         }

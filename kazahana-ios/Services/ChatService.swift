@@ -185,6 +185,35 @@ final class ChatService {
         )
     }
 
+    // MARK: - グループ参加（Phase 2）
+
+    /// 招待リンクのプレビューを取得する
+    func getJoinLinkPreviews(codes: [String]) async throws -> GetJoinLinkPreviewsResponse {
+        let items = codes.map { URLQueryItem(name: "codes", value: $0) }
+        return try await client.getWithProxyArrayParams(
+            nsid: "chat.bsky.group.getJoinLinkPreviews",
+            queryItems: items
+        )
+    }
+
+    /// 招待コードでグループへ参加申請する
+    func requestJoin(code: String) async throws -> RequestJoinResponse {
+        let body = RequestJoinBody(code: code)
+        return try await client.postWithProxy(
+            nsid: "chat.bsky.group.requestJoin",
+            body: body
+        )
+    }
+
+    /// 保留中の参加申請を取り下げる
+    func withdrawJoinRequest(convoId: String) async throws {
+        let body = WithdrawJoinRequestBody(convoId: convoId)
+        let _: WithdrawJoinRequestResponse = try await client.postWithProxy(
+            nsid: "chat.bsky.group.withdrawJoinRequest",
+            body: body
+        )
+    }
+
     // MARK: - グループロック
 
     /// グループ会話をロックする（投稿停止）

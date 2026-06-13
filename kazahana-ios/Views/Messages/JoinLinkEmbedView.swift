@@ -7,13 +7,22 @@ import SwiftUI
 struct JoinLinkEmbedView: View {
     let embed: JoinLinkEmbedData
 
+    @Environment(\.openURL) private var openURL
+
     var body: some View {
-        // Phase 1 では表示のみ（タップでの参加は Phase 2）
         Group {
             if let preview = embed.joinLinkPreview {
                 switch preview {
                 case .active(let active):
-                    activeCard(active)
+                    Button {
+                        if let code = active.code,
+                           let url = URL(string: "kazahana://chat/\(code)") {
+                            openURL(url)
+                        }
+                    } label: {
+                        activeCard(active)
+                    }
+                    .buttonStyle(.plain)
                 case .disabled:
                     disabledCard(message: String(localized: "dm.joinLink.disabled"))
                 case .invalid:

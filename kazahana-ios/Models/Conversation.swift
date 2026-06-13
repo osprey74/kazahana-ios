@@ -461,6 +461,44 @@ struct ListConvoRequestsResponse: Decodable {
     let cursor: String?
 }
 
+struct GetJoinLinkPreviewsResponse: Decodable {
+    let previews: [JoinLinkPreviewItem]
+}
+
+/// getJoinLinkPreviews が返す各プレビュー（$type で active/disabled/invalid を判別）
+enum JoinLinkPreviewItem: Codable {
+    case active(JoinLinkPreviewActive)
+    case disabled
+    case invalid
+
+    private enum TypeKey: String, CodingKey { case type = "$type" }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: TypeKey.self)
+        let type_ = try container.decodeIfPresent(String.self, forKey: .type) ?? ""
+        if type_.contains("disabledJoinLinkPreview") {
+            self = .disabled
+        } else if type_.contains("invalidJoinLinkPreview") {
+            self = .invalid
+        } else {
+            self = .active(try JoinLinkPreviewActive(from: decoder))
+        }
+    }
+
+    func encode(to encoder: Encoder) throws {
+        if case .active(let a) = self { try a.encode(to: encoder) }
+    }
+}
+
+struct RequestJoinResponse: Decodable {
+    let status: String      // "joined" | "pending"
+    let convo: ConvoView?
+}
+
+struct WithdrawJoinRequestResponse: Decodable {
+    let convoId: String?
+}
+
 // MARK: - API リクエスト body 型
 
 struct SendMessageBody: Encodable {
@@ -509,6 +547,14 @@ struct RemoveReactionBody: Encodable {
     let convoId: String
     let messageId: String
     let value: String
+}
+
+struct RequestJoinBody: Encodable {
+    let code: String
+}
+
+struct WithdrawJoinRequestBody: Encodable {
+    let convoId: String
 }
 
 struct LockConvoBody: Encodable {
