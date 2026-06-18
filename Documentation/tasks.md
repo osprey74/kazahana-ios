@@ -668,6 +668,7 @@
 - [ ] **[I-G11] カルーセル枚数バッジ表示** — social-app PR #10719 互換。"3 / 7" 形式を右上に
 - [ ] **[I-G12] lightbox の 10 枚スクロール最適化** — フルスクリーンビュアが 10 枚で破綻しないか検証・最適化
 - [ ] **[I-G13] 画像上限値の正規化（任意）** — `1_900_000` / `950_000` を仕様書通りの `2_000_000` / `1_000_000` に正規化（リスク低、デバッグ時の混乱回避）
+- [ ] **[I-G14] gallery embed モデル定義の追加** — iOS は独自実装の AT Protocol クライアント（`ATProtoClient.swift`）で第三者 SDK 非依存のため、手書きで `AppBskyEmbedGallery` 相当の Codable モデルを追加する必要あり。lexicon: [`app.bsky.embed.gallery`](https://github.com/bluesky-social/atproto/blob/main/lexicons/app/bsky/embed/gallery.json)。**重要**: `gallery#viewImage` のサムネ URL フィールドは `thumbnail`（legacy `embed.images#viewImage` は `thumb`）、`alt`/`aspectRatio` 共に required
 
 ---
 
