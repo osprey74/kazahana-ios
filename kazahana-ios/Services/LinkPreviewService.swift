@@ -40,9 +40,10 @@ final class LinkPreviewService {
         request.setValue("Mozilla/5.0 (compatible; kazahana/1.0)", forHTTPHeaderField: "User-Agent")
         request.timeoutInterval = 10
 
-        let (data, _) = try await urlSession.data(for: request)
-        let html = String(data: data, encoding: .utf8)
-            ?? String(data: data, encoding: .isoLatin1)
+        let (data, response) = try await urlSession.data(for: request)
+        let encoding = Self.detectEncoding(response: response, data: data)
+        let html = String(data: data, encoding: encoding)
+            ?? String(data: data, encoding: .utf8)
             ?? ""
 
         // Standard Site: AT-URI を抽出し、見つかれば XRPC で拡張プレビューを取得
@@ -168,6 +169,59 @@ final class LinkPreviewService {
             quality -= 0.1
         }
         return image.jpegData(compressionQuality: 0.2) ?? Data()
+    }
+
+    // MARK: - 文字コード判定
+
+    /// HTTP Content-Type ヘッダ → HTML meta charset → UTF-8 の優先度でエンコーディングを判定
+    static func detectEncoding(response: URLResponse, data: Data) -> String.Encoding {
+        // 1. HTTP Content-Type ヘッダの charset
+        if let httpResponse = response as? HTTPURLResponse,
+           let contentType = httpResponse.value(forHTTPHeaderField: "Content-Type"),
+           let charsetName = Self.extractCharset(from: contentType) {
+            if let encoding = Self.encoding(fromIANAName: charsetName) {
+                return encoding
+            }
+        }
+
+        // 2. HTML 先頭 4096 バイトから <meta charset="..."> を検出
+        //    .isoLatin1 は全バイト値をマッピングするため、非 ASCII バイトを含むデータでも nil にならない
+        let headBytes = data.prefix(4096)
+        if let head = String(data: headBytes, encoding: .isoLatin1) {
+            let metaPatterns = [
+                #"<meta[^>]+charset\s*=\s*["']?([^"'>\s;]+)"#,
+                #"<meta[^>]+http-equiv\s*=\s*["']?content-type[^>]*charset=([^"'>\s;]+)"#,
+            ]
+            for pattern in metaPatterns {
+                if let regex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive),
+                   let match = regex.firstMatch(in: head, range: NSRange(head.startIndex..., in: head)),
+                   let range = Range(match.range(at: 1), in: head) {
+                    let charsetName = String(head[range])
+                    if let encoding = Self.encoding(fromIANAName: charsetName) {
+                        return encoding
+                    }
+                }
+            }
+        }
+
+        // 3. デフォルト UTF-8
+        return .utf8
+    }
+
+    /// Content-Type ヘッダ文字列から charset 値を抽出
+    private static func extractCharset(from contentType: String) -> String? {
+        guard let regex = try? NSRegularExpression(pattern: #"charset=([^\s;]+)"#, options: .caseInsensitive),
+              let match = regex.firstMatch(in: contentType, range: NSRange(contentType.startIndex..., in: contentType)),
+              let range = Range(match.range(at: 1), in: contentType) else { return nil }
+        return String(contentType[range])
+    }
+
+    /// IANA charset 名を String.Encoding に変換
+    private static func encoding(fromIANAName name: String) -> String.Encoding? {
+        let cfEncoding = CFStringConvertIANACharSetNameToEncoding(name as CFString)
+        guard cfEncoding != kCFStringEncodingInvalidId else { return nil }
+        let nsEncoding = CFStringConvertEncodingToNSStringEncoding(cfEncoding)
+        return String.Encoding(rawValue: nsEncoding)
     }
 
     // MARK: - HTML パース

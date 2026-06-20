@@ -174,18 +174,20 @@ struct ChatMessageView: Codable, Identifiable {
     let facets: [Facet]?
     let reactions: [ChatReaction]?
     let embed: ChatMessageEmbed?
+    let replyTo: ChatReplyTarget?
 
     var sentDate: Date? {
         ISO8601DateFormatter().date(from: sentAt)
     }
 
     private enum CodingKeys: String, CodingKey {
-        case id, rev, text, sender, sentAt, facets, reactions, embed
+        case id, rev, text, sender, sentAt, facets, reactions, embed, replyTo
     }
 
-    init(id: String, rev: String, text: String, sender: ChatMessageSender, sentAt: String, facets: [Facet]?, reactions: [ChatReaction]?, embed: ChatMessageEmbed?) {
+    init(id: String, rev: String, text: String, sender: ChatMessageSender, sentAt: String, facets: [Facet]?, reactions: [ChatReaction]?, embed: ChatMessageEmbed?, replyTo: ChatReplyTarget? = nil) {
         self.id = id; self.rev = rev; self.text = text; self.sender = sender
         self.sentAt = sentAt; self.facets = facets; self.reactions = reactions; self.embed = embed
+        self.replyTo = replyTo
     }
 
     init(from decoder: Decoder) throws {
@@ -198,6 +200,52 @@ struct ChatMessageView: Codable, Identifiable {
         facets = try? container.decodeIfPresent([Facet].self, forKey: .facets)
         reactions = try? container.decodeIfPresent([ChatReaction].self, forKey: .reactions)
         embed = try? container.decodeIfPresent(ChatMessageEmbed.self, forKey: .embed)
+        replyTo = try? container.decodeIfPresent(ChatReplyTarget.self, forKey: .replyTo)
+    }
+}
+
+/// メッセージ返信先（replyTo フィールド）
+/// API レスポンスでは MessageView または DeletedMessageView が返る
+indirect enum ChatReplyTarget: Codable {
+    case message(ChatMessageView)
+    case deleted(DeletedMessageView)
+
+    private enum TypeKey: String, CodingKey { case type = "$type" }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: TypeKey.self)
+        let type_ = try? container.decode(String.self, forKey: .type)
+        if type_?.hasSuffix("deletedMessageView") == true {
+            self = .deleted(try DeletedMessageView(from: decoder))
+        } else {
+            self = .message(try ChatMessageView(from: decoder))
+        }
+    }
+
+    func encode(to encoder: Encoder) throws {
+        switch self {
+        case .message(let m): try m.encode(to: encoder)
+        case .deleted(let d): try d.encode(to: encoder)
+        }
+    }
+
+    var preview: String? {
+        switch self {
+        case .message(let m): return m.text
+        case .deleted: return nil
+        }
+    }
+
+    var isDeleted: Bool {
+        if case .deleted = self { return true }
+        return false
+    }
+
+    var messageId: String {
+        switch self {
+        case .message(let m): return m.id
+        case .deleted(let d): return d.id
+        }
     }
 }
 
@@ -594,6 +642,11 @@ struct SendMessageBody: Encodable {
     struct MessageInput: Encodable {
         let text: String
         let facets: [Facet]?
+        let replyTo: ReplyRef?
+
+        struct ReplyRef: Encodable {
+            let messageId: String
+        }
     }
 }
 

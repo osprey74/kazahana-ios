@@ -7,6 +7,7 @@ import SwiftUI
 struct QuoteEmbedView: View {
 
     let record: EmbedRecordView
+    var onTap: (() -> Void)? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -41,5 +42,9 @@ struct QuoteEmbedView: View {
             RoundedRectangle(cornerRadius: 12)
                 .stroke(Color.secondary.opacity(0.2), lineWidth: 1)
         )
+        .contentShape(Rectangle())
+        .onTapGesture {
+            onTap?()
+        }
     }
 }

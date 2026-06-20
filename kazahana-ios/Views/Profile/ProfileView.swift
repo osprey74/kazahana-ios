@@ -338,6 +338,7 @@ struct ProfileScreenView: View {
             Spacer()
 
             if isSelf {
+                #if !targetEnvironment(macCatalyst)
                 Button {
                     showQRSheet = true
                 } label: {
@@ -345,6 +346,7 @@ struct ProfileScreenView: View {
                         .font(.system(size: 18))
                         .foregroundStyle(.primary)
                 }
+                #endif
                 Button {
                     showSettings = true
                 } label: {
@@ -585,6 +587,7 @@ struct ProfileHeaderView: View {
 
                 if isSelf {
                     HStack(spacing: 8) {
+                        #if !targetEnvironment(macCatalyst)
                         Button {
                             onTapQR?()
                         } label: {
@@ -594,6 +597,7 @@ struct ProfileHeaderView: View {
                                 .frame(width: 36, height: 36)
                                 .background(Color(.systemGray5), in: Circle())
                         }
+                        #endif
                         Button {
                             onTapSettings?()
                         } label: {

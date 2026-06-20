@@ -51,6 +51,7 @@ struct PostCardView: View {
     @State private var isHovered = false
     #endif
     @State private var saveToastMessage: String? = nil
+    @State private var selectedQuoteURI: IdentifiableString? = nil
 
     private var post: PostView { feedPost.post }
     private var author: ProfileViewBasic { post.author }
@@ -142,8 +143,8 @@ struct PostCardView: View {
                             authorRow
 
                             // 返信先表示
-                            if let reply = feedPost.reply, let parentUri = reply.parent?.uri {
-                                replyIndicator(parentUri: parentUri)
+                            if let reply = feedPost.reply, reply.parent?.uri != nil {
+                                replyIndicator(parentAuthor: reply.parent?.author)
                             }
 
                             // langs / via / モデレーションラベル
@@ -317,6 +318,11 @@ struct PostCardView: View {
             .sheet(item: $reportTarget) { target in
                 if let postService {
                     ReportView(target: target, postService: postService)
+                }
+            }
+            .navigationDestination(item: $selectedQuoteURI) { uriStr in
+                if let postService {
+                    ThreadView(uri: uriStr.value, postService: postService)
                 }
             }
         } // else
@@ -528,12 +534,17 @@ struct PostCardView: View {
         .buttonStyle(.plain)
     }
 
-    private func replyIndicator(parentUri: String) -> some View {
+    private func replyIndicator(parentAuthor: ProfileViewBasic?) -> some View {
         HStack(spacing: 4) {
             Image(systemName: "arrowshape.turn.up.left")
                 .font(.caption2)
-            Text(String(localized: "compose.reply"))
-                .font(.caption)
+            if let handle = parentAuthor?.handle {
+                Text(String(localized: "post.replyTo \("@\(handle)")"))
+                    .font(.caption)
+            } else {
+                Text(String(localized: "compose.reply"))
+                    .font(.caption)
+            }
         }
         .foregroundStyle(.secondary)
     }
@@ -566,7 +577,9 @@ struct PostCardView: View {
                 LinkCardView(external: ext.external)
             case .record(let record):
                 if let rec = record.record {
-                    QuoteEmbedView(record: rec)
+                    QuoteEmbedView(record: rec, onTap: {
+                        if let uri = rec.uri { selectedQuoteURI = IdentifiableString(uri) }
+                    })
                 } else {
                     EmptyView()
                 }
@@ -576,7 +589,9 @@ struct PostCardView: View {
                         AnyView(embedView(media))
                     }
                     if let rec = rwm.record.record {
-                        QuoteEmbedView(record: rec)
+                        QuoteEmbedView(record: rec, onTap: {
+                            if let uri = rec.uri { selectedQuoteURI = IdentifiableString(uri) }
+                        })
                     }
                 }
             case .video(let video):

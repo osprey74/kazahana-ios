@@ -319,6 +319,7 @@ struct ReplyRef: Codable {
 struct PostViewRef: Codable {
     let uri: String?
     let cid: String?
+    let author: ProfileViewBasic?
 }
 
 // MARK: - リポスト理由

@@ -67,7 +67,7 @@ final class ChatThreadViewModel {
     // MARK: - 送信
 
     @MainActor
-    func sendMessage(text: String) async {
+    func sendMessage(text: String, replyToMessageId: String? = nil) async {
         guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
         guard !isSending else { return }
         isSending = true
@@ -80,7 +80,11 @@ final class ChatThreadViewModel {
                 if case .mention = $0.kind { return false }
                 return true
             })
-            let response = try await chatService.sendMessage(convoId: convoId, text: text, facets: facets.isEmpty ? nil : facets)
+            let response = try await chatService.sendMessage(
+                convoId: convoId, text: text,
+                facets: facets.isEmpty ? nil : facets,
+                replyToMessageId: replyToMessageId
+            )
             // レスポンスを ChatMessageView に変換してリストに追加
             let newMessage = ChatMessageView(
                 id: response.id,

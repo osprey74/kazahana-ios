@@ -50,10 +50,11 @@ final class ChatService {
     }
 
     /// メッセージを送信する
-    func sendMessage(convoId: String, text: String, facets: [Facet]? = nil) async throws -> SendMessageResponse {
+    func sendMessage(convoId: String, text: String, facets: [Facet]? = nil, replyToMessageId: String? = nil) async throws -> SendMessageResponse {
+        let replyRef = replyToMessageId.map { SendMessageBody.MessageInput.ReplyRef(messageId: $0) }
         let body = SendMessageBody(
             convoId: convoId,
-            message: SendMessageBody.MessageInput(text: text, facets: facets)
+            message: SendMessageBody.MessageInput(text: text, facets: facets, replyTo: replyRef)
         )
         return try await client.postWithProxy(
             nsid: "chat.bsky.convo.sendMessage",

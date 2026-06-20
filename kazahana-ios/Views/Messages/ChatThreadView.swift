@@ -15,6 +15,9 @@ struct ChatThreadView: View {
     @State private var scrollProxy: ScrollViewProxy?
     @State private var selectedAuthorDID: IdentifiableString? = nil
     @State private var showGroupSettings = false
+    @State private var replyTarget: ReplyTargetSelection? = nil
+    @State private var flashingMessageId: String? = nil
+    @FocusState private var isInputFocused: Bool
 
     private var myDID: String { authVM.client.currentSession?.did ?? "" }
     private var isGroup: Bool { convo.isGroup }
@@ -63,9 +66,29 @@ struct ChatThreadView: View {
                                     },
                                     onReaction: { msgId, emoji in
                                         Task { await viewModel?.toggleReaction(messageId: msgId, emoji: emoji, myDID: myDID) }
+                                    },
+                                    onReply: { target in
+                                        replyTarget = target
+                                    },
+                                    onTapReplyTarget: { msgId in
+                                        withAnimation(.easeInOut(duration: 0.3)) {
+                                            scrollProxy?.scrollTo(msgId, anchor: .center)
+                                        }
+                                        // スクロール完了後にフラッシュ
+                                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                                            flashingMessageId = msgId
+                                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.9) {
+                                                flashingMessageId = nil
+                                            }
+                                        }
                                     }
                                 )
                                 .id(messageID(msg))
+                                .background(
+                                    RoundedRectangle(cornerRadius: 16)
+                                        .fill(Color.blue.opacity(flashingMessageId == messageID(msg) ? 0.18 : 0))
+                                        .animation(.easeInOut(duration: 0.45), value: flashingMessageId)
+                                )
                             }
                         }
                     }
@@ -163,25 +186,65 @@ struct ChatThreadView: View {
     // MARK: - Input Bar
 
     private var inputBar: some View {
-        HStack(alignment: .bottom, spacing: 8) {
-            TextField(String(localized: "dm.messageInputPlaceholder"), text: $messageText, axis: .vertical)
-                .textFieldStyle(.roundedBorder)
-                .lineLimit(1...5)
+        VStack(spacing: 0) {
+            // 返信プレビュー
+            if let reply = replyTarget {
+                HStack(spacing: 8) {
+                    RoundedRectangle(cornerRadius: 1)
+                        .fill(Color.blue)
+                        .frame(width: 3)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(String(localized: "dm.reply.replyingTo"))
+                            .font(.caption2)
+                            .fontWeight(.semibold)
+                            .foregroundStyle(.blue)
+                        Text(reply.preview)
+                            .font(.caption)
+                            .lineLimit(2)
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    Button {
+                        replyTarget = nil
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundStyle(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                }
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.horizontal, 12)
                 .padding(.vertical, 8)
-
-            Button {
-                let text = messageText
-                messageText = ""
-                Task { await viewModel?.sendMessage(text: text) }
-            } label: {
-                Image(systemName: "paperplane.fill")
-                    .foregroundStyle(messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? Color.secondary : Color.blue)
-                    .font(.title3)
+                .background(Color(.systemGray6))
             }
-            .disabled(messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || viewModel?.isSending == true)
-            .padding(.bottom, 10)
+
+            HStack(alignment: .bottom, spacing: 8) {
+                TextField(String(localized: "dm.messageInputPlaceholder"), text: $messageText, axis: .vertical)
+                    .textFieldStyle(.roundedBorder)
+                    .lineLimit(1...5)
+                    .focused($isInputFocused)
+                    .padding(.vertical, 8)
+
+                Button {
+                    let text = messageText
+                    let replyMessageId = replyTarget?.messageId
+                    isInputFocused = false
+                    messageText = ""
+                    replyTarget = nil
+                    Task {
+                        await viewModel?.sendMessage(text: text, replyToMessageId: replyMessageId)
+                        isInputFocused = true
+                    }
+                } label: {
+                    Image(systemName: "paperplane.fill")
+                        .foregroundStyle(messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? Color.secondary : Color.blue)
+                        .font(.title3)
+                }
+                .disabled(messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || viewModel?.isSending == true)
+                .padding(.bottom, 10)
+            }
+            .padding(.horizontal, 12)
         }
-        .padding(.horizontal, 12)
         .padding(.bottom, evacuationVM?.bannerVisible == true ? 56 : 0)
         .animation(.easeInOut(duration: 0.3), value: evacuationVM?.bannerVisible)
         .background(.bar)
@@ -225,6 +288,14 @@ struct ChatThreadView: View {
     }
 }
 
+// MARK: - ReplyTargetSelection（返信先選択の中間データ）
+
+struct ReplyTargetSelection {
+    let messageId: String
+    let preview: String
+    let isDeleted: Bool
+}
+
 // MARK: - SystemMessageBubbleView（システムメッセージ表示）
 
 struct SystemMessageBubbleView: View {
@@ -254,6 +325,8 @@ struct MessageBubbleView: View {
     let members: [ChatMember]
     let onDelete: (String) -> Void
     let onReaction: (String, String) -> Void  // (messageId, emoji)
+    var onReply: ((ReplyTargetSelection) -> Void)? = nil
+    var onTapReplyTarget: ((String) -> Void)? = nil  // scroll to messageId
 
     @State private var showEmojiPicker = false
 
@@ -297,6 +370,18 @@ struct MessageBubbleView: View {
                             } label: {
                                 Label(String(localized: "dm.addReaction"), systemImage: "face.smiling")
                             }
+                            // 返信
+                            if let onReply {
+                                Button {
+                                    onReply(ReplyTargetSelection(
+                                        messageId: m.id,
+                                        preview: m.text,
+                                        isDeleted: false
+                                    ))
+                                } label: {
+                                    Label(String(localized: "dm.reply.action"), systemImage: "arrowshape.turn.up.left")
+                                }
+                            }
                             Divider()
                             if isMine {
                                 Button(role: .destructive) {
@@ -332,6 +417,37 @@ struct MessageBubbleView: View {
         case .message(let m):
             VStack(alignment: isMine ? .trailing : .leading, spacing: 4) {
                 VStack(alignment: .leading, spacing: 4) {
+                    // 返信先チップ
+                    if let replyTo = m.replyTo {
+                        Button {
+                            onTapReplyTarget?(replyTo.messageId)
+                        } label: {
+                            HStack(spacing: 4) {
+                                RoundedRectangle(cornerRadius: 1)
+                                    .fill(isMine ? Color.white.opacity(0.5) : Color.secondary.opacity(0.4))
+                                    .frame(width: 2)
+                                VStack(alignment: .leading, spacing: 1) {
+                                    Text(String(localized: "dm.reply.replyingTo"))
+                                        .font(.caption2)
+                                        .fontWeight(.medium)
+                                    if replyTo.isDeleted {
+                                        Text(String(localized: "dm.deletedMessage"))
+                                            .font(.caption2)
+                                            .italic()
+                                    } else if let preview = replyTo.preview, !preview.isEmpty {
+                                        Text(preview)
+                                            .font(.caption2)
+                                            .lineLimit(2)
+                                    }
+                                }
+                            }
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .foregroundStyle(isMine ? .white.opacity(0.8) : .secondary)
+                        }
+                        .buttonStyle(.plain)
+                    }
+
                     Text(richText(for: m))
                         .padding(.horizontal, 12)
                         .padding(.vertical, 8)

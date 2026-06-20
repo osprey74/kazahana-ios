@@ -15,6 +15,7 @@ struct ThreadView: View {
     @State private var quotesPostURI: IdentifiableString? = nil
     @State private var quotePost: PostView? = nil
     @State private var selectedAuthorDID: IdentifiableString? = nil
+    @State private var selectedQuoteURI: IdentifiableString? = nil
 
     // フォーカス投稿のいいね/リポスト/ブックマーク状態（楽観的UI）
     @State private var isLiked = false
@@ -71,6 +72,11 @@ struct ThreadView: View {
         }
         .navigationDestination(item: $quotesPostURI) { item in
             PostQuoteListView(postURI: item.value)
+                .environment(authVM)
+        }
+        // 引用元ポスト遷移
+        .navigationDestination(item: $selectedQuoteURI) { item in
+            ThreadView(uri: item.value, postService: postService)
                 .environment(authVM)
         }
         // プロフィール遷移
@@ -671,7 +677,22 @@ struct ThreadView: View {
             }
         case .external(let ext): LinkCardView(external: ext.external)
         case .record(let rec):
-            if let r = rec.record { QuoteEmbedView(record: r) }
+            if let r = rec.record {
+                QuoteEmbedView(record: r, onTap: {
+                    if let uri = r.uri { selectedQuoteURI = IdentifiableString(uri) }
+                })
+            }
+        case .recordWithMedia(let rwm):
+            VStack(spacing: 6) {
+                if let media = rwm.media {
+                    AnyView(embedView(media))
+                }
+                if let rec = rwm.record.record {
+                    QuoteEmbedView(record: rec, onTap: {
+                        if let uri = rec.uri { selectedQuoteURI = IdentifiableString(uri) }
+                    })
+                }
+            }
         default: EmptyView()
         }
     }
