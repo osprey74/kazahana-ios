@@ -279,7 +279,7 @@ struct ThreadView: View {
             // 本文
             if !post.record.text.isEmpty {
                 Text(RichTextParser.attributedString(text: post.record.text, facets: post.record.facets))
-                    .font(.body)
+                    .font(AppSettings.shared.fontSize.bodyFont)
                     .fixedSize(horizontal: false, vertical: true)
             }
 

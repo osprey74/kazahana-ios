@@ -45,6 +45,7 @@ struct ComposeView: View {
 
     // テキストは View の @State で直接管理（@Observable ViewModel の TextEditor バインディング問題を回避）
     @State private var text: String = ""
+    @FocusState private var isTextEditorFocused: Bool
     @State private var isPosting = false
     @State private var uploadStage: UploadStage? = nil
     @State private var errorMessage: String? = nil
@@ -136,15 +137,7 @@ struct ComposeView: View {
 
                 // 入力エリア + メンション候補オーバーレイ
                 ZStack(alignment: .bottom) {
-                    TextEditor(text: $text)
-                        .font(.body)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .padding(.horizontal, 12)
-                        .scrollContentBackground(.hidden)
-                        .onChange(of: text) { oldValue, newValue in
-                            updateMentionQuery(text: newValue)
-                            updateLinkPreview(oldText: oldValue, newText: newValue)
-                        }
+                    textEditorView
 
                     // メンション候補リスト
                     if !mentionCandidates.isEmpty {
@@ -213,7 +206,6 @@ struct ComposeView: View {
                     }
                     .fontWeight(.bold)
                     .disabled(!canPost)
-                    .keyboardShortcut(.return, modifiers: .command)
                 }
             }
             .alert(String(localized: "compose.error"), isPresented: Binding(
@@ -303,8 +295,34 @@ struct ComposeView: View {
                         .ignoresSafeArea()
                 }
             }
+            // macOS: Cmd+Return で投稿送信（UIKeyCommand 経由）
+            .onReceive(NotificationCenter.default.publisher(for: .composeSubmitPost)) { _ in
+                if canPost { Task { await submitPost() } }
+            }
         }
     }
+
+    // MARK: - TextEditor（型推論タイムアウト回避のため分離）
+
+    @ViewBuilder
+    private var textEditorView: some View {
+        TextEditor(text: $text)
+            .font(.body)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .padding(.horizontal, 12)
+            .scrollContentBackground(.hidden)
+            .focused($isTextEditorFocused)
+            .onAppear {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                    isTextEditorFocused = true
+                }
+            }
+            .onChange(of: text) { oldValue, newValue in
+                updateMentionQuery(text: newValue)
+                updateLinkPreview(oldText: oldValue, newText: newValue)
+            }
+    }
+
 
     // MARK: - Actions
 

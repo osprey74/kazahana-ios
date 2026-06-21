@@ -158,7 +158,7 @@ struct PostCardView: View {
                                     text: post.record.text,
                                     facets: post.record.facets
                                 ))
-                                .font(.body)
+                                .font(AppSettings.shared.fontSize.bodyFont)
                                 .lineLimit(20)
                                 .fixedSize(horizontal: false, vertical: true)
                                 .environment(\.openURL, OpenURLAction { url in

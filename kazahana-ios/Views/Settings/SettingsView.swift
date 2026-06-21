@@ -46,6 +46,11 @@ struct SettingsView: View {
                             Text(interval.displayName).tag(interval)
                         }
                     }
+                    Picker(String(localized: "settings.fontSize"), selection: $settings.fontSize) {
+                        ForEach(AppSettings.FontSize.allCases, id: \.self) { size in
+                            Text(size.displayName).tag(size)
+                        }
+                    }
                 }
 
                 // MARK: - 言語設定

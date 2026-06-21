@@ -638,22 +638,33 @@ struct ProfileHeaderView: View {
                         .foregroundStyle(.secondary)
 
                     if let bio = profile.description, !bio.isEmpty {
-                        Text(bio)
+                        Text(Self.profileBioAttributedString(bio))
                             .font(.subheadline)
                             .padding(.top, 4)
+                            .environment(\.openURL, OpenURLAction { url in
+                                if url.scheme == "kazahana" {
+                                    NotificationCenter.default.post(
+                                        name: .kazahanaDeepLink,
+                                        object: nil,
+                                        userInfo: ["url": url]
+                                    )
+                                    return .handled
+                                }
+                                return .systemAction
+                            })
                     }
 
-                    // 統計（フォロワー・フォロー中はタップでリスト表示）
+                    // 統計（フォロー中・フォロワーはタップでリスト表示）
                     HStack(spacing: 16) {
-                        if let followers = profile.followersCount {
-                            Button { onTapFollowers?() } label: {
-                                statItem(count: followers, label: String(localized: "profile.followers"))
-                            }
-                            .buttonStyle(.plain)
-                        }
                         if let follows = profile.followsCount {
                             Button { onTapFollowing?() } label: {
                                 statItem(count: follows, label: String(localized: "profile.following"))
+                            }
+                            .buttonStyle(.plain)
+                        }
+                        if let followers = profile.followersCount {
+                            Button { onTapFollowers?() } label: {
+                                statItem(count: followers, label: String(localized: "profile.followers"))
                             }
                             .buttonStyle(.plain)
                         }
@@ -754,6 +765,18 @@ struct ProfileHeaderView: View {
                     .background(Color(.systemGray5), in: Circle())
             }
         }
+    }
+
+    /// プロフィール説明文からリンク・メンション・ハッシュタグを検出して AttributedString を生成
+    /// プロフィールには facets が付与されないため、クライアント側で自動検出する
+    static func profileBioAttributedString(_ text: String) -> AttributedString {
+        let detected = RichTextParser.detectFacets(in: text)
+        let facets = RichTextParser.buildFacets(from: detected, resolvedMentions: [:])
+        // メンションは DID 未解決のため除外されるが、URL とハッシュタグは有効化される
+        if facets.isEmpty {
+            return AttributedString(text)
+        }
+        return RichTextParser.attributedString(text: text, facets: facets)
     }
 
     private func statItem(count: Int, label: String) -> some View {

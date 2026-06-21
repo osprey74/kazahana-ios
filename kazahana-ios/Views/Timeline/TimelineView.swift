@@ -92,7 +92,21 @@ struct TimelineView: View {
                     }
                 }
 
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItemGroup(placement: .navigationBarTrailing) {
+                    // リロードボタン（Windows版準拠）
+                    Button {
+                        Task {
+                            await viewModel.refresh()
+                            if let firstPost = viewModel.posts.first {
+                                withAnimation { listScrollProxy?.scrollTo(firstPost.id, anchor: .top) }
+                            }
+                        }
+                    } label: {
+                        Image(systemName: "arrow.clockwise")
+                            .font(.system(size: 15))
+                    }
+                    .disabled(viewModel.isRefreshing)
+
                     if let handle = authVM.client.currentSession?.handle {
                         Button {
                             showAccountSwitcher = true
@@ -284,6 +298,23 @@ struct TimelineView: View {
         }
     }
 
+    /// フィードタブ間の左右スワイプ切替
+    private func handleFeedSwipe(direction: SwipeDirection) {
+        let sources = viewModel.visibleFeedSources
+        guard sources.count > 1 else { return }
+        guard let currentIndex = sources.firstIndex(of: viewModel.currentFeed) else { return }
+
+        let newIndex: Int
+        switch direction {
+        case .left:  newIndex = currentIndex + 1
+        case .right: newIndex = currentIndex - 1
+        }
+        guard newIndex >= 0 && newIndex < sources.count else { return }
+        Task { await viewModel.selectFeed(sources[newIndex]) }
+    }
+
+    private enum SwipeDirection { case left, right }
+
     private var postList: some View {
         ScrollViewReader { proxy in
         List {
@@ -332,6 +363,23 @@ struct TimelineView: View {
         .refreshable {
             await viewModel.refresh()
         }
+        #if !targetEnvironment(macCatalyst)
+        .gesture(
+            DragGesture(minimumDistance: 50, coordinateSpace: .local)
+                .onEnded { value in
+                    // 水平方向のスワイプのみ処理（縦スクロールと競合しないよう角度制限）
+                    let horizontal = value.translation.width
+                    let vertical = value.translation.height
+                    guard abs(horizontal) > abs(vertical) * 1.5 else { return }
+                    if horizontal < 0 {
+                        handleFeedSwipe(direction: .left)
+                    } else {
+                        handleFeedSwipe(direction: .right)
+                    }
+                },
+            isEnabled: viewModel.visibleFeedSources.count > 1
+        )
+        #endif
         .onAppear { listScrollProxy = proxy }
         } // ScrollViewReader
     }

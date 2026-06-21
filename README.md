@@ -22,22 +22,23 @@ Kazahana is designed as a **lightweight companion app** — not a full-featured 
 
 ## Features
 
-- **Timeline** — Home timeline with custom feed switching, auto-refresh (configurable interval), pull-to-refresh, and infinite scroll
+- **Timeline** — Home timeline with custom feed switching (swipe to switch on iOS), auto-refresh (configurable interval), pull-to-refresh, reload button, and infinite scroll
 - **Posts** — Rich text display (mentions, links, hashtags), images (up to 10 with gallery carousel), video (up to 300 MB), external link cards, quote posts
 - **Interactions** — Like, repost, quote post, reply with optimistic UI updates
 - **Thread view** — Parent chain, focused post with stats, replies list; stats tap to show user lists
 - **Notifications** — All notification types including like-via-repost, repost-via-repost, and verified/unverified
 - **Verification Badges** — Bluesky verification marks and trusted verifier badges displayed next to display names
-- **Profile** — Author feed (posts/replies/media/likes tabs), pinned post, follow/unfollow, followers/following lists, in-profile search
+- **Profile** — Author feed (posts/replies/media/likes tabs), pinned post, follow/unfollow, followers/following lists, in-profile search, clickable links in bio
 - **Search** — Actor search and post search with search history
 - **Compose** — New post, reply, and quote post; up to 10 images (crop + ALT text) with gallery embed auto-promotion and video attachment (300 MB, server limit check); upload progress indicator; mention autocomplete; threadgate (reply restrictions) and postgate (quote restrictions); draft saving on cancel
 - **Direct Messages & Group Chat** — 1:1 conversations and group chat (up to 50 members); group creation, invite link management, join request approval, member management, lock/unlock; emoji reactions, new conversation creation with search history
 - **Profile QR Code** — Generate and share a QR code for your Bluesky profile; copy link, share via system sheet, or save to Photos
 - **Content Moderation** — Label-based filtering (hide/warn/ignore), adult content toggle, post reporting
-- **Settings** — Theme, post language, auto-refresh interval, via attribution, Claude API key for ALT text generation
+- **Settings** — Theme, font size (4 levels), post language, auto-refresh interval, via attribution, Claude API key for ALT text generation
 - **Sharing** — Share any post via the iOS share sheet; open `kazahana://` deep links from other apps
 - **Evacuation Assist** — Nearest shelter search based on JMA hazard level information (bsaf-kikikuru-bot), compass-based offline navigation, alert banner with auto-detection via BSAF
-- **Background Refresh** — Periodic background notification polling with local push notifications
+- **Background Refresh** — Periodic background notification polling with local push notifications (iOS); foreground polling with macOS notifications (Mac Catalyst)
+- **Keyboard Shortcuts (macOS)** — Cmd+N (new post), Cmd+Return (submit post), Cmd+R (reload), Cmd+1–5 (switch tabs)
 
 ## Tech Stack
 

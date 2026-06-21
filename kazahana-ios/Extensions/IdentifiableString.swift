@@ -33,4 +33,6 @@ extension Notification.Name {
     static let reloadTimeline = Notification.Name("reloadTimeline")
     /// macOS メニューバー: タブ切替（userInfo["tab"] に Int）
     static let switchTab = Notification.Name("switchTab")
+    /// macOS: Option+Return で投稿送信（UIKeyCommand → ComposeView）
+    static let composeSubmitPost = Notification.Name("composeSubmitPost")
 }

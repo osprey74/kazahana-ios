@@ -56,10 +56,8 @@ final class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationC
         _ application: UIApplication,
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
     ) -> Bool {
-        #if !targetEnvironment(macCatalyst)
-        // フォアグラウンドでもプッシュ通知を表示するためにデリゲートを設定
+        // フォアグラウンドでも通知を表示するためにデリゲートを設定
         UNUserNotificationCenter.current().delegate = self
-        #endif
         return true
     }
 
@@ -104,8 +102,16 @@ final class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationC
             UIKeyCommand(title: String(localized: "tab.profile"), action: #selector(handleTab5), input: "5", modifierFlags: .command),
         ])
 
-        // 既存の File メニューに New Post を追加
-        builder.insertChild(UIMenu(title: "", options: .displayInline, children: [newPost]), atStartOfMenu: .file)
+        // File > Submit Post (Cmd+Return)
+        let submitPost = UIKeyCommand(
+            title: String(localized: "menu.submitPost"),
+            action: #selector(handleSubmitPost),
+            input: "\r",
+            modifierFlags: .command
+        )
+
+        // 既存の File メニューに New Post / Submit Post を追加
+        builder.insertChild(UIMenu(title: "", options: .displayInline, children: [newPost, submitPost]), atStartOfMenu: .file)
 
         // View メニューを追加
         builder.insertSibling(viewMenu, afterMenu: .file)
@@ -118,6 +124,11 @@ final class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationC
         NotificationCenter.default.post(name: .composeNewPost, object: nil)
     }
 
+    @objc func handleSubmitPost() {
+        NotificationCenter.default.post(name: .composeSubmitPost, object: nil)
+    }
+
+
     @objc func handleReload() {
         NotificationCenter.default.post(name: .reloadTimeline, object: nil)
     }
@@ -128,6 +139,14 @@ final class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationC
     @objc func handleTab4() { MenuCommandRelay.shared.switchTo(.messages) }
     @objc func handleTab5() { MenuCommandRelay.shared.switchTo(.profile) }
     #endif
+
+    /// フォアグラウンド表示中に通知を受け取ったときの表示設定（iOS/macOS共通）
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        willPresent notification: UNNotification
+    ) async -> UNNotificationPresentationOptions {
+        return [.banner, .sound]
+    }
 
     #if !targetEnvironment(macCatalyst)
     /// APNs からデバイストークンを受け取ったときに呼ばれる
@@ -144,14 +163,6 @@ final class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationC
         didFailToRegisterForRemoteNotificationsWithError error: Error
     ) {
         print("[Push] Failed to register for remote notifications: \(error)")
-    }
-
-    /// フォアグラウンド表示中にプッシュ通知を受け取ったときの表示設定
-    func userNotificationCenter(
-        _ center: UNUserNotificationCenter,
-        willPresent notification: UNNotification
-    ) async -> UNNotificationPresentationOptions {
-        return [.banner, .sound]
     }
 
     /// ユーザーが通知をタップしたときに呼ばれる

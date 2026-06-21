@@ -307,6 +307,8 @@ final class AppSettings {
         self.longFormServiceUrl = d.string(forKey: "longFormServiceUrl") ?? ""
         self.confirmDraftImageQuality = d.object(forKey: "confirmDraftImageQuality") as? Bool ?? true
         self.watermarkSettings = WatermarkSettings.load()
+        let fontSizeRaw = d.string(forKey: "fontSize") ?? FontSize.medium.rawValue
+        self.fontSize = FontSize(rawValue: fontSizeRaw) ?? .medium
         let imageRaw = d.string(forKey: "imageOpenMode") ?? ImageOpenMode.app.rawValue
         self.imageOpenMode = ImageOpenMode(rawValue: imageRaw) ?? .app
         let closeRaw = d.string(forKey: "closeButtonAction") ?? CloseButtonAction.quit.rawValue
@@ -421,6 +423,48 @@ final class AppSettings {
         didSet { defaults.set(launchAtLogin, forKey: "launchAtLogin") }
     }
 
+
+    // MARK: - フォントサイズ設定
+
+    enum FontSize: String, CaseIterable {
+        case small = "small"
+        case medium = "medium"
+        case large = "large"
+        case extraLarge = "extraLarge"
+
+        var displayName: String {
+            switch self {
+            case .small: return String(localized: "settings.fontSize.small")
+            case .medium: return String(localized: "settings.fontSize.medium")
+            case .large: return String(localized: "settings.fontSize.large")
+            case .extraLarge: return String(localized: "settings.fontSize.extraLarge")
+            }
+        }
+
+        /// 本文の Font
+        var bodyFont: Font {
+            switch self {
+            case .small:      return .footnote
+            case .medium:     return .body
+            case .large:      return .system(size: 19)
+            case .extraLarge: return .system(size: 22)
+            }
+        }
+
+        /// 補助テキスト（ハンドル名等）の Font
+        var captionFont: Font {
+            switch self {
+            case .small:      return .caption2
+            case .medium:     return .caption
+            case .large:      return .subheadline
+            case .extraLarge: return .body
+            }
+        }
+    }
+
+    var fontSize: FontSize {
+        didSet { defaults.set(fontSize.rawValue, forKey: "fontSize") }
+    }
 
     // MARK: - 画像表示モード
 

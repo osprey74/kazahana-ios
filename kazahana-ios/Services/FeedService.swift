@@ -216,9 +216,10 @@ struct FeedService {
         for pref in prefResponse.preferences {
             if pref.type == "app.bsky.actor.defs#savedFeedsPrefV2",
                let items = pref.items {
-                let uris = items.filter { $0.type == "feed" }.map { $0.value }
+                // pinned == true のフィードのみ表示（ピンを外したフィードは除外）
+                let uris = items.filter { $0.type == "feed" && $0.pinned != false }.map { $0.value }
                 feedURIs.append(contentsOf: uris)
-                print("[FeedService] v2 feed URIs: \(uris)")
+                print("[FeedService] v2 feed URIs (pinned): \(uris)")
             } else if pref.type == "app.bsky.actor.defs#savedFeedsPref",
                       let pinned = pref.pinned {
                 // v1 の pinned にフィード URI が含まれる（"following" 等の特殊値を除外）
@@ -322,8 +323,9 @@ struct FeedService {
         for pref in prefResponse.preferences {
             if pref.type == "app.bsky.actor.defs#savedFeedsPrefV2",
                let items = pref.items {
-                feedURIs.append(contentsOf: items.filter { $0.type == "feed" }.map { $0.value })
-                listURIs.append(contentsOf: items.filter { $0.type == "list" }.map { $0.value })
+                // pinned == true のフィード/リストのみ表示（ピンを外したフィードは除外）
+                feedURIs.append(contentsOf: items.filter { $0.type == "feed" && $0.pinned != false }.map { $0.value })
+                listURIs.append(contentsOf: items.filter { $0.type == "list" && $0.pinned != false }.map { $0.value })
             } else if pref.type == "app.bsky.actor.defs#savedFeedsPref",
                       let pinned = pref.pinned {
                 let feedOnly = pinned.filter { $0.hasPrefix("at://") && $0.contains("/app.bsky.feed.generator/") }

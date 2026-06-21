@@ -3,6 +3,7 @@
 // ルートビュー（認証状態によりログイン画面 or メイン画面を切り替え）
 
 import SwiftUI
+import UserNotifications
 
 struct ContentView: View {
 
@@ -152,6 +153,10 @@ struct MainTabView: View {
     @State private var selectedTab: Tab = .home
     @State private var dmUnreadCount = 0
     @State private var dmJoinRequestCount = 0
+    #if targetEnvironment(macCatalyst)
+    /// macOS: 前回の通知未読数（増加検出に使用）
+    @State private var lastNotificationUnreadCount = 0
+    #endif
     /// Catalyst でプログラマティックなタブ切替時に TabView を強制再構築するための ID
     @State private var tabViewRefreshID = UUID()
     private let tabBarDelegate = TabBarDelegate()
@@ -284,13 +289,37 @@ struct MainTabView: View {
         .onChange(of: MenuCommandRelay.shared.tabCommand?.id) { _, _ in
             guard let command = MenuCommandRelay.shared.tabCommand else { return }
             selectedTab = command.tab
-            // TabView の id を変更して強制再構築 → タブバー UI が確実に同期
+        }
+        // Mac Catalyst: プログラマティックなタブ切替時に TabView を強制再構築
+        // → UITabBarController のチェックマーク表示を確実に同期させる
+        .onChange(of: selectedTab) { _, _ in
+            #if targetEnvironment(macCatalyst)
             tabViewRefreshID = UUID()
+            #endif
         }
         #if !targetEnvironment(macCatalyst)
         // バッジをリセット（アプリ起動時）
         .task {
             PushNotificationService.shared.resetBadge()
+        }
+        #else
+        // macOS: フォアグラウンドでの通知ポーリング（BGAppRefreshTask が使えないため）
+        .task {
+            await requestMacNotificationPermission()
+            let notificationService = NotificationService(client: client)
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(30))
+                guard !Task.isCancelled else { break }
+                do {
+                    let count = try await notificationService.getUnreadCount()
+                    if count > lastNotificationUnreadCount && count > 0 {
+                        await sendMacLocalNotification(unreadCount: count)
+                    }
+                    lastNotificationUnreadCount = count
+                } catch {
+                    // ポーリングエラーはサイレント
+                }
+            }
         }
         #endif
     }
@@ -326,10 +355,26 @@ struct MainTabView: View {
                 )
             }
         case "compose":
-            // Share Extension から起動: ?text= クエリパラメータを投稿エリアに渡す
+            // Share Extension / Edge共有 から起動
+            // ?text= : Share Extension 経由（テキスト直接指定）
+            // ?title=...&url=... : Edge 等のブラウザ共有（Windows版互換）
             let components = URLComponents(url: url, resolvingAgainstBaseURL: false)
-            let text = components?.queryItems?.first(where: { $0.name == "text" })?.value ?? ""
-            deepLinkComposeText = IdentifiableString(value: text)
+            let queryItems = components?.queryItems ?? []
+            let textParam = queryItems.first(where: { $0.name == "text" })?.value
+            let titleParam = queryItems.first(where: { $0.name == "title" })?.value
+            let urlParam = queryItems.first(where: { $0.name == "url" })?.value
+
+            let composeText: String
+            if let text = textParam, !text.isEmpty {
+                composeText = text
+            } else if let title = titleParam, let shareURL = urlParam {
+                composeText = title + "\n" + shareURL
+            } else if let shareURL = urlParam {
+                composeText = shareURL
+            } else {
+                composeText = ""
+            }
+            deepLinkComposeText = IdentifiableString(value: composeText)
         case "chat":
             // グループ招待リンク: kazahana://chat/{code}
             if let code = path.first, !code.isEmpty {
@@ -339,6 +384,40 @@ struct MainTabView: View {
             break
         }
     }
+
+    #if targetEnvironment(macCatalyst)
+    /// macOS: 通知権限をリクエスト
+    private func requestMacNotificationPermission() async {
+        let center = UNUserNotificationCenter.current()
+        let settings = await center.notificationSettings()
+        if settings.authorizationStatus == .notDetermined {
+            _ = try? await center.requestAuthorization(options: [.alert, .sound, .badge])
+        }
+    }
+
+    /// macOS: ローカル通知を送信
+    private func sendMacLocalNotification(unreadCount: Int) async {
+        let center = UNUserNotificationCenter.current()
+        let settings = await center.notificationSettings()
+        guard settings.authorizationStatus == .authorized else { return }
+
+        // 既存の通知を削除して重複を防ぐ
+        center.removePendingNotificationRequests(withIdentifiers: ["kazahana.mac.notifications.unread"])
+        center.removeDeliveredNotifications(withIdentifiers: ["kazahana.mac.notifications.unread"])
+
+        let content = UNMutableNotificationContent()
+        content.title = "kazahana"
+        content.body = String(format: String(localized: "notification.bg.body %lld"), unreadCount)
+        content.sound = .default
+
+        let request = UNNotificationRequest(
+            identifier: "kazahana.mac.notifications.unread",
+            content: content,
+            trigger: nil
+        )
+        try? await center.add(request)
+    }
+    #endif
 
     @ViewBuilder
     private var selfProfileView: some View {

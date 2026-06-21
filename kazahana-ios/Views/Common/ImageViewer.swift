@@ -95,6 +95,41 @@ private struct ZoomableImage: View {
     @State private var offset: CGSize = .zero
     @State private var lastOffset: CGSize = .zero
 
+    /// ズーム中のドラッグ（パン）ジェスチャー
+    private var dragGesture: some Gesture {
+        DragGesture()
+            .onChanged { value in
+                guard scale > 1.0 else { return }
+                offset = CGSize(
+                    width: lastOffset.width + value.translation.width,
+                    height: lastOffset.height + value.translation.height
+                )
+            }
+            .onEnded { _ in
+                lastOffset = offset
+            }
+    }
+
+    /// ピンチズームジェスチャー
+    private var magnificationGesture: some Gesture {
+        MagnificationGesture()
+            .onChanged { value in
+                scale = max(1.0, lastScale * value)
+            }
+            .onEnded { _ in
+                if scale <= 1.0 {
+                    withAnimation(.spring(duration: 0.3)) {
+                        scale = 1.0
+                        offset = .zero
+                    }
+                    lastScale = 1.0
+                    lastOffset = .zero
+                } else {
+                    lastScale = scale
+                }
+            }
+    }
+
     var body: some View {
         GeometryReader { geo in
             AsyncImage(url: URL(string: urlString)) { phase in
@@ -106,25 +141,8 @@ private struct ZoomableImage: View {
                         .frame(width: geo.size.width, height: geo.size.height)
                         .scaleEffect(scale)
                         .offset(offset)
-                        .gesture(
-                            // ピンチズームジェスチャー（TabView スワイプと競合しない）
-                            MagnificationGesture()
-                                .onChanged { value in
-                                    scale = max(1.0, lastScale * value)
-                                }
-                                .onEnded { _ in
-                                    if scale < 1.0 {
-                                        withAnimation(.spring(duration: 0.3)) {
-                                            scale = 1.0
-                                            offset = .zero
-                                        }
-                                        lastScale = 1.0
-                                        lastOffset = .zero
-                                    } else {
-                                        lastScale = scale
-                                    }
-                                }
-                        )
+                        .gesture(magnificationGesture)
+                        .gesture(dragGesture, isEnabled: scale > 1.0)
                         .onTapGesture(count: 2) {
                             withAnimation(.spring(duration: 0.3)) {
                                 if scale > 1.0 {
