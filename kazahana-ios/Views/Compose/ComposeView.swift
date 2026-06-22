@@ -126,6 +126,11 @@ struct ComposeView: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
+                // カスタムヘッダー（Catalyst のツールバーが黒背景になる問題の回避）
+                composeHeader
+
+                Divider()
+
                 // 返信先・引用元プレビュー（上部に統一表示）
                 if let replyTo = replyToPost {
                     referencePreview(post: replyTo, label: String(localized: "compose.replyPreview"))
@@ -178,36 +183,7 @@ struct ComposeView: View {
                 Divider()
                 bottomBar
             }
-            .navigationTitle(replyToPost != nil ? String(localized: "compose.reply") : quotePost != nil ? String(localized: "compose.quotePost") : String(localized: "compose.newPost"))
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button(String(localized: "compose.cancel")) {
-                        let hasContent = !text.isEmpty || !selectedImages.isEmpty || selectedVideo != nil
-                        if hasContent && replyTarget == nil && quotePost == nil {
-                            showCancelDraftDialog = true
-                        } else {
-                            dismiss()
-                        }
-                    }
-                }
-                ToolbarItemGroup(placement: .confirmationAction) {
-                    // WMなしで投稿（ウォーターマーク有効 && 画像あり時のみ表示）
-                    if appSettings.watermarkSettings.enabled && !selectedImages.isEmpty {
-                        Button(String(localized: "watermark.postWithout")) {
-                            Task { await submitPost(skipWatermark: true) }
-                        }
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .disabled(!canPost)
-                    }
-                    Button(String(localized: "compose.post")) {
-                        Task { await submitPost() }
-                    }
-                    .fontWeight(.bold)
-                    .disabled(!canPost)
-                }
-            }
+            .navigationBarHidden(true)
             .alert(String(localized: "compose.error"), isPresented: Binding(
                 get: { errorMessage != nil },
                 set: { if !$0 { errorMessage = nil } }
@@ -295,7 +271,7 @@ struct ComposeView: View {
                         .ignoresSafeArea()
                 }
             }
-            // macOS: Cmd+Return で投稿送信（UIKeyCommand 経由）
+            // macOS: Option+Return で投稿送信（メニューバー UIKeyCommand のフォールバック）
             .onReceive(NotificationCenter.default.publisher(for: .composeSubmitPost)) { _ in
                 if canPost { Task { await submitPost() } }
             }
@@ -306,6 +282,22 @@ struct ComposeView: View {
 
     @ViewBuilder
     private var textEditorView: some View {
+        #if targetEnvironment(macCatalyst)
+        CatalystTextEditor(text: $text, onOptionReturn: {
+            if canPost { Task { await submitPost() } }
+        })
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding(.horizontal, 12)
+        .onAppear {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                // CatalystTextEditor は自動的にフォーカスを取る
+            }
+        }
+        .onChange(of: text) { oldValue, newValue in
+            updateMentionQuery(text: newValue)
+            updateLinkPreview(oldText: oldValue, newText: newValue)
+        }
+        #else
         TextEditor(text: $text)
             .font(.body)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -321,6 +313,57 @@ struct ComposeView: View {
                 updateMentionQuery(text: newValue)
                 updateLinkPreview(oldText: oldValue, newText: newValue)
             }
+        #endif
+    }
+
+    // MARK: - カスタムヘッダー（Catalyst ツールバー黒背景回避）
+
+    private var composeHeader: some View {
+        HStack {
+            Button(String(localized: "compose.cancel")) {
+                let hasContent = !text.isEmpty || !selectedImages.isEmpty || selectedVideo != nil
+                if hasContent && replyTarget == nil && quotePost == nil {
+                    showCancelDraftDialog = true
+                } else {
+                    dismiss()
+                }
+            }
+
+            Spacer()
+
+            Text(composeTitle)
+                .font(.headline)
+
+            Spacer()
+
+            // WMなしで投稿（ウォーターマーク有効 && 画像あり時のみ表示）
+            if appSettings.watermarkSettings.enabled && !selectedImages.isEmpty {
+                Button(String(localized: "watermark.postWithout")) {
+                    Task { await submitPost(skipWatermark: true) }
+                }
+                .font(.subheadline)
+                .foregroundStyle(Color.secondary)
+                .disabled(!canPost)
+            }
+
+            Button(String(localized: "compose.post")) {
+                Task { await submitPost() }
+            }
+            .fontWeight(.bold)
+            .disabled(!canPost)
+        }
+        .padding(.horizontal, 16)
+        .frame(height: 50)
+    }
+
+    private var composeTitle: String {
+        if replyToPost != nil {
+            return String(localized: "compose.reply")
+        } else if quotePost != nil {
+            return String(localized: "compose.quotePost")
+        } else {
+            return String(localized: "compose.newPost")
+        }
     }
 
 
@@ -1358,3 +1401,74 @@ struct ComposeView: View {
         .padding(.vertical, 10)
     }
 }
+
+// MARK: - Catalyst 用 UITextView ラッパー（Option+Return で投稿送信）
+
+#if targetEnvironment(macCatalyst)
+/// UITextView をサブクラス化し、Option+Return を keyCommands で奪うことで
+/// テキスト入力システムより先にイベントを捕捉する。
+/// SwiftUI の TextEditor / .onKeyPress では UITextView が改行として消費した後にしか
+/// イベントが届かないため、この方式が必要。
+struct CatalystTextEditor: UIViewRepresentable {
+    @Binding var text: String
+    var onOptionReturn: () -> Void
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(self)
+    }
+
+    func makeUIView(context: Context) -> SubmitTextView {
+        let tv = SubmitTextView()
+        tv.delegate = context.coordinator
+        tv.onOptionReturn = onOptionReturn
+        tv.font = UIFont.preferredFont(forTextStyle: .body)
+        tv.backgroundColor = .clear
+        tv.textContainerInset = UIEdgeInsets(top: 8, left: 0, bottom: 8, right: 0)
+        tv.text = text
+        // 自動フォーカス
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            tv.becomeFirstResponder()
+        }
+        return tv
+    }
+
+    func updateUIView(_ uiView: SubmitTextView, context: Context) {
+        if uiView.text != text {
+            uiView.text = text
+        }
+    }
+
+    class Coordinator: NSObject, UITextViewDelegate {
+        var parent: CatalystTextEditor
+
+        init(_ parent: CatalystTextEditor) {
+            self.parent = parent
+        }
+
+        func textViewDidChange(_ textView: UITextView) {
+            parent.text = textView.text
+        }
+    }
+
+    /// Option+Return を keyCommands でオーバーライドする UITextView サブクラス
+    class SubmitTextView: UITextView {
+        var onOptionReturn: (() -> Void)?
+
+        private lazy var optionReturnCommand: UIKeyCommand = {
+            UIKeyCommand(
+                input: "\r",
+                modifierFlags: .alternate,
+                action: #selector(handleOptionReturn)
+            )
+        }()
+
+        override var keyCommands: [UIKeyCommand]? {
+            return [optionReturnCommand] + (super.keyCommands ?? [])
+        }
+
+        @objc private func handleOptionReturn() {
+            onOptionReturn?()
+        }
+    }
+}
+#endif

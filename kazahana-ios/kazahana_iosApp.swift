@@ -102,12 +102,12 @@ final class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationC
             UIKeyCommand(title: String(localized: "tab.profile"), action: #selector(handleTab5), input: "5", modifierFlags: .command),
         ])
 
-        // File > Submit Post (Cmd+Return)
+        // File > Submit Post (Option+Return) — Desktop版 (Alt+Enter) と統一
         let submitPost = UIKeyCommand(
             title: String(localized: "menu.submitPost"),
             action: #selector(handleSubmitPost),
             input: "\r",
-            modifierFlags: .command
+            modifierFlags: .alternate
         )
 
         // 既存の File メニューに New Post / Submit Post を追加

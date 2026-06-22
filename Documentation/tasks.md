@@ -1,6 +1,6 @@
 # kazahana-ios 開発タスク・進捗記録
 
-最終更新: 2026-06-04 (避難誘導補助機能・v3.2.0)
+最終更新: 2026-06-22 (v3.5.0 棚卸し — Phase 10〜14 反映)
 
 ---
 
@@ -16,6 +16,11 @@
 - Phase 7 (マルチアカウント): 7/7 ✅ 完了（v1.1.0）
 - Phase 8 (standard.site 連携): 6/6 ✅ 完了（v2.3.0）
 - Phase 9 (避難誘導補助): 全5フェーズ ✅ 完了（v3.2.0）
+- Phase 10 (Bluesky v1.123 対応): 14/14 ✅ 完了（v3.3.0）
+- Phase 11 (ウォーターマーク): 全機能 ✅ 完了（v2.0.2〜）
+- Phase 12 (Standard Site 拡張リンクカード): 全機能 ✅ 完了（v3.0.0）
+- Phase 13 (グループチャット・QR コード): 全機能 ✅ 完了（v3.4.0）
+- Phase 14 (v3.5.0 機能): OGP charset 修正・チャット返信・引用タップ・返信先表示 ✅ 完了（v3.5.0）
 - App Store 準備: バージョン 1.1.0・Bundle ID 統一（Keychain/IAP/BGTask/CFBundleURLName）・プライバシーポリシー公開・審査用アカウント作成・v1.0 リリース完了 ✅
 
 ---
@@ -640,35 +645,153 @@
 
 ---
 
-## Phase 10: Bluesky v1.123 対応（2026-06-09）
+## Phase 10: Bluesky v1.123 対応（2026-06-09）— 完了 ✅
 
 > 設計書: `../../HANDOFF_kazahana-bsky-v1.123.md`
 > 背景: 2026-06-06 リリースの Bluesky 公式 v1.123 で `app.bsky.embed.gallery`（写真 10 枚 / 5 枚以上カルーセル）が正式リリース、動画 300MB 化の feature gate も解除された
-> 一次情報: atproto #4827 (merged 2026-06-03) / social-app #10707 #10497 #10683 / lexicon: `app.bsky.embed.gallery`（`maxLength: 20`、ソフト上限 10、`#image.required = ["image", "alt", "aspectRatio"]`）
-> 重要: 動画 lexicon `video.maxSize` は **100MB のまま**。300MB はサーバ受容範囲（トランスコード前提）。`app.bsky.video.getUploadLimits` 応答の尊重を推奨
+> 実装: commit `61d03db` (v3.3.0, build 19) — 2026-06-09
 
-### Phase A: 受信側 embed.gallery viewer 対応（最優先・3 プラットフォーム同時リリース推奨）
+### Phase A: 受信側 embed.gallery viewer 対応 — 完了 ✅
 
-- [ ] **[I-G1] `app.bsky.embed.gallery#view` レンダラ追加** — `ImageGridView.swift` を拡張、または `GalleryCarouselView.swift` を新設。PostCard 等の embed 振り分け箇所で `embed.gallery` ケースを追加
-- [ ] **[I-G2] ≤4 枚グリッド / ≥5 枚カルーセル分岐** — 4 枚以下は既存 1/2/3/4 枚レイアウト維持、5 枚以上は `TabView` + `.tabViewStyle(.page(indexDisplayMode: .always))` でカルーセル
-- [ ] **[I-G3] `recordWithMedia` 内 gallery 対応** — `recordWithMedia.media` の union を `embed.images` / `embed.gallery` / `embed.video` 3 通りで処理
-- [ ] **[I-G4] 未知 union ref のスキップ実装** — `items[]` の将来追加 ref（`#video` 等）を安全にスキップ
+- [x] **[I-G1] `app.bsky.embed.gallery#view` レンダラ追加** — `GalleryCarouselView.swift` を新設。PostCard 等の embed 振り分け箇所で `embed.gallery` ケースを追加
+- [x] **[I-G2] ≤4 枚グリッド / ≥5 枚カルーセル分岐** — 4 枚以下は既存 1/2/3/4 枚レイアウト維持、5 枚以上はカルーセル + 枚数バッジ
+- [x] **[I-G3] `recordWithMedia` 内 gallery 対応** — `recordWithMedia.media` の union を `embed.images` / `embed.gallery` / `embed.video` 3 通りで処理
+- [x] **[I-G4] 未知 union ref のスキップ実装** — `items[]` の将来追加 ref（`#video` 等）を安全にスキップ
 
-### Phase B: 送信側 composer 対応 + 動画 300MB
+### Phase B: 送信側 composer 対応 + 動画 300MB — 完了 ✅
 
-- [ ] **[I-G5] `PHPicker.maxSelectionCount = 4` → `10` に拡張** — `ComposeView.swift:1143`
-- [ ] **[I-G6] 5 枚以上選択時に `embed.gallery` で送信** — `PostService.swift` の embed 組み立て箇所。≤4 枚は `embed.images`、≥5 枚は `embed.gallery` で自動分岐
-- [ ] **[I-G7] gallery `#image` に alt / aspectRatio 必須付与** — lexicon required を満たす（alt 空文字は許容）
-- [ ] **[I-G8] 動画上限ガード追加 300MB** — 既存は明示上限なし。300MB のクライアントガード追加（サーバ応答も信頼）
-- [ ] **[I-G9] `app.bsky.video.getUploadLimits` 応答尊重** — サーバ応答の `canUpload` / `remainingDailyBytes` をチェックし、超過時はユーザに通知
-- [ ] **[I-G10] alt 入力 UI を 10 枚スクロール対応に** — 既存 alt 入力フローを画像 10 枚に対応
+- [x] **[I-G5] `PHPicker.maxSelectionCount = 4` → `10` に拡張**
+- [x] **[I-G6] 5 枚以上選択時に `embed.gallery` で送信** — ≤4 枚は `embed.images`、≥5 枚は `embed.gallery` で自動 promote/demote
+- [x] **[I-G7] gallery `#image` に alt / aspectRatio 必須付与** — lexicon required を満たす（alt 空文字は許容）
+- [x] **[I-G8] 動画上限ガード追加 300MB** — 300MB のクライアントガード追加
+- [x] **[I-G9] `app.bsky.video.getUploadLimits` 応答尊重** — サーバ応答の `canUpload` / `remainingDailyBytes` をチェックし、超過時はユーザに通知
+- [x] **[I-G10] alt 入力 UI を 10 枚スクロール対応に**
 
-### Phase C: 品質改善（任意）
+### Phase C: 品質改善 — 完了 ✅
 
-- [ ] **[I-G11] カルーセル枚数バッジ表示** — social-app PR #10719 互換。"3 / 7" 形式を右上に
-- [ ] **[I-G12] lightbox の 10 枚スクロール最適化** — フルスクリーンビュアが 10 枚で破綻しないか検証・最適化
-- [ ] **[I-G13] 画像上限値の正規化（任意）** — `1_900_000` / `950_000` を仕様書通りの `2_000_000` / `1_000_000` に正規化（リスク低、デバッグ時の混乱回避）
-- [ ] **[I-G14] gallery embed モデル定義の追加** — iOS は独自実装の AT Protocol クライアント（`ATProtoClient.swift`）で第三者 SDK 非依存のため、手書きで `AppBskyEmbedGallery` 相当の Codable モデルを追加する必要あり。lexicon: [`app.bsky.embed.gallery`](https://github.com/bluesky-social/atproto/blob/main/lexicons/app/bsky/embed/gallery.json)。**重要**: `gallery#viewImage` のサムネ URL フィールドは `thumbnail`（legacy `embed.images#viewImage` は `thumb`）、`alt`/`aspectRatio` 共に required
+- [x] **[I-G11] カルーセル枚数バッジ表示** — "3 / 7" 形式を右上に
+- [x] **[I-G12] lightbox の 10 枚スクロール最適化**
+- [x] **[I-G13] 画像上限値の正規化** — `1_900_000` / `950_000` を `2_000_000` / `1_000_000` に正規化
+- [x] **[I-G14] gallery embed モデル定義の追加** — `AppBskyEmbedGallery` 相当の Codable モデルを手書きで追加。`thumbnail` → `thumb` マッピング付きデコーダ
+
+### 追加実装（設計書スコープ外）
+
+- [x] **アップロード進捗インジケーター** — 圧縮中 / アップロード中(n/m) / 動画送信中 / 変換処理中 / 投稿中 の 5 段階表示。`PostService.uploadVideo` を 2 段階分割（送信→変換処理）
+- [x] **アカウント切り替え時ローディング** — `AccountPickerView` / `SettingsView` に ProgressView 追加
+- [x] **MediaSaveHelper / ThreadView / NotificationItemView の gallery 対応**
+
+---
+
+## Phase 11: ウォーターマーク（2026-04-08）— 完了 ✅
+
+> 実装: commit `e447a5e` — 2026-04-08
+
+- [x] **WatermarkSettings モデル** — `Models/WatermarkSettings.swift`: `enabled` / `preset` / `customText` / `position` / `opacity` / `fontSize` / `textColor` / `skipVideo` / `confirmBeforePost`。UserDefaults 永続化
+- [x] **WatermarkService** — `Services/WatermarkService.swift`: CoreGraphics による画像合成エンジン。8 方向配置（top/center/bottom × left/center/right + random + tile）、タイル配置は -30° 回転・~20% カバレッジ、スマート単行/複数行レイアウト
+- [x] **プリセット文言（6種）** — 無断転載禁止 / AI学習禁止(JP) / No AI Training / AI+JP / 撮影・編集 / カスタム入力。11 言語対応
+- [x] **位置・不透明度・サイズ・色設定** — 8 方向 / 不透明度 20〜100% / フォントサイズ 8〜20px / W3C 16 色パレット＋HEX 入力
+- [x] **設定画面 UI** — `Views/Settings/WatermarkSettingsView.swift`: リアルタイムプレビュー付き設定画面。位置グリッド・スライダー・カラーパレット
+- [x] **投稿前確認モーダル** — `ComposeView.swift` 内 `WatermarkConfirmData` struct。1 枚フル表示 / 2 枚以上グリッド。「ウォーターマーク付きで投稿」/「ウォーターマークなしで投稿」の 2 ボタン UX
+- [x] **動画スキップ設定** — `skipVideo` 設定。Phase 1 は動画本体へは非適用
+- [x] **ComposeView 統合** — `submitPost` ロジックにウォーターマーク合成を統合
+
+---
+
+## Phase 12: Standard Site 拡張リンクカード（2026-05-10）— 完了 ✅
+
+> 実装: commit `0ef2c4a` (受信・送信) / `c2fb7ec` (v3.0.0 Mac Catalyst 同時対応) — 2026-05-10〜30
+
+### 受信側
+- [x] **Standard Site URI 抽出** — `LinkPreviewService.swift`: HTML から `<link rel="site.standard.*" href="at://...">` をパース
+- [x] **XRPC プレビュー取得** — `fetchStandardSitePreview()`: `app.bsky.embed.getEmbedExternalView` で `ExternalView` 取得。失敗時は OGP フォールバック
+- [x] **ExternalView モデル** — `Post.swift`: `ExternalView` / `ExternalSource` / テーマカラー（backgroundRGB / foregroundRGB / accentRGB / accentForegroundRGB）/ `associatedProfiles` / `associatedRefs`
+- [x] **3 パターン描画** — `LinkCardView.swift`: document のみ / publication のみ / document + publication。著者情報・ソースブランディング・subscribe リンク対応
+
+### 送信側
+- [x] **コンポーザプレビュー** — `ComposeView.swift`: `associatedRefs` / `externalView` フィールドを `LinkPreview` に追加
+- [x] **投稿送信** — `PostService` 経由で `associatedRefs` を投稿レコードに含める
+
+---
+
+## Phase 13: グループチャット・プロフィール QR コード（2026-06-13）— 完了 ✅
+
+> 実装: commits `c097af9` → `89f9770` → `45b870e` → `f6016db` (Phase 1〜4) + `61401b0` (QR) — v3.4.0 (build 20)
+
+### 13-A: グループチャット Phase 1 — 受信側対応 ✅
+- [x] **GroupConvo モデル** — `Conversation.swift`: `ConvoKind` enum (`.direct` / `.group`)、`GroupConvo` struct（name / memberCount / memberLimit / lockStatus / joinLink / joinRequestCount）
+- [x] **システムメッセージ表示** — `SystemMessageData` enum (14 種: addMember / removeMember / memberJoin / memberLeave / lockConvo / unlockConvo / lockConvoPermanently / editGroup / createJoinLink / editJoinLink / enableJoinLink / disableJoinLink ほか)。中央寄せ italic 表示
+- [x] **招待リンク embed 受信表示** — `JoinLinkEmbedView.swift`: 有効 / 無効化 / 無効リンクの 3 状態カード
+- [x] **グループロック中の入力抑止** — `lockStatus: locked` / `locked-permanently` 時は入力欄を非表示にロック通知を表示
+
+### 13-B: グループチャット Phase 2 — 招待リンクから参加 ✅
+- [x] **招待 URL in-app 解決** — `bsky.app/chat/<code>` ディープリンク対応
+- [x] **参加プレビュー画面** — `JoinLinkView`: グループ名 / メンバー数 / オーナー / 参加 CTA / pending・joined・disabled・invalid 状態
+- [x] **参加リクエスト送信** — `requestJoin`: `joined` で会話画面へ自動遷移、`pending` でバナー表示。エラー 6 種のローカライズ表示
+- [x] **参加申請の取り下げ** — `withdrawJoinRequest`: `viewer.requestedAt` 存在時に取り下げボタン表示
+
+### 13-C: グループチャット Phase 3 — グループ作成・owner 操作 ✅
+- [x] **グループ作成** — `CreateGroupView.swift`: 名前 ≤50 文字 + メンバー ≤49 名選択。ユーザー検索タイプアヘッド
+- [x] **メンバー管理（追加・削除）** — `GroupSettingsView.swift`: `addMembers` / `removeMembers`、`getConvoMembers` ページング
+- [x] **グループ名編集** — owner のみ。設定画面の編集ダイアログ
+- [x] **招待リンク生成・無効化** — `createJoinLink` / `editJoinLink` (joinRule + requireApproval) / `enableJoinLink` / `disableJoinLink`。コピー・URL 表示
+- [x] **参加申請承認 / 拒否** — `listJoinRequests` ページング + `approveJoinRequest` / `rejectJoinRequest`
+- [x] **グループロック操作** — `lockConvo` / `unlockConvo`。`locked-permanently` は解除 UI 非表示
+- [x] **参加リクエスト一覧** — `GroupSettingsView` 内で表示
+
+### 13-D: グループチャット Phase 4 — プライバシー設定・補助機能 ✅
+- [x] **グループ招待プライバシー設定** — `allowGroupInvites`: 全員 / フォロー中 / 誰からも。`chat.bsky.actor.declaration/self` レコード更新
+- [x] **未読参加申請バッジ** — DM タブに参加申請数バッジ表示
+- [x] **macOS Catalyst 会話一覧三点メニュー** — スワイプ非対応のため代替 UI
+
+### 13-E: プロフィール QR コード ✅
+- [x] **QR コード生成** — `ProfileQRSheet.swift`: `CIFilter.qrCodeGenerator` で `bsky.app/profile/{handle}` を符号化
+- [x] **共有・保存** — リンクのコピー / 共有シート / ギャラリー保存（iOS）/ ファイル保存（macOS Catalyst）
+- [x] **macOS Catalyst 対応** — QR ボタン非表示（`#if !targetEnvironment(macCatalyst)`）、保存は `NSSavePanel` 経由
+
+---
+
+## Phase 14: v3.5.0 機能（2026-06-20）— 完了 ✅
+
+> 実装: commit `d0596bc` — v3.5.0 (build 21)
+
+- [x] **OGP 文字コード自動判定** — `LinkPreviewService.swift` / `ShareATProtoClient.swift`: Content-Type / `<meta charset>` を優先し `CFStringConvertIANACharSetNameToEncoding` で全 IANA charset 名に対応（Shift_JIS / EUC-JP 等の非 UTF-8 サイト文字化け解消）
+- [x] **チャット内メッセージ返信（Bluesky v1.125 対応）** — コンテキストメニュー「返信」→ コンポーザー返信先チップ（キャンセル可）→ `sendMessage` で `replyTo: { messageId }` 付与。受信メッセージの返信先プレビュー表示・タップでスクロール＋フラッシュ。`ReplyTargetNotFound` ローカライズ表示
+- [x] **引用元ポストのタップで ThreadView に遷移** — `QuoteEmbedView` に `onTap` コールバックを追加
+- [x] **返信先 @handle 表示** — `ReplyRef` モデル拡張
+- [x] **DM 送信後のフォームクリア修正**
+
+---
+
+## UX改善（2026-06-21）— 完了 ✅
+
+> 実装: commit `a12f9b1`
+
+### 共通
+- [x] **フィードピン同期修正** — ピンを外したフィードがフィード一覧に残る問題を修正（`savedFeedsPrefV2` の `pinned` フラグを参照）
+
+### macOS (Catalyst)
+- [x] **返信・Cmd+N 時のテキストエリア自動フォーカス**
+- [x] **文字サイズ変更機能** — 小 / 標準 / 大 / 特大の 4 段階（`AppSettings.fontSize`）
+- [x] **リロードボタン** — ツールバーに追加
+- [x] **macOS 通知** — フォアグラウンド 30 秒ポーリング + `UNUserNotificationCenter`
+- [x] **プロフィール説明文のリンクをクリック可能に** — `detectFacets` で自動検出
+- [x] **Cmd+Return で投稿送信** — `UIKeyCommand` 経由
+- [x] **Edge/ブラウザ URL 共有** — `title` + `url` パラメータ対応
+- [x] **プルダウンメニューのチェックマーク連動修正**
+- [x] **フォロー/フォロワー並び順統一** — Following → Followers → Posts
+
+### iOS
+- [x] **タイムラインの左右スワイプでフィードタブ切替**
+- [x] **画像拡大時のドラッグ（パン）操作対応**
+
+---
+
+## Bluesky 認証マーク対応（2026-05-20）— 完了 ✅
+
+> 実装: commit `2c58cda` — v3.1.0
+
+- [x] **認証バッジ表示** — `app.bsky.actor.defs#verificationState` を読み取り、認証済み / 信頼された認証機関を表示名横にバッジ表示
+- [x] **認証通知対応** — `verified` / `unverified` reason の通知表示
 
 ---
 
