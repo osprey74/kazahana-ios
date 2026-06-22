@@ -72,6 +72,10 @@ struct ComposeView: View {
     @State private var showThreadgateSheet: Bool = false
     @State private var showPostgateSheet: Bool = false
 
+    // カメラ
+    @State private var showCamera: Bool = false
+    @State private var cameraMediaType: CameraView.MediaType = .photo
+
     // 長文投稿サービス
     @State private var showLongFormSafari: Bool = false
 
@@ -214,6 +218,21 @@ struct ComposeView: View {
                     }
                 }
             }
+            // カメラ撮影
+            #if !targetEnvironment(macCatalyst)
+            .fullScreenCover(isPresented: $showCamera) {
+                CameraView(mediaType: cameraMediaType) { result in
+                    switch result {
+                    case .photo(let image):
+                        if selectedImages.count < 10 {
+                            selectedImages.append(SelectedImage(image: image))
+                        }
+                    case .video(let url):
+                        Task { await loadCapturedVideo(url: url) }
+                    }
+                }
+            }
+            #endif
             .onChange(of: photoPickerItems) { _, newItems in
                 guard !newItems.isEmpty else { return }
                 Task { await loadPickedImages(items: newItems) }
@@ -717,6 +736,26 @@ struct ComposeView: View {
 
         await MainActor.run {
             selectedVideo = SelectedVideo(url: tempURL, data: rawData, mimeType: mimeType, thumbnail: thumbnail)
+        }
+    }
+
+    // MARK: - カメラ撮影動画の読み込み
+
+    private func loadCapturedVideo(url: URL) async {
+        guard let data = try? Data(contentsOf: url) else { return }
+        let ext = url.pathExtension.lowercased()
+        let mimeType = ext == "mov" ? "video/quicktime" : "video/mp4"
+
+        let asset = AVURLAsset(url: url)
+        let generator = AVAssetImageGenerator(asset: asset)
+        generator.appliesPreferredTrackTransform = true
+        let thumbnail = try? await {
+            let (cgImage, _) = try await generator.image(at: .zero)
+            return UIImage(cgImage: cgImage)
+        }()
+
+        await MainActor.run {
+            selectedVideo = SelectedVideo(url: url, data: data, mimeType: mimeType, thumbnail: thumbnail)
         }
     }
 
@@ -1310,6 +1349,35 @@ struct ComposeView: View {
             }
             .disabled(!selectedImages.isEmpty || selectedVideo != nil)
 
+            // 撮影ボタン（iOS のみ、Catalyst はカメラ非対応）
+            #if !targetEnvironment(macCatalyst)
+            if UIImagePickerController.isSourceTypeAvailable(.camera) {
+                Menu {
+                    Button {
+                        cameraMediaType = .photo
+                        showCamera = true
+                    } label: {
+                        Label(String(localized: "compose.camera.photo"), systemImage: "camera")
+                    }
+                    .disabled(selectedImages.count >= 10 || selectedVideo != nil)
+
+                    Button {
+                        cameraMediaType = .video
+                        showCamera = true
+                    } label: {
+                        Label(String(localized: "compose.camera.video"), systemImage: "video")
+                    }
+                    .disabled(!selectedImages.isEmpty || selectedVideo != nil)
+                } label: {
+                    Image(systemName: "camera.fill")
+                        .font(.system(size: 20))
+                        .foregroundStyle(
+                            (selectedImages.count >= 10 && selectedVideo != nil) ? .tertiary : .secondary
+                        )
+                }
+            }
+            #endif
+
             // 長文を書く（設定済みの場合のみ表示）
             if let longFormURL = URL(string: appSettings.longFormServiceUrl),
                longFormURL.scheme == "https" {
@@ -1472,3 +1540,67 @@ struct CatalystTextEditor: UIViewRepresentable {
     }
 }
 #endif
+
+// MARK: - カメラ撮影ビュー（UIImagePickerController ラッパー）
+
+struct CameraView: UIViewControllerRepresentable {
+    enum MediaType {
+        case photo
+        case video
+    }
+
+    enum CaptureResult {
+        case photo(UIImage)
+        case video(URL)
+    }
+
+    let mediaType: MediaType
+    let onCapture: (CaptureResult) -> Void
+
+    @Environment(\.dismiss) private var dismiss
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(self)
+    }
+
+    func makeUIViewController(context: Context) -> UIImagePickerController {
+        let picker = UIImagePickerController()
+        picker.sourceType = .camera
+        picker.delegate = context.coordinator
+
+        switch mediaType {
+        case .photo:
+            picker.mediaTypes = ["public.image"]
+            picker.cameraCaptureMode = .photo
+        case .video:
+            picker.mediaTypes = ["public.movie"]
+            picker.cameraCaptureMode = .video
+            picker.videoQuality = .typeHigh
+        }
+
+        return picker
+    }
+
+    func updateUIViewController(_ uiViewController: UIImagePickerController, context: Context) {}
+
+    class Coordinator: NSObject, UIImagePickerControllerDelegate, UINavigationControllerDelegate {
+        let parent: CameraView
+
+        init(_ parent: CameraView) {
+            self.parent = parent
+        }
+
+        func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]) {
+            if let image = info[.originalImage] as? UIImage {
+                parent.onCapture(.photo(image))
+            } else if let videoURL = info[.mediaURL] as? URL {
+                parent.onCapture(.video(videoURL))
+            }
+            parent.dismiss()
+        }
+
+        func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
+            parent.dismiss()
+        }
+    }
+}

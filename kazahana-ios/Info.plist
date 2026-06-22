@@ -16,6 +16,10 @@
 	<array>
 		<string>SmartToy.ttf</string>
 	</array>
+	<key>NSCameraUsageDescription</key>
+	<string>写真や動画を撮影して投稿に添付するために使用します。</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>動画撮影時の音声録音に使用します。</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>投稿に含まれる画像・動画を写真ライブラリに保存するために使用します。</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
