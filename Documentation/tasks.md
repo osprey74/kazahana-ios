@@ -1,6 +1,6 @@
 # kazahana-ios 開発タスク・進捗記録
 
-最終更新: 2026-06-22 (v3.5.0 棚卸し — Phase 10〜14 反映)
+最終更新: 2026-06-24 (v3.7.0 — v3.6.0 テスターフィードバック15件対応)
 
 ---
 
@@ -21,6 +21,7 @@
 - Phase 12 (Standard Site 拡張リンクカード): 全機能 ✅ 完了（v3.0.0）
 - Phase 13 (グループチャット・QR コード): 全機能 ✅ 完了（v3.4.0）
 - Phase 14 (v3.5.0 機能): OGP charset 修正・チャット返信・引用タップ・返信先表示 ✅ 完了（v3.5.0）
+- Phase 15 (v3.7.0 機能): v3.6.0 テスターフィードバック15件対応 ✅ 完了（v3.7.0）
 - App Store 準備: バージョン 1.1.0・Bundle ID 統一（Keychain/IAP/BGTask/CFBundleURLName）・プライバシーポリシー公開・審査用アカウント作成・v1.0 リリース完了 ✅
 
 ---
@@ -792,6 +793,33 @@
 
 - [x] **認証バッジ表示** — `app.bsky.actor.defs#verificationState` を読み取り、認証済み / 信頼された認証機関を表示名横にバッジ表示
 - [x] **認証通知対応** — `verified` / `unverified` reason の通知表示
+
+---
+
+## Phase 15: v3.7.0 機能 — v3.6.0 テスターフィードバック対応（2026-06-24）— 完了 ✅
+
+> 実装: commit `1fcdf75` — v3.7.0 (build 23)
+
+### iOS
+- [x] **フリックジェスチャー改善** — `DragGesture(minimumDistance: 20)` に変更、`onEnded` で移動量チェック追加、角度制限を 2.0 に厳格化
+- [x] **画像拡大後のスクロール改善** — ピンチ/ドラッグ分離、バウンド制限、プリフェッチ、ページインジケーター修正
+
+### macOS (Catalyst)
+- [x] **返信レースコンディション修正** — `replyToPost` 設定後に `DispatchQueue.main.async` で `showCompose = true` を遅延
+- [x] **フォントサイズ設定の適用拡大** — 通知・DM・会話一覧・投稿フォームに `fontSize.bodyFont` 適用
+- [x] **リンクカード OGP 改善** — `og:image`/`og:description` の正規表現バグ修正、`twitter:*` フォールバック追加、プロトコル相対URL対応
+- [x] **ComposeView リンクカード自動生成** — `.task` で `initialText` 内 URL を検出して OGP フェッチ
+- [x] **macOS メディアピッカー統合** — 写真/ビデオを統合ボタン1つに集約（`UIDocumentPickerViewController`）
+- [x] **クリップボード画像ペースト** — `CatalystTextEditor` で `paste:` をオーバーライド
+- [x] **entitlements 追加** — `com.apple.security.files.user-selected.read-only`
+
+### Share Extension
+- [x] **URL 取得修正（macOS Catalyst）** — `loadItem` が返す `NSData` を `String → URL` に変換
+- [x] **ページタイトル自動補完** — OGP フェッチ後に `card.title + "\n" + URL` でテキスト補完
+- [x] **表示名修正** — `CFBundleDisplayName = kazahana`
+
+### データ
+- [x] **タイムラインパースエラー解消** — `SafeDecodable<FeedViewPost>` ラッパー導入、`PostEmbed` に try/catch フォールバック追加
 
 ---
 
