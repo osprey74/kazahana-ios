@@ -55,7 +55,7 @@ struct TimelineView: View {
 
                 // FAB（投稿作成ボタン）
                 Button {
-                    showCompose = true
+                    replyToPost = nil; quotePost = nil; showCompose = true
                 } label: {
                     Image(systemName: "pencil")
                         .font(.system(size: 22, weight: .semibold))
@@ -152,8 +152,7 @@ struct TimelineView: View {
             }
             // macOS: メニューバーからの新規投稿
             .onReceive(NotificationCenter.default.publisher(for: .composeNewPost)) { _ in
-                replyToPost = nil; quotePost = nil
-                showCompose = true
+                replyToPost = nil; quotePost = nil; showCompose = true
             }
             // macOS: メニューバーからの再読み込み
             .onReceive(NotificationCenter.default.publisher(for: .reloadTimeline)) { _ in
@@ -330,10 +329,10 @@ struct TimelineView: View {
                     bsafDuplicateInfo: viewModel.bsafDuplicateInfo[feedPost.post.uri],
                     onTapPost: { post in selectedPost = post },
                     onTapAuthor: { did in selectedAuthorDID = IdentifiableString(did) },
-                    onTapReply: { post in replyToPost = post; showCompose = true },
+                    onTapReply: { post in replyToPost = post; DispatchQueue.main.async { showCompose = true } },
                     onTapLikeCount: { post in postActorListType = .likes(postURI: post.uri) },
                     onTapRepostCount: { post in postActorListType = .reposts(postURI: post.uri) },
-                    onTapQuote: { post in quotePost = post; showCompose = true },
+                    onTapQuote: { post in quotePost = post; DispatchQueue.main.async { showCompose = true } },
                     onTapViewQuotes: { post in quotesPostURI = IdentifiableString(post.uri) },
                     onDelete: { post in viewModel.removePost(uri: post.uri) },
                     onTapMuteUser: { post in muteTargetPost = post },
@@ -365,12 +364,14 @@ struct TimelineView: View {
         }
         #if !targetEnvironment(macCatalyst)
         .gesture(
-            DragGesture(minimumDistance: 50, coordinateSpace: .local)
+            DragGesture(minimumDistance: 20, coordinateSpace: .local)
                 .onEnded { value in
                     // 水平方向のスワイプのみ処理（縦スクロールと競合しないよう角度制限）
                     let horizontal = value.translation.width
                     let vertical = value.translation.height
-                    guard abs(horizontal) > abs(vertical) * 1.5 else { return }
+                    // 最低移動量50ptを維持しつつ、ジェスチャー検出開始は20ptに引き下げ
+                    guard abs(horizontal) > 50 else { return }
+                    guard abs(horizontal) > abs(vertical) * 2.0 else { return }
                     if horizontal < 0 {
                         handleFeedSwipe(direction: .left)
                     } else {

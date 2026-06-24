@@ -98,7 +98,7 @@ struct NotificationItemView: View {
                 // fetchSubjectPosts が間に合わない場合は record.text で代替表示
                 if let text = notification.record.text, !text.isEmpty {
                     Text(text)
-                        .font(.subheadline)
+                        .font(AppSettings.shared.fontSize.bodyFont)
                         .foregroundStyle(.secondary)
                         .lineLimit(3)
                         .padding(.leading, 50)
@@ -158,7 +158,7 @@ struct NotificationItemView: View {
             // 本文
             if !post.record.text.isEmpty {
                 Text(post.record.text)
-                    .font(.subheadline)
+                    .font(AppSettings.shared.fontSize.bodyFont)
                     .foregroundStyle(.primary)
                     .lineLimit(4)
                     .fixedSize(horizontal: false, vertical: true)

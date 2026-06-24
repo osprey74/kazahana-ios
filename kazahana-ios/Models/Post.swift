@@ -9,6 +9,37 @@ import Foundation
 struct TimelineResponse: Codable {
     let feed: [FeedViewPost]
     let cursor: String?
+
+    /// 通常の初期化（空レスポンス等で使用）
+    init(feed: [FeedViewPost] = [], cursor: String? = nil) {
+        self.feed = feed
+        self.cursor = cursor
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        cursor = try container.decodeIfPresent(String.self, forKey: .cursor)
+        // 個別の投稿のデコード失敗をスキップし、タイムライン全体の表示を維持する
+        let feedArray = try container.decode([SafeDecodable<FeedViewPost>].self, forKey: .feed)
+        feed = feedArray.compactMap(\.value)
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case feed, cursor
+    }
+}
+
+/// デコード失敗を nil として吸収するラッパー（配列内の個別要素が壊れてもスキップ可能にする）
+struct SafeDecodable<T: Decodable>: Decodable {
+    let value: T?
+    init(from decoder: Decoder) throws {
+        do {
+            value = try T(from: decoder)
+        } catch {
+            print("[SafeDecodable] Skipped undecodable \(T.self): \(error)")
+            value = nil
+        }
+    }
 }
 
 // MARK: - FeedViewPost（タイムラインの1エントリ）
@@ -109,9 +140,13 @@ indirect enum PostEmbed: Codable {
 
         switch type {
         case "app.bsky.embed.images#view":
-            self = .images(try EmbedImages(from: decoder))
+            do {
+                self = .images(try EmbedImages(from: decoder))
+            } catch {
+                print("[PostEmbed] Failed to decode images, falling back to unknown: \(error)")
+                self = .unknown
+            }
         case "app.bsky.embed.gallery#view":
-            // gallery は新しい embed 型のため、デコード失敗時は .unknown にフォールバック
             do {
                 self = .gallery(try EmbedGallery(from: decoder))
             } catch {
@@ -119,13 +154,33 @@ indirect enum PostEmbed: Codable {
                 self = .unknown
             }
         case "app.bsky.embed.external#view":
-            self = .external(try EmbedExternal(from: decoder))
+            do {
+                self = .external(try EmbedExternal(from: decoder))
+            } catch {
+                print("[PostEmbed] Failed to decode external, falling back to unknown: \(error)")
+                self = .unknown
+            }
         case "app.bsky.embed.record#view":
-            self = .record(try EmbedRecord(from: decoder))
+            do {
+                self = .record(try EmbedRecord(from: decoder))
+            } catch {
+                print("[PostEmbed] Failed to decode record, falling back to unknown: \(error)")
+                self = .unknown
+            }
         case "app.bsky.embed.recordWithMedia#view":
-            self = .recordWithMedia(try EmbedRecordWithMedia(from: decoder))
+            do {
+                self = .recordWithMedia(try EmbedRecordWithMedia(from: decoder))
+            } catch {
+                print("[PostEmbed] Failed to decode recordWithMedia, falling back to unknown: \(error)")
+                self = .unknown
+            }
         case "app.bsky.embed.video#view":
-            self = .video(try EmbedVideo(from: decoder))
+            do {
+                self = .video(try EmbedVideo(from: decoder))
+            } catch {
+                print("[PostEmbed] Failed to decode video, falling back to unknown: \(error)")
+                self = .unknown
+            }
         default:
             self = .unknown
         }

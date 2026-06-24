@@ -6,6 +6,7 @@ import SwiftUI
 import PhotosUI
 import UIKit
 import AVKit
+import UniformTypeIdentifiers
 
 struct SelectedImage: Identifiable {
     let id = UUID()
@@ -75,6 +76,7 @@ struct ComposeView: View {
     // カメラ
     @State private var showCamera: Bool = false
     @State private var cameraMediaType: CameraView.MediaType = .photo
+
 
     // 長文投稿サービス
     @State private var showLongFormSafari: Bool = false
@@ -188,6 +190,15 @@ struct ComposeView: View {
                 bottomBar
             }
             .navigationBarHidden(true)
+            .task {
+                // initialText に URL が含まれる場合（Share Extension / Edge共有経由）
+                // リンクカードを自動フェッチ
+                guard selectedImages.isEmpty, selectedVideo == nil, quotePost == nil else { return }
+                if let url = LinkPreviewService.detectFirstURL(in: text) {
+                    detectedURL = url
+                    fetchLinkCard(url: url)
+                }
+            }
             .alert(String(localized: "compose.error"), isPresented: Binding(
                 get: { errorMessage != nil },
                 set: { if !$0 { errorMessage = nil } }
@@ -237,6 +248,22 @@ struct ComposeView: View {
                 guard !newItems.isEmpty else { return }
                 Task { await loadPickedImages(items: newItems) }
             }
+            #if targetEnvironment(macCatalyst)
+            .onReceive(NotificationCenter.default.publisher(for: CatalystMediaPicker.pickedNotification)) { notif in
+                // 画像
+                if let images = notif.userInfo?["images"] as? [UIImage] {
+                    let remaining = 10 - selectedImages.count
+                    for image in images.prefix(remaining) {
+                        selectedImages.append(SelectedImage(image: image))
+                    }
+                }
+                // 動画（画像未選択時のみ、1本まで）
+                if let videoURL = notif.userInfo?["videoURL"] as? URL,
+                   selectedImages.isEmpty, selectedVideo == nil {
+                    Task { await loadVideoFromURL(videoURL) }
+                }
+            }
+            #endif
             .onChange(of: videoPickerItem) { _, newItem in
                 guard let newItem else { return }
                 Task { await loadPickedVideo(item: newItem) }
@@ -304,6 +331,12 @@ struct ComposeView: View {
         #if targetEnvironment(macCatalyst)
         CatalystTextEditor(text: $text, onOptionReturn: {
             if canPost { Task { await submitPost() } }
+        }, onPasteImages: { images in
+            let remaining = 10 - selectedImages.count
+            guard remaining > 0 else { return }
+            for image in images.prefix(remaining) {
+                selectedImages.append(SelectedImage(image: image))
+            }
         })
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .padding(.horizontal, 12)
@@ -318,7 +351,7 @@ struct ComposeView: View {
         }
         #else
         TextEditor(text: $text)
-            .font(.body)
+            .font(appSettings.fontSize.bodyFont)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .padding(.horizontal, 12)
             .scrollContentBackground(.hidden)
@@ -742,6 +775,25 @@ struct ComposeView: View {
     // MARK: - カメラ撮影動画の読み込み
 
     private func loadCapturedVideo(url: URL) async {
+        guard let data = try? Data(contentsOf: url) else { return }
+        let ext = url.pathExtension.lowercased()
+        let mimeType = ext == "mov" ? "video/quicktime" : "video/mp4"
+
+        let asset = AVURLAsset(url: url)
+        let generator = AVAssetImageGenerator(asset: asset)
+        generator.appliesPreferredTrackTransform = true
+        let thumbnail = try? await {
+            let (cgImage, _) = try await generator.image(at: .zero)
+            return UIImage(cgImage: cgImage)
+        }()
+
+        await MainActor.run {
+            selectedVideo = SelectedVideo(url: url, data: data, mimeType: mimeType, thumbnail: thumbnail)
+        }
+    }
+
+    /// Finder で選択された動画ファイルを SelectedVideo に変換（macOS Catalyst 用）
+    private func loadVideoFromURL(_ url: URL) async {
         guard let data = try? Data(contentsOf: url) else { return }
         let ext = url.pathExtension.lowercased()
         let mimeType = ext == "mov" ? "video/quicktime" : "video/mp4"
@@ -1324,8 +1376,28 @@ struct ComposeView: View {
 
     private var bottomBar: some View {
         HStack(spacing: 16) {
-            // フォトピッカー（最大10枚、動画選択済みの場合は無効）
-            // .compatible で HEIC→JPEG 変換を保証
+            #if targetEnvironment(macCatalyst)
+            // macOS: Finder ダイアログで写真/ビデオを統合選択
+            // 写真選択済み → 写真のみ追加可、ビデオ選択済み → 無効
+            Button {
+                if selectedImages.isEmpty && selectedVideo == nil {
+                    // 未選択: 画像＋動画の両方を許可
+                    CatalystMediaPicker.present(contentTypes: [.image, .movie])
+                } else {
+                    // 画像選択済み: 画像のみ追加可
+                    CatalystMediaPicker.present(contentTypes: [.image])
+                }
+            } label: {
+                Image(systemName: "photo.on.rectangle.angled")
+                    .font(.system(size: 20))
+                    .frame(width: 32, height: 32)
+                    .contentShape(Rectangle())
+                    .foregroundStyle((selectedImages.count >= 10 || selectedVideo != nil) ? .tertiary : .secondary)
+            }
+            .buttonStyle(.plain)
+            .disabled(selectedImages.count >= 10 || selectedVideo != nil)
+            #else
+            // iOS: フォトピッカー（最大10枚、動画選択済みの場合は無効）
             PhotosPicker(
                 selection: $photoPickerItems,
                 maxSelectionCount: max(0, 10 - selectedImages.count),
@@ -1334,6 +1406,8 @@ struct ComposeView: View {
             ) {
                 Image(systemName: "photo")
                     .font(.system(size: 20))
+                    .frame(width: 32, height: 32)
+                    .contentShape(Rectangle())
                     .foregroundStyle((selectedImages.count >= 10 || selectedVideo != nil) ? .tertiary : .secondary)
             }
             .disabled(selectedImages.count >= 10 || selectedVideo != nil)
@@ -1345,9 +1419,12 @@ struct ComposeView: View {
             ) {
                 Image(systemName: "video")
                     .font(.system(size: 20))
+                    .frame(width: 32, height: 32)
+                    .contentShape(Rectangle())
                     .foregroundStyle((!selectedImages.isEmpty || selectedVideo != nil) ? .tertiary : .secondary)
             }
             .disabled(!selectedImages.isEmpty || selectedVideo != nil)
+            #endif
 
             // 撮影ボタン（iOS のみ、Catalyst はカメラ非対応）
             #if !targetEnvironment(macCatalyst)
@@ -1371,6 +1448,8 @@ struct ComposeView: View {
                 } label: {
                     Image(systemName: "camera.fill")
                         .font(.system(size: 20))
+                        .frame(width: 32, height: 32)
+                        .contentShape(Rectangle())
                         .foregroundStyle(
                             (selectedImages.count >= 10 && selectedVideo != nil) ? .tertiary : .secondary
                         )
@@ -1386,6 +1465,8 @@ struct ComposeView: View {
                 } label: {
                     Image(systemName: "doc.text")
                         .font(.system(size: 20))
+                        .frame(width: 32, height: 32)
+                        .contentShape(Rectangle())
                         .foregroundStyle(.secondary)
                 }
                 .accessibilityLabel(String(localized: "compose.longform.button"))
@@ -1401,6 +1482,8 @@ struct ComposeView: View {
                           ? "bubble.left.and.bubble.right"
                           : "bubble.left.and.exclamationmark.bubble.right")
                         .font(.system(size: 20))
+                        .frame(width: 32, height: 32)
+                        .contentShape(Rectangle())
                         .foregroundStyle(threadgateSetting == .everyone ? Color.secondary : Color.accentColor)
                 }
                 .confirmationDialog(
@@ -1427,6 +1510,8 @@ struct ComposeView: View {
                 } label: {
                     Image(systemName: disableEmbedding ? "quote.bubble.fill" : "quote.bubble")
                         .font(.system(size: 20))
+                        .frame(width: 32, height: 32)
+                        .contentShape(Rectangle())
                         .foregroundStyle(disableEmbedding ? Color.accentColor : Color.secondary)
                 }
                 .confirmationDialog(
@@ -1470,6 +1555,66 @@ struct ComposeView: View {
     }
 }
 
+// MARK: - Catalyst 用ファイルピッカー（UIKit 直接表示でクラッシュ回避）
+
+#if targetEnvironment(macCatalyst)
+/// macOS Catalyst: Finder のメディア選択ダイアログを ComposeSheet の上に表示する。
+/// 画像・動画の選択結果を Notification で SwiftUI 側に通知。
+enum CatalystMediaPicker {
+    static let pickedNotification = Notification.Name("CatalystMediaPickerPicked")
+    private static var activeDelegate: PickerDelegate?
+
+    static func present(contentTypes: [UTType]) {
+        guard let scene = UIApplication.shared.connectedScenes
+            .compactMap({ $0 as? UIWindowScene }).first,
+              let keyWindow = scene.keyWindow,
+              let root = keyWindow.rootViewController
+        else { return }
+        var top = root
+        while let presented = top.presentedViewController { top = presented }
+
+        let picker = UIDocumentPickerViewController(forOpeningContentTypes: contentTypes, asCopy: true)
+        picker.allowsMultipleSelection = true
+        let delegate = PickerDelegate()
+        picker.delegate = delegate
+        activeDelegate = delegate
+        top.present(picker, animated: true)
+    }
+
+    private class PickerDelegate: NSObject, UIDocumentPickerDelegate {
+        func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
+            CatalystMediaPicker.activeDelegate = nil
+            var images: [UIImage] = []
+            var videoURL: URL?
+            for url in urls {
+                let uti = UTType(filenameExtension: url.pathExtension) ?? .data
+                if uti.conforms(to: .movie) || uti.conforms(to: .video) {
+                    // 動画は1つだけ
+                    if videoURL == nil { videoURL = url }
+                } else if uti.conforms(to: .image) {
+                    if let data = try? Data(contentsOf: url),
+                       let image = UIImage(data: data) {
+                        images.append(image)
+                    }
+                }
+            }
+            var userInfo: [String: Any] = [:]
+            if !images.isEmpty { userInfo["images"] = images }
+            if let videoURL { userInfo["videoURL"] = videoURL }
+            guard !userInfo.isEmpty else { return }
+            NotificationCenter.default.post(
+                name: CatalystMediaPicker.pickedNotification,
+                object: nil,
+                userInfo: userInfo
+            )
+        }
+        func documentPickerWasCancelled(_ controller: UIDocumentPickerViewController) {
+            CatalystMediaPicker.activeDelegate = nil
+        }
+    }
+}
+#endif
+
 // MARK: - Catalyst 用 UITextView ラッパー（Option+Return で投稿送信）
 
 #if targetEnvironment(macCatalyst)
@@ -1480,6 +1625,7 @@ struct ComposeView: View {
 struct CatalystTextEditor: UIViewRepresentable {
     @Binding var text: String
     var onOptionReturn: () -> Void
+    var onPasteImages: (([UIImage]) -> Void)?
 
     func makeCoordinator() -> Coordinator {
         Coordinator(self)
@@ -1489,7 +1635,10 @@ struct CatalystTextEditor: UIViewRepresentable {
         let tv = SubmitTextView()
         tv.delegate = context.coordinator
         tv.onOptionReturn = onOptionReturn
-        tv.font = UIFont.preferredFont(forTextStyle: .body)
+        tv.onPasteImages = { images in
+            self.onPasteImages?(images)
+        }
+        tv.font = AppSettings.shared.fontSize.uiFont
         tv.backgroundColor = .clear
         tv.textContainerInset = UIEdgeInsets(top: 8, left: 0, bottom: 8, right: 0)
         tv.text = text
@@ -1503,6 +1652,10 @@ struct CatalystTextEditor: UIViewRepresentable {
     func updateUIView(_ uiView: SubmitTextView, context: Context) {
         if uiView.text != text {
             uiView.text = text
+        }
+        uiView.font = AppSettings.shared.fontSize.uiFont
+        uiView.onPasteImages = { images in
+            self.onPasteImages?(images)
         }
     }
 
@@ -1518,9 +1671,11 @@ struct CatalystTextEditor: UIViewRepresentable {
         }
     }
 
-    /// Option+Return を keyCommands でオーバーライドする UITextView サブクラス
+    /// Option+Return を keyCommands でオーバーライドし、
+    /// 画像ペーストをインターセプトする UITextView サブクラス
     class SubmitTextView: UITextView {
         var onOptionReturn: (() -> Void)?
+        var onPasteImages: (([UIImage]) -> Void)?
 
         private lazy var optionReturnCommand: UIKeyCommand = {
             UIKeyCommand(
@@ -1536,6 +1691,25 @@ struct CatalystTextEditor: UIViewRepresentable {
 
         @objc private func handleOptionReturn() {
             onOptionReturn?()
+        }
+
+        override func paste(_ sender: Any?) {
+            let pb = UIPasteboard.general
+            // クリップボードに画像がある場合はインターセプト
+            if pb.hasImages, let images = pb.images, !images.isEmpty {
+                onPasteImages?(images)
+                return
+            }
+            // テキスト等はデフォルトのペースト処理に委譲
+            super.paste(sender)
+        }
+
+        override func canPerformAction(_ action: Selector, withSender sender: Any?) -> Bool {
+            if action == #selector(paste(_:)) {
+                // 画像がクリップボードにある場合もペーストを有効にする
+                if UIPasteboard.general.hasImages { return true }
+            }
+            return super.canPerformAction(action, withSender: sender)
         }
     }
 }

@@ -264,12 +264,12 @@ struct ConversationRowView: View {
 
                         if let preview = convo.lastMessage?.previewText {
                             Text(preview)
-                                .font(.subheadline)
+                                .font(AppSettings.shared.fontSize.bodyFont)
                                 .foregroundStyle(.secondary)
                                 .lineLimit(1)
                         } else if convo.lastMessage != nil {
                             Text(String(localized: "dm.deletedMessage"))
-                                .font(.subheadline)
+                                .font(AppSettings.shared.fontSize.bodyFont)
                                 .foregroundStyle(.secondary)
                                 .italic()
                         }

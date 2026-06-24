@@ -220,6 +220,7 @@ struct ChatThreadView: View {
 
             HStack(alignment: .bottom, spacing: 8) {
                 TextField(String(localized: "dm.messageInputPlaceholder"), text: $messageText, axis: .vertical)
+                    .font(AppSettings.shared.fontSize.bodyFont)
                     .textFieldStyle(.roundedBorder)
                     .lineLimit(1...5)
                     .focused($isInputFocused)
@@ -449,6 +450,7 @@ struct MessageBubbleView: View {
                     }
 
                     Text(richText(for: m))
+                        .font(AppSettings.shared.fontSize.bodyFont)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 8)
 

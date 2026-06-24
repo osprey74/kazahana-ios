@@ -403,7 +403,7 @@
 				DEVELOPMENT_TEAM = 9L6A9KDH5P;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Share​Extension/Info.plist";
-				INFOPLIST_KEY_CFBundleDisplayName = "Share​Extension";
+				INFOPLIST_KEY_CFBundleDisplayName = kazahana;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -434,7 +434,7 @@
 				DEVELOPMENT_TEAM = 9L6A9KDH5P;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Share​Extension/Info.plist";
-				INFOPLIST_KEY_CFBundleDisplayName = "Share​Extension";
+				INFOPLIST_KEY_CFBundleDisplayName = kazahana;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",

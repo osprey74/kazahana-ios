@@ -211,41 +211,84 @@ struct ShareComposeView: View {
         var pageTitle: String? = nil
 
         for item in items {
-            // attributedTitle / attributedContentText からページタイトルを取得（Safari等）
+            // attributedTitle からページタイトルを取得
             if let title = item.attributedTitle?.string, !title.isEmpty {
-                pageTitle = title
-            } else if let title = item.attributedContentText?.string, !title.isEmpty {
                 pageTitle = title
             }
 
+            // attributedContentText: macOS Safari はここに URL を格納することがある
+            if let contentText = item.attributedContentText?.string {
+                let trimmed = contentText.trimmingCharacters(in: .whitespacesAndNewlines)
+                if let parsedURL = URL(string: trimmed), parsedURL.scheme?.hasPrefix("http") == true {
+                    url = parsedURL
+                } else if pageTitle == nil, !trimmed.isEmpty {
+                    pageTitle = trimmed
+                }
+            }
+
+            // attachments から URL・画像を取得
+            // ObjC コールバック形式が macOS Catalyst で安定して動作する
             guard let attachments = item.attachments else { continue }
             for provider in attachments {
-                // URL（else if を使わず独立して処理）
-                if provider.hasItemConformingToTypeIdentifier(UTType.url.identifier) {
-                    if let loaded = try? await provider.loadItem(forTypeIdentifier: UTType.url.identifier),
-                       let loadedURL = loaded as? URL,
-                       loadedURL.scheme?.hasPrefix("http") == true {
-                        url = loadedURL
+                // URL（public.url 型）
+                // macOS Catalyst では NSURL でなく NSData（UTF-8バイト列）で返ることがある
+                if url == nil, provider.hasItemConformingToTypeIdentifier(UTType.url.identifier) {
+                    let candidate: URL? = await withCheckedContinuation { continuation in
+                        provider.loadItem(forTypeIdentifier: UTType.url.identifier, options: nil) { item, _ in
+                            if let nsURL = item as? NSURL {
+                                continuation.resume(returning: nsURL as URL)
+                            } else if let data = item as? NSData,
+                                      let str = String(data: data as Data, encoding: .utf8),
+                                      let parsed = URL(string: str.trimmingCharacters(in: .whitespacesAndNewlines)) {
+                                continuation.resume(returning: parsed)
+                            } else if let str = (item as? NSString) as String?,
+                                      let parsed = URL(string: str.trimmingCharacters(in: .whitespacesAndNewlines)) {
+                                continuation.resume(returning: parsed)
+                            } else {
+                                continuation.resume(returning: nil)
+                            }
+                        }
+                    }
+                    if let candidate, candidate.scheme?.hasPrefix("http") == true {
+                        url = candidate
+                    }
+                }
+                // plain-text フォールバック
+                if url == nil, provider.hasItemConformingToTypeIdentifier(UTType.plainText.identifier) {
+                    let str: String? = await withCheckedContinuation { continuation in
+                        provider.loadItem(forTypeIdentifier: UTType.plainText.identifier, options: nil) { item, _ in
+                            let s = (item as? NSString).map { $0 as String } ?? (item as? String)
+                            continuation.resume(returning: s)
+                        }
+                    }
+                    if let str,
+                       let parsedURL = URL(string: str.trimmingCharacters(in: .whitespacesAndNewlines)),
+                       parsedURL.scheme?.hasPrefix("http") == true {
+                        url = parsedURL
                     }
                 }
                 // 画像（最大4枚）
                 if provider.hasItemConformingToTypeIdentifier(UTType.image.identifier), images.count < 4 {
-                    if let loaded = try? await provider.loadItem(forTypeIdentifier: UTType.image.identifier) {
-                        if let img = loaded as? UIImage {
-                            images.append(img)
-                        } else if let imgURL = loaded as? URL,
-                                  let data = try? Data(contentsOf: imgURL),
-                                  let img = UIImage(data: data) {
-                            images.append(img)
+                    let img: UIImage? = await withCheckedContinuation { continuation in
+                        provider.loadItem(forTypeIdentifier: UTType.image.identifier, options: nil) { item, _ in
+                            if let image = item as? UIImage {
+                                continuation.resume(returning: image)
+                            } else if let imgURL = item as? URL,
+                                      let data = try? Data(contentsOf: imgURL),
+                                      let image = UIImage(data: data) {
+                                continuation.resume(returning: image)
+                            } else {
+                                continuation.resume(returning: nil)
+                            }
                         }
                     }
+                    if let img { images.append(img) }
                 }
             }
         }
 
         await MainActor.run {
             if let u = url {
-                // ページタイトルがあれば「タイトル\nURL」、なければ URL のみ
                 if let title = pageTitle {
                     text = title + "\n" + u.absoluteString
                 } else {
@@ -280,6 +323,10 @@ struct ShareComposeView: View {
             await MainActor.run {
                 linkCardPreview = preview
                 isFetchingCard = false
+                // macOS Safari は attributedTitle が nil のため OGP タイトルで text を補完
+                if !card.title.isEmpty, text == url.absoluteString {
+                    text = card.title + "\n" + url.absoluteString
+                }
             }
         } catch {
             await MainActor.run { isFetchingCard = false }

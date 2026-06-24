@@ -86,9 +86,19 @@ final class ShareATProtoClient {
             ?? String(data: data, encoding: .utf8)
             ?? ""
 
-        let title = ogValue(html: html, property: "og:title") ?? titleTag(html: html) ?? url.host ?? ""
-        let description = ogValue(html: html, property: "og:description") ?? metaDescription(html: html) ?? ""
-        let imageURLString = ogValue(html: html, property: "og:image")
+        let title = ogValue(html: html, property: "og:title")
+            ?? ogValue(html: html, property: "twitter:title")
+            ?? titleTag(html: html) ?? url.host ?? ""
+        let description = ogValue(html: html, property: "og:description")
+            ?? ogValue(html: html, property: "twitter:description")
+            ?? metaDescription(html: html) ?? ""
+        var imageURLString = ogValue(html: html, property: "og:image")
+            ?? ogValue(html: html, property: "twitter:image")
+
+        // プロトコル相対URL（//cdn.example.com/...）を https: に補完
+        if let imgStr = imageURLString, imgStr.hasPrefix("//") {
+            imageURLString = "https:" + imgStr
+        }
 
         // サムネイルのアップロード（失敗しても続行）
         var thumbBlob: BlobRef? = nil
@@ -256,11 +266,16 @@ private extension ShareATProtoClient {
 
     func ogValue(html: String, property: String) -> String? {
         // <meta property="og:title" content="..."> または <meta name="og:title" content="...">
-        let patterns = [
-            #"<meta[^>]+property="\#(property)"[^>]+content="([^"]*)"[^>]*/?>""#,
-            #"<meta[^>]+content="([^"]*)"[^>]+property="\#(property)"[^>]*/?>""#,
-            #"<meta[^>]+property='\#(property)'[^>]+content='([^']*)'[^>]*/?>""#,
-        ]
+        // property= と name= の両方に対応（サイトにより使い分けがある）
+        let attrs = ["property", "name"]
+        let quotes: [(String, String)] = [("\"", "\""), ("'", "'")]
+        var patterns: [String] = []
+        for attr in attrs {
+            for (q, q2) in quotes {
+                patterns.append("<meta[^>]+\(attr)=\(q)\(property)\(q2)[^>]+content=\(q)([^\(q)]*)\(q2)[^>]*/?>")
+                patterns.append("<meta[^>]+content=\(q)([^\(q)]*)\(q2)[^>]+\(attr)=\(q)\(property)\(q2)[^>]*/?>")
+            }
+        }
         for pattern in patterns {
             if let regex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive),
                let match = regex.firstMatch(in: html, range: NSRange(html.startIndex..., in: html)),
@@ -280,8 +295,10 @@ private extension ShareATProtoClient {
 
     func metaDescription(html: String) -> String? {
         let patterns = [
-            #"<meta[^>]+name="description"[^>]+content="([^"]*)"[^>]*/?>""#,
-            #"<meta[^>]+content="([^"]*)"[^>]+name="description"[^>]*/?>""#,
+            "<meta[^>]+name=\"description\"[^>]+content=\"([^\"]*)\"[^>]*/?>",
+            "<meta[^>]+content=\"([^\"]*)\"[^>]+name=\"description\"[^>]*/?>",
+            "<meta[^>]+name='description'[^>]+content='([^']*)'[^>]*/?>",
+            "<meta[^>]+content='([^']*)'[^>]+name='description'[^>]*/?>",
         ]
         for pattern in patterns {
             if let regex = try? NSRegularExpression(pattern: pattern, options: .caseInsensitive),

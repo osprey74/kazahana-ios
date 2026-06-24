@@ -451,6 +451,16 @@ final class AppSettings {
             }
         }
 
+        /// UIKit 用の UIFont（CatalystTextEditor 等で使用）
+        var uiFont: UIFont {
+            switch self {
+            case .small:      return .preferredFont(forTextStyle: .footnote)
+            case .medium:     return .preferredFont(forTextStyle: .body)
+            case .large:      return .systemFont(ofSize: 19)
+            case .extraLarge: return .systemFont(ofSize: 22)
+            }
+        }
+
         /// 補助テキスト（ハンドル名等）の Font
         var captionFont: Font {
             switch self {
