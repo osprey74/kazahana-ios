@@ -4,6 +4,15 @@
 
 import Foundation
 import Security
+import UIKit
+
+// MARK: - SelectedImage
+
+struct SelectedImage: Identifiable {
+    let id = UUID()
+    var image: UIImage
+    var alt: String = ""
+}
 
 // MARK: - Session
 

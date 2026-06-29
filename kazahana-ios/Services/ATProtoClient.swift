@@ -279,7 +279,8 @@ final class ATProtoClient {
         authenticated: Bool,
         useRefreshToken: Bool = false
     ) throws -> URLRequest {
-        var request = URLRequest(url: url)
+        // URLSession のローカルキャッシュを使わず常に最新データを取得する
+        var request = URLRequest(url: url, cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: 60)
         request.httpMethod = method
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         request.setValue("kazahana-ios/1.0", forHTTPHeaderField: "User-Agent")

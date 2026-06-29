@@ -77,7 +77,6 @@ struct ComposeView: View {
     @State private var showCamera: Bool = false
     @State private var cameraMediaType: CameraView.MediaType = .photo
 
-
     // 長文投稿サービス
     @State private var showLongFormSafari: Bool = false
 
@@ -92,10 +91,6 @@ struct ComposeView: View {
     @State private var mentionSearchTask: Task<Void, Never>? = nil
     // 解決済みメンション DID（handle → did のキャッシュ）
     @State private var resolvedMentions: [String: String] = [:]
-
-    #if targetEnvironment(macCatalyst)
-    @State private var isDragTarget = false
-    #endif
 
     // リンクカードプレビュー
     @State private var detectedURL: URL? = nil          // テキスト中で検出した URL
@@ -328,6 +323,9 @@ struct ComposeView: View {
         }
     }
 
+    // MARK: - macOS Finder ドロップハンドラ
+
+
     // MARK: - TextEditor（型推論タイムアウト回避のため分離）
 
     @ViewBuilder
@@ -344,61 +342,6 @@ struct ComposeView: View {
         })
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .padding(.horizontal, 12)
-        // Finder からのドラッグ＆ドロップ（テキストエリアのみに限定してボタン干渉を回避）
-        // loadObject(ofClass: UIImage.self) は Finder ドロップでは機能しないため
-        // loadFileRepresentation を使ってファイルURLから UIImage を生成する
-        .onDrop(of: [.image, .movie], isTargeted: $isDragTarget) { providers in
-            let group = DispatchGroup()
-            var images: [UIImage] = []
-            var videoURL: URL? = nil
-
-            for provider in providers {
-                if provider.hasItemConformingToTypeIdentifier(UTType.movie.identifier) {
-                    group.enter()
-                    provider.loadFileRepresentation(forTypeIdentifier: UTType.movie.identifier) { url, _ in
-                        defer { group.leave() }
-                        guard let url, videoURL == nil else { return }
-                        let dest = FileManager.default.temporaryDirectory
-                            .appendingPathComponent(url.lastPathComponent)
-                        try? FileManager.default.copyItem(at: url, to: dest)
-                        videoURL = dest
-                    }
-                } else if provider.hasItemConformingToTypeIdentifier(UTType.image.identifier) {
-                    group.enter()
-                    provider.loadFileRepresentation(forTypeIdentifier: UTType.image.identifier) { url, _ in
-                        defer { group.leave() }
-                        guard let url else { return }
-                        let dest = FileManager.default.temporaryDirectory
-                            .appendingPathComponent(UUID().uuidString + "." + url.pathExtension)
-                        try? FileManager.default.copyItem(at: url, to: dest)
-                        if let data = try? Data(contentsOf: dest),
-                           let image = UIImage(data: data) {
-                            images.append(image)
-                        }
-                    }
-                }
-            }
-
-            group.notify(queue: .main) {
-                var userInfo: [String: Any] = [:]
-                if !images.isEmpty { userInfo["images"] = images }
-                if let videoURL { userInfo["videoURL"] = videoURL }
-                guard !userInfo.isEmpty else { return }
-                NotificationCenter.default.post(
-                    name: CatalystMediaPicker.pickedNotification,
-                    object: nil,
-                    userInfo: userInfo
-                )
-            }
-            return true
-        }
-        .overlay {
-            if isDragTarget {
-                RoundedRectangle(cornerRadius: 8)
-                    .stroke(Color.accentColor, lineWidth: 2)
-                    .background(Color.accentColor.opacity(0.05), in: RoundedRectangle(cornerRadius: 8))
-            }
-        }
         .onAppear {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                 // CatalystTextEditor は自動的にフォーカスを取る
@@ -1176,62 +1119,69 @@ struct ComposeView: View {
     }
 
     private var imagePreviewRow: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
+        // グリッドを ScrollView で囲み最大高さを制限（テキストエリア・ボタンを常に表示）
+        ScrollView(.vertical, showsIndicators: false) {
+            LazyVGrid(
+                columns: Array(repeating: GridItem(.flexible(), spacing: 6), count: 3),
+                spacing: 6
+            ) {
                 ForEach(Array(selectedImages.enumerated()), id: \.element.id) { index, selected in
-                    ZStack(alignment: .topTrailing) {
-                        Image(uiImage: selected.image)
-                            .resizable()
-                            .scaledToFill()
-                            .frame(width: 110, height: 110)
-                            .clipShape(RoundedRectangle(cornerRadius: 10))
-                            .onTapGesture {
-                                altText = selected.alt
-                                editingAltIndex = index
+                    // Color.clear でセルサイズを 1:1 に固定し、画像は overlay で塗りつぶす
+                    Color.clear
+                        .aspectRatio(1, contentMode: .fit)
+                        .overlay {
+                            Image(uiImage: selected.image)
+                                .resizable()
+                                .scaledToFill()
+                        }
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                        .onTapGesture {
+                            altText = selected.alt
+                            editingAltIndex = index
+                        }
+                        // 削除ボタン（右上）
+                        .overlay(alignment: .topTrailing) {
+                            Button {
+                                selectedImages.remove(at: index)
+                            } label: {
+                                Image(systemName: "xmark.circle.fill")
+                                    .font(.system(size: 22))
+                                    .foregroundStyle(.white)
+                                    .shadow(radius: 2)
                             }
-
-                        // 削除ボタン
-                        Button {
-                            selectedImages.remove(at: index)
-                        } label: {
-                            Image(systemName: "xmark.circle.fill")
-                                .font(.system(size: 22))
-                                .foregroundStyle(.white)
-                                .shadow(radius: 2)
+                            .padding(4)
                         }
-                        .padding(4)
-
-                        // ALT バッジ（alt が設定されている場合）
-                        if !selected.alt.isEmpty {
-                            Text("ALT")
-                                .font(.system(size: 9, weight: .bold))
-                                .foregroundStyle(.white)
-                                .padding(.horizontal, 4)
-                                .padding(.vertical, 2)
-                                .background(Color.black.opacity(0.6), in: RoundedRectangle(cornerRadius: 3))
-                                .padding(4)
-                                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
+                        // ALT バッジ（左下）
+                        .overlay(alignment: .bottomLeading) {
+                            if !selected.alt.isEmpty {
+                                Text("ALT")
+                                    .font(.system(size: 9, weight: .bold))
+                                    .foregroundStyle(.white)
+                                    .padding(.horizontal, 4)
+                                    .padding(.vertical, 2)
+                                    .background(Color.black.opacity(0.6), in: RoundedRectangle(cornerRadius: 3))
+                                    .padding(4)
+                            }
                         }
-
                         // クロップボタン（右下）
-                        Button {
-                            croppingImageIndex = index
-                        } label: {
-                            Image(systemName: "crop")
-                                .font(.system(size: 13, weight: .bold))
-                                .foregroundStyle(.white)
-                                .padding(6)
-                                .background(Color.black.opacity(0.6), in: Circle())
+                        .overlay(alignment: .bottomTrailing) {
+                            Button {
+                                croppingImageIndex = index
+                            } label: {
+                                Image(systemName: "crop")
+                                    .font(.system(size: 13, weight: .bold))
+                                    .foregroundStyle(.white)
+                                    .padding(6)
+                                    .background(Color.black.opacity(0.6), in: Circle())
+                            }
+                            .padding(4)
                         }
-                        .padding(4)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
-                    }
-                    .frame(width: 110, height: 110)
                 }
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
         }
+        .frame(maxHeight: 260)
     }
 
     // MARK: - ウォーターマーク確認モーダル
@@ -1455,6 +1405,7 @@ struct ComposeView: View {
             }
             .buttonStyle(.plain)
             .disabled(selectedImages.count >= 10 || selectedVideo != nil)
+            .help(String(localized: "compose.filePicker.multiSelectHint"))
             #else
             // iOS: フォトピッカー（最大10枚、動画選択済みの場合は無効）
             PhotosPicker(
@@ -1614,7 +1565,7 @@ struct ComposeView: View {
     }
 }
 
-// MARK: - Catalyst 用ファイルピッカー（UIKit 直接表示でクラッシュ回避）
+// MARK: - Catalyst 用ファイルピッカー
 
 #if targetEnvironment(macCatalyst)
 /// macOS Catalyst: Finder のメディア選択ダイアログを ComposeSheet の上に表示する。
@@ -1631,7 +1582,6 @@ enum CatalystMediaPicker {
         else { return }
         var top = root
         while let presented = top.presentedViewController { top = presented }
-
         let picker = UIDocumentPickerViewController(forOpeningContentTypes: contentTypes, asCopy: true)
         picker.allowsMultipleSelection = true
         let delegate = PickerDelegate()
@@ -1646,11 +1596,17 @@ enum CatalystMediaPicker {
             var images: [UIImage] = []
             var videoURL: URL?
             for url in urls {
-                let uti = UTType(filenameExtension: url.pathExtension) ?? .data
-                if uti.conforms(to: .movie) || uti.conforms(to: .video) {
-                    // 動画は1つだけ
+                // UTType をリソース値から取得（pathExtension より信頼性が高い）
+                let contentType: UTType
+                if let values = try? url.resourceValues(forKeys: [.contentTypeKey]),
+                   let t = values.contentType {
+                    contentType = t
+                } else {
+                    contentType = UTType(filenameExtension: url.pathExtension) ?? .data
+                }
+                if contentType.conforms(to: .audiovisualContent) {
                     if videoURL == nil { videoURL = url }
-                } else if uti.conforms(to: .image) {
+                } else if contentType.conforms(to: .image) {
                     if let data = try? Data(contentsOf: url),
                        let image = UIImage(data: data) {
                         images.append(image)
@@ -1661,11 +1617,13 @@ enum CatalystMediaPicker {
             if !images.isEmpty { userInfo["images"] = images }
             if let videoURL { userInfo["videoURL"] = videoURL }
             guard !userInfo.isEmpty else { return }
-            NotificationCenter.default.post(
-                name: CatalystMediaPicker.pickedNotification,
-                object: nil,
-                userInfo: userInfo
-            )
+            DispatchQueue.main.async {
+                NotificationCenter.default.post(
+                    name: CatalystMediaPicker.pickedNotification,
+                    object: nil,
+                    userInfo: userInfo
+                )
+            }
         }
         func documentPickerWasCancelled(_ controller: UIDocumentPickerViewController) {
             CatalystMediaPicker.activeDelegate = nil
@@ -1694,14 +1652,11 @@ struct CatalystTextEditor: UIViewRepresentable {
         let tv = SubmitTextView()
         tv.delegate = context.coordinator
         tv.onOptionReturn = onOptionReturn
-        tv.onPasteImages = { images in
-            self.onPasteImages?(images)
-        }
+        tv.onPasteImages = { images in self.onPasteImages?(images) }
         tv.font = AppSettings.shared.fontSize.uiFont
         tv.backgroundColor = .clear
         tv.textContainerInset = UIEdgeInsets(top: 8, left: 0, bottom: 8, right: 0)
         tv.text = text
-        // 自動フォーカス
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
             tv.becomeFirstResponder()
         }
@@ -1713,9 +1668,7 @@ struct CatalystTextEditor: UIViewRepresentable {
             uiView.text = text
         }
         uiView.font = AppSettings.shared.fontSize.uiFont
-        uiView.onPasteImages = { images in
-            self.onPasteImages?(images)
-        }
+        uiView.onPasteImages = { images in self.onPasteImages?(images) }
     }
 
     class Coordinator: NSObject, UITextViewDelegate {
@@ -1754,18 +1707,15 @@ struct CatalystTextEditor: UIViewRepresentable {
 
         override func paste(_ sender: Any?) {
             let pb = UIPasteboard.general
-            // クリップボードに画像がある場合はインターセプト
             if pb.hasImages, let images = pb.images, !images.isEmpty {
                 onPasteImages?(images)
                 return
             }
-            // テキスト等はデフォルトのペースト処理に委譲
             super.paste(sender)
         }
 
         override func canPerformAction(_ action: Selector, withSender sender: Any?) -> Bool {
             if action == #selector(paste(_:)) {
-                // 画像がクリップボードにある場合もペーストを有効にする
                 if UIPasteboard.general.hasImages { return true }
             }
             return super.canPerformAction(action, withSender: sender)
@@ -1837,3 +1787,4 @@ struct CameraView: UIViewControllerRepresentable {
         }
     }
 }
+

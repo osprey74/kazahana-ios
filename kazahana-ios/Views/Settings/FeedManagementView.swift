@@ -13,6 +13,8 @@ struct FeedManagementView: View {
     @State private var isLoading = false
     @State private var visibleItems: [FeedItem] = []
     @State private var hiddenItems: [FeedItem] = []
+    /// インクリメントすると .task(id:) が再実行されリフレッシュされる
+    @State private var refreshID = 0
 
     /// フィード/リストを統一的に扱うための内部モデル
     struct FeedItem: Identifiable, Equatable {
@@ -80,7 +82,19 @@ struct FeedManagementView: View {
         .navigationTitle(String(localized: "settings.feedManagement"))
         .navigationBarTitleDisplayMode(.inline)
         .environment(\.editMode, .constant(.active))
-        .task {
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button {
+                    visibleItems = []
+                    hiddenItems = []
+                    refreshID += 1
+                } label: {
+                    Image(systemName: "arrow.clockwise")
+                }
+                .disabled(isLoading)
+            }
+        }
+        .task(id: refreshID) {
             await loadItems()
         }
     }
@@ -121,10 +135,11 @@ struct FeedManagementView: View {
     // MARK: - Data Loading
 
     private func loadItems() async {
-        guard !isLoading else { return }
         isLoading = true
+        defer { isLoading = false }
         do {
             let result = try await feedService.getAllSavedFeedItems(actor: actorDID)
+            guard !Task.isCancelled else { return }
             let feedItems: [FeedItem] = result.feeds.map {
                 FeedItem(id: $0.uri, name: $0.displayName, icon: "list.star", isListType: false)
             }
@@ -135,7 +150,6 @@ struct FeedManagementView: View {
         } catch {
             print("[FeedManagementView] load error: \(error)")
         }
-        isLoading = false
     }
 
     private func buildItemLists(all: [FeedItem]) {
@@ -165,7 +179,6 @@ struct FeedManagementView: View {
             hidden.append(uri)
         }
         settings.hiddenFeedURIs = hidden
-        // 全アイテムを再構成
         let all = visibleItems + hiddenItems
         buildItemLists(all: all)
     }

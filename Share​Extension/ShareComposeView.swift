@@ -33,13 +33,18 @@ struct ShareComposeView: View {
     let session: Session?
 
     @State private var text: String = ""
-    @State private var sharedImages: [UIImage] = []
+    @State private var sharedImages: [SelectedImage] = []
     @State private var sharedURL: URL? = nil
     @State private var linkCardPreview: LinkCardPreview? = nil
     @State private var isFetchingCard = false
     @State private var isPosting = false
     @State private var errorMessage: String? = nil
     @State private var isLoaded = false
+
+    // 画像クロップ・ALT
+    @State private var croppingImageIndex: Int? = nil
+    @State private var editingAltIndex: Int? = nil
+    @State private var altText: String = ""
 
     private let maxLength = 300
     private var remaining: Int { maxLength - graphemeCount(text) }
@@ -72,11 +77,31 @@ struct ShareComposeView: View {
                 }
             }
         }
-        .task { await loadSharedContent() }
+        .onAppear {
+            Task { await loadSharedContent() }
+        }
         .overlay {
             if isPosting {
                 postingOverlay
             }
+        }
+        // 画像クロップエディタ
+        .fullScreenCover(isPresented: Binding(
+            get: { croppingImageIndex != nil },
+            set: { if !$0 { croppingImageIndex = nil } }
+        )) {
+            if let idx = croppingImageIndex, idx < sharedImages.count {
+                ImageCropView(image: sharedImages[idx].image) { croppedImage in
+                    sharedImages[idx].image = croppedImage
+                }
+            }
+        }
+        // ALT テキスト編集シート
+        .sheet(isPresented: Binding(
+            get: { editingAltIndex != nil },
+            set: { if !$0 { editingAltIndex = nil } }
+        )) {
+            altEditSheet
         }
     }
 
@@ -160,18 +185,7 @@ struct ShareComposeView: View {
 
                 // 画像プレビュー
                 if !sharedImages.isEmpty {
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 8) {
-                            ForEach(Array(sharedImages.enumerated()), id: \.offset) { _, img in
-                                Image(uiImage: img)
-                                    .resizable()
-                                    .scaledToFill()
-                                    .frame(width: 80, height: 80)
-                                    .clipShape(RoundedRectangle(cornerRadius: 8))
-                            }
-                        }
-                        .padding(.horizontal, 2)
-                    }
+                    imagePreviewRow
                 }
 
                 // エラー表示
@@ -184,6 +198,104 @@ struct ShareComposeView: View {
             }
             .padding()
         }
+    }
+
+    // MARK: - 画像プレビュー行（3列グリッド・複数行折り返し）
+
+    private var imagePreviewRow: some View {
+        LazyVGrid(
+            columns: Array(repeating: GridItem(.flexible(), spacing: 6), count: 3),
+            spacing: 6
+        ) {
+            ForEach(Array(sharedImages.enumerated()), id: \.element.id) { index, selected in
+                // Color.clear でセルサイズを 1:1 に固定し、画像は overlay で塗りつぶす
+                Color.clear
+                    .aspectRatio(1, contentMode: .fit)
+                    .overlay {
+                        Image(uiImage: selected.image)
+                            .resizable()
+                            .scaledToFill()
+                    }
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                    .onTapGesture {
+                        altText = selected.alt
+                        editingAltIndex = index
+                    }
+                    // 削除ボタン（右上）
+                    .overlay(alignment: .topTrailing) {
+                        Button {
+                            sharedImages.remove(at: index)
+                        } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .font(.system(size: 22))
+                                .foregroundStyle(.white)
+                                .shadow(radius: 2)
+                        }
+                        .padding(4)
+                    }
+                    // ALT バッジ（左下）
+                    .overlay(alignment: .bottomLeading) {
+                        if !selected.alt.isEmpty {
+                            Text("ALT")
+                                .font(.system(size: 9, weight: .bold))
+                                .foregroundStyle(.white)
+                                .padding(.horizontal, 4)
+                                .padding(.vertical, 2)
+                                .background(Color.black.opacity(0.6), in: RoundedRectangle(cornerRadius: 3))
+                                .padding(4)
+                        }
+                    }
+                    // クロップボタン（右下）
+                    .overlay(alignment: .bottomTrailing) {
+                        Button {
+                            croppingImageIndex = index
+                        } label: {
+                            Image(systemName: "crop")
+                                .font(.system(size: 13, weight: .bold))
+                                .foregroundStyle(.white)
+                                .padding(6)
+                                .background(Color.black.opacity(0.6), in: Circle())
+                        }
+                        .padding(4)
+                    }
+            }
+        }
+        .padding(.horizontal, 2)
+    }
+
+    // MARK: - ALT テキスト編集シート
+
+    @ViewBuilder
+    private var altEditSheet: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    TextField(shareLocalized("image.altPlaceholder"), text: $altText, axis: .vertical)
+                        .lineLimit(4...8)
+                } header: {
+                    Text(shareLocalized("image.altTitle"))
+                } footer: {
+                    Text(shareLocalized("image.altHint"))
+                }
+            }
+            .navigationTitle(shareLocalized("image.altTitle"))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(shareLocalized("compose.cancel")) { editingAltIndex = nil }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(shareLocalized("compose.done")) {
+                        if let idx = editingAltIndex, idx < sharedImages.count {
+                            sharedImages[idx].alt = altText
+                        }
+                        editingAltIndex = nil
+                    }
+                    .fontWeight(.bold)
+                }
+            }
+        }
+        .presentationDetents([.medium, .large])
     }
 
     // MARK: - 投稿中オーバーレイ
@@ -206,7 +318,7 @@ struct ShareComposeView: View {
 
         guard let items = extensionContext?.inputItems as? [NSExtensionItem] else { return }
 
-        var images: [UIImage] = []
+        var images: [SelectedImage] = []
         var url: URL? = nil
         var pageTitle: String? = nil
 
@@ -267,22 +379,35 @@ struct ShareComposeView: View {
                         url = parsedURL
                     }
                 }
-                // 画像（最大4枚）
-                if provider.hasItemConformingToTypeIdentifier(UTType.image.identifier), images.count < 4 {
-                    let img: UIImage? = await withCheckedContinuation { continuation in
-                        provider.loadItem(forTypeIdentifier: UTType.image.identifier, options: nil) { item, _ in
-                            if let image = item as? UIImage {
-                                continuation.resume(returning: image)
-                            } else if let imgURL = item as? URL,
-                                      let data = try? Data(contentsOf: imgURL),
-                                      let image = UIImage(data: data) {
-                                continuation.resume(returning: image)
-                            } else {
-                                continuation.resume(returning: nil)
+                // 画像（最大10枚）
+                if images.count < 10 {
+                    var img: UIImage? = nil
+
+                    // Photos・アプリからの直接共有（public.image）
+                    if provider.hasItemConformingToTypeIdentifier(UTType.image.identifier) {
+                        img = await withCheckedContinuation { continuation in
+                            provider.loadDataRepresentation(forTypeIdentifier: UTType.image.identifier) { data, _ in
+                                continuation.resume(returning: data.flatMap { UIImage(data: $0) })
                             }
                         }
                     }
-                    if let img { images.append(img) }
+
+                    // Finder ファイル共有フォールバック（public.file-url）
+                    // loadFileRepresentation が OS 側でファイルを拡張機能のコンテナへコピーするため
+                    // サンドボックス制限なく Data として読み込める
+                    if img == nil, provider.hasItemConformingToTypeIdentifier(UTType.fileURL.identifier) {
+                        img = await withCheckedContinuation { continuation in
+                            provider.loadFileRepresentation(forTypeIdentifier: UTType.fileURL.identifier) { url, _ in
+                                guard let url, let data = try? Data(contentsOf: url) else {
+                                    continuation.resume(returning: nil)
+                                    return
+                                }
+                                continuation.resume(returning: UIImage(data: data))
+                            }
+                        }
+                    }
+
+                    if let img { images.append(SelectedImage(image: img)) }
                 }
             }
         }
@@ -343,12 +468,12 @@ struct ShareComposeView: View {
         do {
             let client = ShareATProtoClient(session: session)
 
-            // 画像アップロード
+            // 画像アップロード（ALT テキスト付き）
             var uploadedImages: [(blob: BlobRef, alt: String)] = []
-            for img in sharedImages {
-                let compressed = compressImage(img)
+            for selected in sharedImages {
+                let compressed = compressImage(selected.image)
                 let blob = try await client.uploadImage(data: compressed, mimeType: "image/jpeg")
-                uploadedImages.append((blob: blob, alt: ""))
+                uploadedImages.append((blob: blob, alt: selected.alt))
             }
 
             // Facet 検出

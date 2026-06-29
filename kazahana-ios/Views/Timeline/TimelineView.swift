@@ -83,17 +83,15 @@ struct TimelineView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
-                    // showAllFeedsInSelector=true のときのみフィード選択ボタンを表示
-                    // （false のときはタブバーで切替、全フィード非表示時はボタンも非表示）
-                    if settings.showAllFeedsInSelector {
-                        Button {
-                            showFeedSelector = true
-                        } label: {
-                            HStack(spacing: 4) {
-                                Image(systemName: "list.bullet")
-                                Image(systemName: "chevron.down")
-                                    .font(.caption2)
-                            }
+                    // フィード選択ボタンは常に表示
+                    // showAllFeedsInSelector の設定はドロップダウン内のフィード数にのみ影響する
+                    Button {
+                        showFeedSelector = true
+                    } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: "list.bullet")
+                            Image(systemName: "chevron.down")
+                                .font(.caption2)
                         }
                     }
                 }

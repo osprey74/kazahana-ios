@@ -4459,6 +4459,76 @@
         }
       }
     },
+    "compose.filePicker.multiSelectHint" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Im Dateidialog mit ⌘+Klick, Shift+Klick oder Ziehen mehrere Dateien auswählen, oder im Finder auswählen, ⌘+C, dann ⌘+V in das Fenster einfügen."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "⌘+click, Shift+click, or drag to select multiple files in the dialog, or select in Finder, ⌘+C, then ⌘+V into the compose window."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "En el diálogo, usa ⌘+clic, Shift+clic o arrastra para seleccionar varios. También puedes seleccionar en Finder con ⌘+C y pegar con ⌘+V."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "⌘+clic, Shift+clic ou glisser pour sélectionner plusieurs fichiers, ou sélectionnez dans le Finder avec ⌘+C, puis ⌘+V dans la fenêtre."
+          }
+        },
+        "id" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "⌘+klik, Shift+klik, atau seret untuk memilih beberapa file, atau pilih di Finder ⌘+C, lalu ⌘+V ke jendela."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ファイル選択ダイアログでは⌘クリック・Shiftクリック・ドラッグで複数選択が、ファインダーから複数選択し⌘＋C、kazahanaの新規投稿ウィンドウへ⌘＋Vでも複数画像を貼付できます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "대화상자에서 ⌘+클릭, Shift+클릭 또는 드래그로 여러 파일을 선택하거나, Finder에서 ⌘+C 후 ⌘+V로 붙여넣기."
+          }
+        },
+        "pt" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "⌘+clique, Shift+clique ou arraste para selecionar vários arquivos, ou selecione no Finder com ⌘+C e cole com ⌘+V."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "⌘+клик, Shift+клик или перетаскивание для выбора нескольких файлов, или выберите в Finder ⌘+C и вставьте ⌘+V."
+          }
+        },
+        "zh-CN" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在对话框中用 ⌘+点击、Shift+点击或拖拽多选，或在 Finder 中选择后 ⌘+C，再 ⌘+V 粘贴到窗口。"
+          }
+        },
+        "zh-TW" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在對話框中用 ⌘+點擊、Shift+點擊或拖曳多選，或在 Finder 中選擇後 ⌘+C，再 ⌘+V 貼上至視窗。"
+          }
+        }
+      }
+    },
     "compose.generateLinkCard" : {
       "localizations" : {
         "de" : {

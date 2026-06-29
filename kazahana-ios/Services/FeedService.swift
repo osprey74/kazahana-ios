@@ -319,15 +319,24 @@ struct FeedService {
 
         var feedURIs: [String] = []
         var listURIs: [String] = []
+        var hasV2 = false
 
-        for pref in prefResponse.preferences {
-            if pref.type == "app.bsky.actor.defs#savedFeedsPrefV2",
-               let items = pref.items {
-                // pinned == true のフィード/リストのみ表示（ピンを外したフィードは除外）
-                feedURIs.append(contentsOf: items.filter { $0.type == "feed" && $0.pinned != false }.map { $0.value })
-                listURIs.append(contentsOf: items.filter { $0.type == "list" && $0.pinned != false }.map { $0.value })
-            } else if pref.type == "app.bsky.actor.defs#savedFeedsPref",
-                      let pinned = pref.pinned {
+        // v2 を優先処理
+        for pref in prefResponse.preferences where pref.type == "app.bsky.actor.defs#savedFeedsPrefV2" {
+            guard let items = pref.items else { continue }
+            hasV2 = true
+            // pinned に関わらず preferences に登録済みの全フィード/リストを対象にする
+            // pinned: true = ホームに表示中、pinned: false = 保存済みだがホームに未追加
+            // Bluesky から完全削除したものは preferences から除去されるため ↺ で消える
+            feedURIs.append(contentsOf: items.filter { $0.type == "feed" }.map { $0.value })
+            listURIs.append(contentsOf: items.filter { $0.type == "list" }.map { $0.value })
+        }
+
+        // v2 が存在しない場合のみ v1 にフォールバック
+        // v1 は v2 と並存するが古いデータのため、v2 が存在する場合は無視する
+        if !hasV2 {
+            for pref in prefResponse.preferences where pref.type == "app.bsky.actor.defs#savedFeedsPref" {
+                guard let pinned = pref.pinned else { continue }
                 let feedOnly = pinned.filter { $0.hasPrefix("at://") && $0.contains("/app.bsky.feed.generator/") }
                 feedURIs.append(contentsOf: feedOnly)
             }
@@ -346,6 +355,7 @@ struct FeedService {
         }
 
         // Step 3: 保存されたリストを個別取得
+        // preferences を唯一の正本とし、Bluesky でフォロー解除されたリストは自動消去される
         listURIs = Array(Set(listURIs))
         var savedLists: [GraphListView] = []
         for listURI in listURIs {
@@ -360,14 +370,6 @@ struct FeedService {
             } catch {
                 print("[FeedService] getList failed for \(listURI): \(error)")
             }
-        }
-
-        // Step 4: 自分のキュレーションリストをマージ（重複除去）
-        let myLists = (try? await getMyLists(actor: actor)) ?? []
-        var seen = Set<String>(savedLists.map { $0.uri })
-        for list in myLists where !seen.contains(list.uri) {
-            seen.insert(list.uri)
-            savedLists.append(list)
         }
 
         return (feeds: feeds, lists: savedLists)
