@@ -9,12 +9,15 @@ struct FeedSelectorView: View {
     @Binding var isPresented: Bool
     @Environment(AppSettings.self) private var settings
 
-    /// 表示するフィードソース一覧（showAllFeedsInSelector に従う）
+    /// 表示するフィードソース一覧（showAllFeedsInSelector に従う、hiddenFeedURIs は常に除外）
     private var displayedSources: [FeedSource] {
-        if settings.showAllFeedsInSelector {
-            return viewModel.allFeedSources
-        } else {
-            return viewModel.visibleFeedSources.filter { $0 != .following }
+        let hiddenURIs = Set(settings.hiddenFeedURIs)
+        let sources = settings.showAllFeedsInSelector
+            ? viewModel.allFeedSources
+            : viewModel.visibleFeedSources.filter { $0 != .following }
+        return sources.filter { source in
+            guard let uri = source.uri else { return true }
+            return !hiddenURIs.contains(uri)
         }
     }
 

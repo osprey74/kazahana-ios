@@ -15,6 +15,8 @@ struct TimelineView: View {
     @State private var quotePost: PostView? = nil
     @State private var showFeedSelector: Bool = false
     @State private var showAccountSwitcher: Bool = false
+    /// TabView ページスワイプ用インデックス（iOS のみ）
+    @State private var currentPageIndex: Int = 0
     @State private var selectedPost: FeedViewPost? = nil
     @State private var selectedAuthorDID: IdentifiableString? = nil
     @State private var postActorListType: PostActorListType? = nil
@@ -41,6 +43,7 @@ struct TimelineView: View {
                     // 横スクロールタブバー（フィードが2件以上の場合のみ表示）
                     feedTabBar
 
+                    #if targetEnvironment(macCatalyst)
                     Group {
                         if viewModel.isLoading && viewModel.posts.isEmpty {
                             ProgressView()
@@ -51,6 +54,9 @@ struct TimelineView: View {
                             postList
                         }
                     }
+                    #else
+                    feedPageTabView
+                    #endif
                 }
 
                 // FAB（投稿作成ボタン）
@@ -297,22 +303,45 @@ struct TimelineView: View {
         }
     }
 
-    /// フィードタブ間の左右スワイプ切替
-    private func handleFeedSwipe(direction: SwipeDirection) {
+    /// iOS: TabView ページスワイプによるフィード切替
+    #if !targetEnvironment(macCatalyst)
+    private var feedPageTabView: some View {
         let sources = viewModel.visibleFeedSources
-        guard sources.count > 1 else { return }
-        guard let currentIndex = sources.firstIndex(of: viewModel.currentFeed) else { return }
-
-        let newIndex: Int
-        switch direction {
-        case .left:  newIndex = currentIndex + 1
-        case .right: newIndex = currentIndex - 1
+        return TabView(selection: $currentPageIndex) {
+            ForEach(sources.indices, id: \.self) { index in
+                Group {
+                    if viewModel.isLoading && viewModel.posts.isEmpty {
+                        ProgressView()
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    } else if let error = viewModel.errorMessage, viewModel.posts.isEmpty {
+                        errorView(message: error)
+                    } else {
+                        postList
+                    }
+                }
+                .tag(index)
+            }
         }
-        guard newIndex >= 0 && newIndex < sources.count else { return }
-        Task { await viewModel.selectFeed(sources[newIndex]) }
+        .tabViewStyle(.page(indexDisplayMode: .never))
+        .onChange(of: currentPageIndex) { _, newIndex in
+            let sources = viewModel.visibleFeedSources
+            guard newIndex < sources.count else { return }
+            let source = sources[newIndex]
+            guard viewModel.currentFeed != source else { return }
+            Task { await viewModel.selectFeed(source) }
+        }
+        .onChange(of: viewModel.currentFeed) { _, newFeed in
+            let sources = viewModel.visibleFeedSources
+            if let index = sources.firstIndex(of: newFeed), index != currentPageIndex {
+                currentPageIndex = index
+            }
+        }
+        .onChange(of: viewModel.visibleFeedSources.count) { _, _ in
+            let sources = viewModel.visibleFeedSources
+            currentPageIndex = sources.firstIndex(of: viewModel.currentFeed) ?? 0
+        }
     }
-
-    private enum SwipeDirection { case left, right }
+    #endif
 
     private var postList: some View {
         ScrollViewReader { proxy in
@@ -362,25 +391,6 @@ struct TimelineView: View {
         .refreshable {
             await viewModel.refresh()
         }
-        #if !targetEnvironment(macCatalyst)
-        .gesture(
-            DragGesture(minimumDistance: 20, coordinateSpace: .local)
-                .onEnded { value in
-                    // 水平方向のスワイプのみ処理（縦スクロールと競合しないよう角度制限）
-                    let horizontal = value.translation.width
-                    let vertical = value.translation.height
-                    // 最低移動量50ptを維持しつつ、ジェスチャー検出開始は20ptに引き下げ
-                    guard abs(horizontal) > 50 else { return }
-                    guard abs(horizontal) > abs(vertical) * 2.0 else { return }
-                    if horizontal < 0 {
-                        handleFeedSwipe(direction: .left)
-                    } else {
-                        handleFeedSwipe(direction: .right)
-                    }
-                },
-            isEnabled: viewModel.visibleFeedSources.count > 1
-        )
-        #endif
         .onAppear { listScrollProxy = proxy }
         } // ScrollViewReader
     }

@@ -93,6 +93,10 @@ struct ComposeView: View {
     // 解決済みメンション DID（handle → did のキャッシュ）
     @State private var resolvedMentions: [String: String] = [:]
 
+    #if targetEnvironment(macCatalyst)
+    @State private var isDragTarget = false
+    #endif
+
     // リンクカードプレビュー
     @State private var detectedURL: URL? = nil          // テキスト中で検出した URL
     @State private var linkPreview: LinkPreview? = nil  // 取得済みプレビュー
@@ -340,6 +344,41 @@ struct ComposeView: View {
         })
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .padding(.horizontal, 12)
+        // Finder からのドラッグ＆ドロップ（テキストエリアのみに限定してボタン干渉を回避）
+        .onDrop(of: [.image, .movie], isTargeted: $isDragTarget) { providers in
+            for provider in providers {
+                if provider.hasItemConformingToTypeIdentifier(UTType.movie.identifier) {
+                    provider.loadFileRepresentation(forTypeIdentifier: UTType.movie.identifier) { url, _ in
+                        guard let url else { return }
+                        let dest = FileManager.default.temporaryDirectory
+                            .appendingPathComponent(url.lastPathComponent)
+                        try? FileManager.default.copyItem(at: url, to: dest)
+                        NotificationCenter.default.post(
+                            name: CatalystMediaPicker.pickedNotification,
+                            object: nil,
+                            userInfo: ["videoURL": dest]
+                        )
+                    }
+                } else if provider.hasItemConformingToTypeIdentifier(UTType.image.identifier) {
+                    provider.loadObject(ofClass: UIImage.self) { obj, _ in
+                        guard let image = obj as? UIImage else { return }
+                        NotificationCenter.default.post(
+                            name: CatalystMediaPicker.pickedNotification,
+                            object: nil,
+                            userInfo: ["images": [image]]
+                        )
+                    }
+                }
+            }
+            return true
+        }
+        .overlay {
+            if isDragTarget {
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(Color.accentColor, lineWidth: 2)
+                    .background(Color.accentColor.opacity(0.05), in: RoundedRectangle(cornerRadius: 8))
+            }
+        }
         .onAppear {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                 // CatalystTextEditor は自動的にフォーカスを取る
