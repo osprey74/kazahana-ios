@@ -345,30 +345,50 @@ struct ComposeView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .padding(.horizontal, 12)
         // Finder からのドラッグ＆ドロップ（テキストエリアのみに限定してボタン干渉を回避）
+        // loadObject(ofClass: UIImage.self) は Finder ドロップでは機能しないため
+        // loadFileRepresentation を使ってファイルURLから UIImage を生成する
         .onDrop(of: [.image, .movie], isTargeted: $isDragTarget) { providers in
+            let group = DispatchGroup()
+            var images: [UIImage] = []
+            var videoURL: URL? = nil
+
             for provider in providers {
                 if provider.hasItemConformingToTypeIdentifier(UTType.movie.identifier) {
+                    group.enter()
                     provider.loadFileRepresentation(forTypeIdentifier: UTType.movie.identifier) { url, _ in
-                        guard let url else { return }
+                        defer { group.leave() }
+                        guard let url, videoURL == nil else { return }
                         let dest = FileManager.default.temporaryDirectory
                             .appendingPathComponent(url.lastPathComponent)
                         try? FileManager.default.copyItem(at: url, to: dest)
-                        NotificationCenter.default.post(
-                            name: CatalystMediaPicker.pickedNotification,
-                            object: nil,
-                            userInfo: ["videoURL": dest]
-                        )
+                        videoURL = dest
                     }
                 } else if provider.hasItemConformingToTypeIdentifier(UTType.image.identifier) {
-                    provider.loadObject(ofClass: UIImage.self) { obj, _ in
-                        guard let image = obj as? UIImage else { return }
-                        NotificationCenter.default.post(
-                            name: CatalystMediaPicker.pickedNotification,
-                            object: nil,
-                            userInfo: ["images": [image]]
-                        )
+                    group.enter()
+                    provider.loadFileRepresentation(forTypeIdentifier: UTType.image.identifier) { url, _ in
+                        defer { group.leave() }
+                        guard let url else { return }
+                        let dest = FileManager.default.temporaryDirectory
+                            .appendingPathComponent(UUID().uuidString + "." + url.pathExtension)
+                        try? FileManager.default.copyItem(at: url, to: dest)
+                        if let data = try? Data(contentsOf: dest),
+                           let image = UIImage(data: data) {
+                            images.append(image)
+                        }
                     }
                 }
+            }
+
+            group.notify(queue: .main) {
+                var userInfo: [String: Any] = [:]
+                if !images.isEmpty { userInfo["images"] = images }
+                if let videoURL { userInfo["videoURL"] = videoURL }
+                guard !userInfo.isEmpty else { return }
+                NotificationCenter.default.post(
+                    name: CatalystMediaPicker.pickedNotification,
+                    object: nil,
+                    userInfo: userInfo
+                )
             }
             return true
         }
