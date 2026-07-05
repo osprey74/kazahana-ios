@@ -173,51 +173,34 @@ private struct ZoomableImage: View {
 
     var body: some View {
         GeometryReader { geo in
-            AsyncImage(url: URL(string: urlString)) { phase in
-                switch phase {
-                case .success(let image):
-                    image
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: geo.size.width, height: geo.size.height)
-                        .background(GeometryReader { imgGeo in
-                            Color.clear.onAppear { imageSize = imgGeo.size }
-                        })
-                        .scaleEffect(scale)
-                        .offset(offset)
-                        // ピンチズームは常時有効
-                        .gesture(magnificationGesture)
-                        // ドラッグはズーム中のみ有効（等倍時は TabView のスワイプに委譲）
-                        .simultaneousGesture(
-                            dragGesture(in: geo.size),
-                            isEnabled: isZoomed
-                        )
-                        .onTapGesture(count: 2) {
-                            withAnimation(.spring(duration: 0.3)) {
-                                if scale > 1.0 {
-                                    scale = 1.0
-                                    lastScale = 1.0
-                                    offset = .zero
-                                    lastOffset = .zero
-                                } else {
-                                    scale = 2.5
-                                    lastScale = 2.5
-                                }
-                            }
+            AnimatedImageView(url: URL(string: urlString))
+                .frame(width: geo.size.width, height: geo.size.height)
+                .background(GeometryReader { imgGeo in
+                    Color.clear.onAppear { imageSize = imgGeo.size }
+                })
+                .scaleEffect(scale)
+                .offset(offset)
+                // ピンチズームは常時有効
+                .gesture(magnificationGesture)
+                // ドラッグはズーム中のみ有効（等倍時は TabView のスワイプに委譲）
+                .simultaneousGesture(
+                    dragGesture(in: geo.size),
+                    isEnabled: isZoomed
+                )
+                .onTapGesture(count: 2) {
+                    withAnimation(.spring(duration: 0.3)) {
+                        if scale > 1.0 {
+                            scale = 1.0
+                            lastScale = 1.0
+                            offset = .zero
+                            lastOffset = .zero
+                        } else {
+                            scale = 2.5
+                            lastScale = 2.5
                         }
-                        .accessibilityLabel(alt.isEmpty ? "画像" : alt)
-                case .failure:
-                    Image(systemName: "photo")
-                        .font(.largeTitle)
-                        .foregroundStyle(.secondary)
-                        .frame(width: geo.size.width, height: geo.size.height)
-                case .empty:
-                    ProgressView()
-                        .frame(width: geo.size.width, height: geo.size.height)
-                @unknown default:
-                    EmptyView()
+                    }
                 }
-            }
+                .accessibilityLabel(alt.isEmpty ? "画像" : alt)
         }
     }
 }

@@ -12,6 +12,7 @@ struct SelectedImage: Identifiable {
     let id = UUID()
     var image: UIImage   // クロップ後の置き換えを可能にするため var
     var alt: String = ""
+    var originalGIFData: Data?  // GIF の場合、元データを保持（JPEG 変換をスキップするため）
 }
 
 /// ウォーターマーク確認モーダルに渡すデータ。.sheet(item:) で状態を確実に渡すためのラッパー。
@@ -251,9 +252,10 @@ struct ComposeView: View {
             .onReceive(NotificationCenter.default.publisher(for: CatalystMediaPicker.pickedNotification)) { notif in
                 // 画像
                 if let images = notif.userInfo?["images"] as? [UIImage] {
+                    let gifDataMap = notif.userInfo?["gifDataMap"] as? [Int: Data] ?? [:]
                     let remaining = 10 - selectedImages.count
-                    for image in images.prefix(remaining) {
-                        selectedImages.append(SelectedImage(image: image))
+                    for (i, image) in images.prefix(remaining).enumerated() {
+                        selectedImages.append(SelectedImage(image: image, originalGIFData: gifDataMap[i]))
                     }
                 }
                 // 動画（画像未選択時のみ、1本まで）
@@ -471,7 +473,21 @@ struct ComposeView: View {
                 let pixW = Int(img.size.width * img.scale)
                 let pixH = Int(img.size.height * img.scale)
                 let aspectRatio = (pixW > 0 && pixH > 0) ? AspectRatioCreate(width: pixW, height: pixH) : nil
-                guard let (imageData, mimeType) = compressImage(img) else { continue }
+
+                let imageData: Data
+                let mimeType: String
+
+                if let gifData = selected.originalGIFData, gifData.count <= Self.imageMaxBytes {
+                    // GIF: 元データをそのままアップロード（アニメーション保持）
+                    imageData = gifData
+                    mimeType = "image/gif"
+                } else {
+                    // 通常画像（または 2MB 超の GIF）: JPEG に圧縮
+                    guard let compressed = compressImage(img) else { continue }
+                    imageData = compressed.0
+                    mimeType = compressed.1
+                }
+
                 uploadStage = .uploadingImage(current: index + 1, total: imageTotal)
                 let blob = try await uploadImageWithFallback(image: img, data: imageData, mimeType: mimeType)
                 uploadedImages.append((blob: blob, alt: selected.alt, aspectRatio: aspectRatio))
@@ -641,18 +657,28 @@ struct ComposeView: View {
         for item in items.prefix(10) {
             guard let data = try? await item.loadTransferable(type: Data.self) else { continue }
             guard let uiImage = UIImage(data: data) else { continue }
-            // CGImage バッキングを確立して正規化
+
+            // GIF 判定: 元データを保持して JPEG 変換をスキップできるようにする
+            let gifData: Data? = isGIFData(data) ? data : nil
+
+            // CGImage バッキングを確立して正規化（プレビュー用）
             let normalized: UIImage
             if let cg = uiImage.cgImage {
                 normalized = UIImage(cgImage: cg, scale: uiImage.scale, orientation: uiImage.imageOrientation)
             } else {
                 normalized = uiImage
             }
-            results.append(SelectedImage(image: normalized))
+            results.append(SelectedImage(image: normalized, originalGIFData: gifData))
         }
         await MainActor.run {
             selectedImages = results
         }
+    }
+
+    /// データが GIF フォーマットかどうかを先頭バイトで判定する
+    private func isGIFData(_ data: Data) -> Bool {
+        guard data.count >= 6 else { return false }
+        return data.starts(with: [0x47, 0x49, 0x46, 0x38]) // GIF87a or GIF89a
     }
 
     /// 公式クライアント互換の圧縮アルゴリズム。
@@ -1594,6 +1620,7 @@ enum CatalystMediaPicker {
         func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
             CatalystMediaPicker.activeDelegate = nil
             var images: [UIImage] = []
+            var gifDataMap: [Int: Data] = [:]  // index → GIF 元データ
             var videoURL: URL?
             for url in urls {
                 // UTType をリソース値から取得（pathExtension より信頼性が高い）
@@ -1609,12 +1636,19 @@ enum CatalystMediaPicker {
                 } else if contentType.conforms(to: .image) {
                     if let data = try? Data(contentsOf: url),
                        let image = UIImage(data: data) {
+                        // GIF の場合は元データを保持
+                        if contentType.conforms(to: .gif) || data.starts(with: [0x47, 0x49, 0x46, 0x38]) {
+                            gifDataMap[images.count] = data
+                        }
                         images.append(image)
                     }
                 }
             }
             var userInfo: [String: Any] = [:]
-            if !images.isEmpty { userInfo["images"] = images }
+            if !images.isEmpty {
+                userInfo["images"] = images
+                if !gifDataMap.isEmpty { userInfo["gifDataMap"] = gifDataMap }
+            }
             if let videoURL { userInfo["videoURL"] = videoURL }
             guard !userInfo.isEmpty else { return }
             DispatchQueue.main.async {

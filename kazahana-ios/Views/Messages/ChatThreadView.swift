@@ -219,23 +219,21 @@ struct ChatThreadView: View {
             }
 
             HStack(alignment: .bottom, spacing: 8) {
+                #if targetEnvironment(macCatalyst)
+                CatalystChatTextEditor(text: $messageText, onSubmit: { performSend() })
+                    .frame(minHeight: 32, maxHeight: 120)
+                    .padding(.vertical, 4)
+                #else
                 TextField(String(localized: "dm.messageInputPlaceholder"), text: $messageText, axis: .vertical)
                     .font(AppSettings.shared.fontSize.bodyFont)
                     .textFieldStyle(.roundedBorder)
                     .lineLimit(1...5)
                     .focused($isInputFocused)
                     .padding(.vertical, 8)
+                #endif
 
                 Button {
-                    let text = messageText
-                    let replyMessageId = replyTarget?.messageId
-                    isInputFocused = false
-                    messageText = ""
-                    replyTarget = nil
-                    Task {
-                        await viewModel?.sendMessage(text: text, replyToMessageId: replyMessageId)
-                        isInputFocused = true
-                    }
+                    performSend()
                 } label: {
                     Image(systemName: "paperplane.fill")
                         .foregroundStyle(messageText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? Color.secondary : Color.blue)
@@ -249,6 +247,21 @@ struct ChatThreadView: View {
         .padding(.bottom, evacuationVM?.bannerVisible == true ? 56 : 0)
         .animation(.easeInOut(duration: 0.3), value: evacuationVM?.bannerVisible)
         .background(.bar)
+    }
+
+    // MARK: - Send
+
+    private func performSend() {
+        let text = messageText
+        guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        let replyMessageId = replyTarget?.messageId
+        isInputFocused = false
+        messageText = ""
+        replyTarget = nil
+        Task {
+            await viewModel?.sendMessage(text: text, replyToMessageId: replyMessageId)
+            isInputFocused = true
+        }
     }
 
     // MARK: - Locked Notice
@@ -642,3 +655,71 @@ struct EmojiPickerView: View {
         .padding(.vertical, 8)
     }
 }
+
+// MARK: - Catalyst 用チャット入力（Enter で送信 / Shift+Enter で改行）
+
+#if targetEnvironment(macCatalyst)
+import UIKit
+
+struct CatalystChatTextEditor: UIViewRepresentable {
+    @Binding var text: String
+    var onSubmit: () -> Void
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(self)
+    }
+
+    func makeUIView(context: Context) -> ChatSubmitTextView {
+        let tv = ChatSubmitTextView()
+        tv.delegate = context.coordinator
+        tv.onSubmit = onSubmit
+        tv.font = AppSettings.shared.fontSize.uiFont
+        tv.backgroundColor = .secondarySystemBackground
+        tv.layer.cornerRadius = 8
+        tv.textContainerInset = UIEdgeInsets(top: 6, left: 4, bottom: 6, right: 4)
+        tv.isScrollEnabled = true
+        tv.text = text
+        return tv
+    }
+
+    func updateUIView(_ uiView: ChatSubmitTextView, context: Context) {
+        if uiView.text != text {
+            uiView.text = text
+        }
+        uiView.font = AppSettings.shared.fontSize.uiFont
+    }
+
+    class Coordinator: NSObject, UITextViewDelegate {
+        var parent: CatalystChatTextEditor
+
+        init(_ parent: CatalystChatTextEditor) {
+            self.parent = parent
+        }
+
+        func textViewDidChange(_ textView: UITextView) {
+            parent.text = textView.text
+        }
+    }
+
+    /// Enter（修飾キーなし）で送信、Shift+Enter で改行する UITextView サブクラス
+    class ChatSubmitTextView: UITextView {
+        var onSubmit: (() -> Void)?
+
+        private lazy var returnCommand: UIKeyCommand = {
+            UIKeyCommand(
+                input: "\r",
+                modifierFlags: [],
+                action: #selector(handleReturn)
+            )
+        }()
+
+        override var keyCommands: [UIKeyCommand]? {
+            return [returnCommand] + (super.keyCommands ?? [])
+        }
+
+        @objc private func handleReturn() {
+            onSubmit?()
+        }
+    }
+}
+#endif

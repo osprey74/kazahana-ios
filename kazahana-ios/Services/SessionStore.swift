@@ -87,6 +87,7 @@ final class SessionStore {
 
     /// DID を指定してセッションを返す
     func load(forDID did: String) -> Session? {
+        // 1. Keychain から取得
         let query: [String: Any] = [
             kSecClass as String:            kSecClassGenericPassword,
             kSecAttrService as String:      Keys.service,
@@ -97,12 +98,20 @@ final class SessionStore {
         ]
         var result: AnyObject?
         let status = SecItemCopyMatching(query as CFDictionary, &result)
-        guard status == errSecSuccess,
-              let data = result as? Data,
-              let session = try? JSONDecoder().decode(Session.self, from: data) else {
-            return nil
+        if status == errSecSuccess,
+           let data = result as? Data,
+           let session = try? JSONDecoder().decode(Session.self, from: data) {
+            return session
         }
-        return session
+
+        // 2. Keychain 失敗時: App Group UserDefaults キャッシュへフォールバック
+        //    macOS 再起動直後はキーチェーンがロック状態のため Keychain アクセスが失敗する場合がある
+        if let cached = sharedDefaults.data(forKey: Keys.sessionCacheKey(for: did)),
+           let session = try? JSONDecoder().decode(Session.self, from: cached) {
+            return session
+        }
+
+        return nil
     }
 
     /// 保存済みの全セッションを返す

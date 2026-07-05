@@ -211,6 +211,18 @@ final class MacSceneDelegate: UIResponder, UIWindowSceneDelegate {
     func scene(_ scene: UIScene, willConnectTo session: UISceneSession, options connectionOptions: UIScene.ConnectionOptions) {
         guard let windowScene = scene as? UIWindowScene else { return }
 
+        // 二重起動防止: 既にアクティブなシーンがある場合、この新規シーンを破棄する
+        // （SMAppService 自動起動と Scene Restoration の競合を防ぐ）
+        let existingScenes = UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .filter { $0 != windowScene && $0.activationState != .unattached }
+        if !existingScenes.isEmpty {
+            DispatchQueue.main.async {
+                UIApplication.shared.requestSceneSessionDestruction(session, options: nil)
+            }
+            return
+        }
+
         // Desktop 版準拠: 最小 400×600
         windowScene.sizeRestrictions?.minimumSize = CGSize(width: 400, height: 600)
 
