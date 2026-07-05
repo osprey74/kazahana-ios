@@ -701,23 +701,23 @@ struct CatalystChatTextEditor: UIViewRepresentable {
         }
     }
 
-    /// Enter（修飾キーなし）で送信、Shift+Enter で改行する UITextView サブクラス
+    /// Enter で改行、Shift+Enter で送信する UITextView サブクラス
     class ChatSubmitTextView: UITextView {
         var onSubmit: (() -> Void)?
 
-        private lazy var returnCommand: UIKeyCommand = {
+        private lazy var shiftReturnCommand: UIKeyCommand = {
             UIKeyCommand(
                 input: "\r",
-                modifierFlags: [],
-                action: #selector(handleReturn)
+                modifierFlags: .shift,
+                action: #selector(handleShiftReturn)
             )
         }()
 
         override var keyCommands: [UIKeyCommand]? {
-            return [returnCommand] + (super.keyCommands ?? [])
+            return [shiftReturnCommand] + (super.keyCommands ?? [])
         }
 
-        @objc private func handleReturn() {
+        @objc private func handleShiftReturn() {
             onSubmit?()
         }
     }
