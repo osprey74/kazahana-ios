@@ -52,10 +52,41 @@ struct kazahana_iosApp: App {
 
 final class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterDelegate {
 
+    #if targetEnvironment(macCatalyst)
+    /// flock で保持するファイルディスクリプタ（プロセス生存中はロック維持）
+    private static var instanceLockFD: Int32 = -1
+
+    /// ファイルロックによる排他制御。先発プロセスがロックを保持し、
+    /// 後発は取得に失敗して false を返す。ロックはプロセス終了時に自動解放。
+    private func acquireInstanceLock() -> Bool {
+        guard let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first else {
+            return true
+        }
+        let lockDir = appSupport.appendingPathComponent(Bundle.main.bundleIdentifier ?? "com.osprey74.kazahana")
+        try? FileManager.default.createDirectory(at: lockDir, withIntermediateDirectories: true)
+        let fd = open(lockDir.appendingPathComponent(".instance.lock").path, O_CREAT | O_RDWR, 0o600)
+        guard fd != -1 else { return true }
+        if flock(fd, LOCK_EX | LOCK_NB) != 0 {
+            close(fd)
+            return false
+        }
+        Self.instanceLockFD = fd
+        return true
+    }
+    #endif
+
     func application(
         _ application: UIApplication,
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
     ) -> Bool {
+        #if targetEnvironment(macCatalyst)
+        // プロセスレベル二重起動防止（LSMultipleInstancesProhibited のフォールバック）:
+        // flock が取得できなければ先発プロセスが既に動作中 — 即時終了
+        if !acquireInstanceLock() {
+            exit(0)
+        }
+        #endif
+
         // フォアグラウンドでも通知を表示するためにデリゲートを設定
         UNUserNotificationCenter.current().delegate = self
         return true
@@ -211,8 +242,8 @@ final class MacSceneDelegate: UIResponder, UIWindowSceneDelegate {
     func scene(_ scene: UIScene, willConnectTo session: UISceneSession, options connectionOptions: UIScene.ConnectionOptions) {
         guard let windowScene = scene as? UIWindowScene else { return }
 
-        // 二重起動防止: 既にアクティブなシーンがある場合、この新規シーンを破棄する
-        // （SMAppService 自動起動と Scene Restoration の競合を防ぐ）
+        // シーンレベル重複防止: 同一プロセス内で Scene Restoration が余分なシーンを復元した場合に破棄する
+        // （プロセスレベルのガードは AppDelegate.didFinishLaunchingWithOptions で実施済み）
         let existingScenes = UIApplication.shared.connectedScenes
             .compactMap { $0 as? UIWindowScene }
             .filter { $0 != windowScene && $0.activationState != .unattached }
