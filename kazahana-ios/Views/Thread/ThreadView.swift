@@ -189,7 +189,7 @@ struct ThreadView: View {
                 if let replies = thread.replies {
                     ForEach(Array(replies.enumerated()), id: \.offset) { _, reply in
                         if let replyPost = reply.post {
-                            let feedPost = FeedViewPost(post: replyPost, reply: nil, reason: nil)
+                            let feedPost = FeedViewPost(post: replyPost, reply: nil, reason: nil, opThreadPostIndex: nil, opThreadPostCount: nil)
                             PostCardView(
                                 feedPost: feedPost,
                                 postService: postService,
@@ -219,7 +219,7 @@ struct ThreadView: View {
             }
             if let post = thread.post {
                 PostCardView(
-                    feedPost: FeedViewPost(post: post, reply: nil, reason: nil),
+                    feedPost: FeedViewPost(post: post, reply: nil, reason: nil, opThreadPostIndex: nil, opThreadPostCount: nil),
                     postService: postService,
                     onTapPost: { p in selectedPost = p },
                     onTapAuthor: { did in selectedAuthorDID = IdentifiableString(did) },

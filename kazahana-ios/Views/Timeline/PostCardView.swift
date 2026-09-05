@@ -404,6 +404,10 @@ struct PostCardView: View {
                     if isBotAccount(did: author.did, labels: author.labels) {
                         BotBadge(size: 14)
                     }
+                    if let idx = feedPost.opThreadPostIndex, let cnt = feedPost.opThreadPostCount,
+                       cnt >= 2, (1...cnt).contains(idx) {
+                        OpThreadBadge(index: idx, count: cnt)
+                    }
                     Text("@\(author.handle)")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)

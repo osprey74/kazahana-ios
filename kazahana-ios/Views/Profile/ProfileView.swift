@@ -4,6 +4,13 @@
 
 import SwiftUI
 
+/// プロフィールからの @mention 投稿に必要なデータ
+struct MentionInitialData: Identifiable {
+    let id = UUID()
+    let handle: String
+    let did: String
+}
+
 struct ProfileScreenView: View {
     @Environment(AuthViewModel.self) private var authVM
     @Environment(EvacuationViewModel.self) private var evacuationVM: EvacuationViewModel?
@@ -17,7 +24,7 @@ struct ProfileScreenView: View {
     @State private var selectedStarterPack: StarterPackViewBasic? = nil
     @State private var showSettings = false
     @State private var showCompose = false
-    @State private var mentionInitialText: IdentifiableString? = nil
+    @State private var mentionData: MentionInitialData? = nil
     @State private var quotePost: PostView? = nil
     @State private var replyToPost: PostView? = nil
     @State private var showAddToList = false
@@ -74,9 +81,9 @@ struct ProfileScreenView: View {
             ComposeView(postService: PostService(client: authVM.client))
                 .environment(AppSettings.shared)
         }
-        .sheet(item: $mentionInitialText) { item in
+        .sheet(item: $mentionData) { data in
             // 他人のプロフィール画面から @mention 付きで投稿
-            ComposeView(postService: PostService(client: authVM.client), initialText: item.value)
+            ComposeView(postService: PostService(client: authVM.client), initialText: "@\(data.handle) ", initialMentions: [data.handle: data.did])
                 .environment(AppSettings.shared)
         }
         .sheet(item: $quotePost) { quoted in
@@ -273,8 +280,8 @@ struct ProfileScreenView: View {
         .overlay(alignment: .bottomTrailing) {
             Button {
                 // 他人のプロフィール画面では @handle を初期テキストとして挿入
-                if !isSelf, let handle = vm.profile?.handle {
-                    mentionInitialText = IdentifiableString("@\(handle) ")
+                if !isSelf, let handle = vm.profile?.handle, let did = vm.profile?.did {
+                    mentionData = MentionInitialData(handle: handle, did: did)
                 } else {
                     showCompose = true
                 }
@@ -363,7 +370,7 @@ struct ProfileScreenView: View {
 
     @ViewBuilder
     private func pinnedPostView(post: PostView, vm: ProfileViewModel) -> some View {
-        let feedPost = FeedViewPost(post: post, reply: nil, reason: nil)
+        let feedPost = FeedViewPost(post: post, reply: nil, reason: nil, opThreadPostIndex: nil, opThreadPostCount: nil)
         VStack(spacing: 0) {
             // ピン留めラベル（リポスト理由行と同じ構造）
             HStack(spacing: 4) {
@@ -448,7 +455,7 @@ struct ProfileScreenView: View {
             .frame(maxWidth: .infinity)
         } else {
             ForEach(vm.profileSearchResults, id: \.uri) { post in
-                let feedPost = FeedViewPost(post: post, reply: nil, reason: nil)
+                let feedPost = FeedViewPost(post: post, reply: nil, reason: nil, opThreadPostIndex: nil, opThreadPostCount: nil)
                 PostCardView(
                     feedPost: feedPost,
                     postService: PostService(client: authVM.client),

@@ -50,6 +50,10 @@ struct FeedViewPost: Codable, Identifiable, Hashable {
     let post: PostView
     let reply: ReplyRef?
     let reason: FeedReason?
+    /// OP スレッド内の位置（1-indexed）。AppView 提供フィールド
+    let opThreadPostIndex: Int?
+    /// OP スレッドの総投稿数。AppView 提供フィールド
+    let opThreadPostCount: Int?
 
     var id: String { post.uri }
 }
@@ -325,10 +329,12 @@ struct EmbedRecordView: Codable {
     let author: ProfileViewBasic?
     let value: PostRecordSimple?
     let indexedAt: String?
+    /// 引用元投稿の埋め込みメディア（画像・動画・リンクカード等）
+    let embeds: [PostEmbed]?
 
     enum CodingKeys: String, CodingKey {
         case type = "$type"
-        case uri, cid, author, value, indexedAt
+        case uri, cid, author, value, indexedAt, embeds
     }
 
     init(from decoder: Decoder) throws {
@@ -340,6 +346,12 @@ struct EmbedRecordView: Codable {
         // value は PostRecord 形式だが $type を持つため、decodeIfPresent で安全に
         self.value = try? container.decodeIfPresent(PostRecordSimple.self, forKey: .value)
         self.indexedAt = try container.decodeIfPresent(String.self, forKey: .indexedAt)
+        // embeds は配列内の個別要素がデコード失敗しても残りを活かす
+        if let raw = try? container.decodeIfPresent([SafeDecodable<PostEmbed>].self, forKey: .embeds) {
+            self.embeds = raw.compactMap(\.value)
+        } else {
+            self.embeds = nil
+        }
     }
 }
 

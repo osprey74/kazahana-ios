@@ -64,6 +64,8 @@ struct ComposeView: View {
     // 動画添付
     @State private var selectedVideo: SelectedVideo? = nil
     @State private var videoPickerItem: PhotosPickerItem? = nil
+    @State private var isEditingVideoAlt: Bool = false
+    @State private var videoAltText: String = ""
 
     // ウォーターマーク確認モーダル用データ（nil = 非表示）
     @State private var watermarkConfirmImages: WatermarkConfirmData? = nil
@@ -106,7 +108,7 @@ struct ComposeView: View {
     private let replyTarget: ReplyTarget?
     private let quotePost: PostView?
 
-    init(postService: PostService, searchService: SearchService? = nil, replyTo: PostView? = nil, quotedPost: PostView? = nil, initialText: String = "") {
+    init(postService: PostService, searchService: SearchService? = nil, replyTo: PostView? = nil, quotedPost: PostView? = nil, initialText: String = "", initialMentions: [String: String] = [:]) {
         self.postService = postService
         self.searchService = searchService ?? SearchService(client: postService.atProtoClient)
         self.linkPreviewService = LinkPreviewService(client: postService.atProtoClient)
@@ -123,6 +125,7 @@ struct ComposeView: View {
             self.replyTarget = nil
         }
         self._text = State(initialValue: initialText)
+        self._resolvedMentions = State(initialValue: initialMentions)
     }
 
     private var graphemeCount: Int { text.count }
@@ -207,12 +210,16 @@ struct ComposeView: View {
             } message: {
                 Text(errorMessage ?? "")
             }
-            // Alt テキスト入力シート
+            // Alt テキスト入力シート（画像）
             .sheet(isPresented: Binding(
                 get: { editingAltIndex != nil },
                 set: { if !$0 { editingAltIndex = nil } }
             )) {
                 altEditSheet
+            }
+            // Alt テキスト入力シート（動画）
+            .sheet(isPresented: $isEditingVideoAlt) {
+                videoAltEditSheet
             }
             // ウォーターマーク確認モーダル（.sheet(item:) で確実に画像を渡す）
             .sheet(item: $watermarkConfirmImages) { data in
@@ -1340,6 +1347,36 @@ struct ComposeView: View {
         .presentationDetents([.medium, .large])
     }
 
+    private var videoAltEditSheet: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    TextField(String(localized: "image.altPlaceholder"), text: $videoAltText, axis: .vertical)
+                        .lineLimit(4...8)
+                } header: {
+                    Text(String(localized: "image.altTitle"))
+                } footer: {
+                    Text(String(localized: "image.altHint"))
+                }
+            }
+            .navigationTitle(String(localized: "image.altTitle"))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(String(localized: "compose.cancel")) { isEditingVideoAlt = false }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(String(localized: "compose.done")) {
+                        selectedVideo?.alt = videoAltText
+                        isEditingVideoAlt = false
+                    }
+                    .fontWeight(.bold)
+                }
+            }
+        }
+        .presentationDetents([.medium, .large])
+    }
+
     private func generateAltForCurrentImage() async {
         guard let idx = editingAltIndex, idx < selectedImages.count else { return }
         let image = selectedImages[idx].image
@@ -1392,6 +1429,26 @@ struct ComposeView: View {
                 Text(String(format: "%.1f MB", mb))
                     .font(.caption)
                     .foregroundStyle(.secondary)
+
+                // ALT テキストボタン
+                Button {
+                    videoAltText = video.alt
+                    isEditingVideoAlt = true
+                } label: {
+                    HStack(spacing: 4) {
+                        Text("ALT")
+                            .font(.caption.weight(.bold))
+                        if !video.alt.isEmpty {
+                            Image(systemName: "checkmark.circle.fill")
+                                .font(.caption2)
+                                .foregroundStyle(.green)
+                        }
+                    }
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(Color.secondary.opacity(0.12), in: RoundedRectangle(cornerRadius: 6))
+                }
+                .buttonStyle(.plain)
             }
 
             Spacer()

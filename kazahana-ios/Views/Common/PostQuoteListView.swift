@@ -45,7 +45,7 @@ struct PostQuoteListView: View {
                 let postService = PostService(client: authVM.client)
                 List {
                     ForEach(posts) { post in
-                        let feedPost = FeedViewPost(post: post, reply: nil, reason: nil)
+                        let feedPost = FeedViewPost(post: post, reply: nil, reason: nil, opThreadPostIndex: nil, opThreadPostCount: nil)
                         PostCardView(
                             feedPost: feedPost,
                             postService: postService,

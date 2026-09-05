@@ -201,7 +201,7 @@ final class ProfileViewModel {
             print("[ProfileViewModel] loadBookmarks: got \(response.bookmarks.count) bookmarks")
             bookmarkedPosts = response.bookmarks.compactMap { bookmark -> FeedViewPost? in
                 guard let post = bookmark.item else { return nil }
-                return FeedViewPost(post: post, reply: nil, reason: nil)
+                return FeedViewPost(post: post, reply: nil, reason: nil, opThreadPostIndex: nil, opThreadPostCount: nil)
             }
         } catch {
             print("[ProfileViewModel] loadBookmarks error: \(error)")

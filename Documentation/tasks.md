@@ -949,3 +949,31 @@ ShareExtension/
 ├── ShareModels.swift              # Session / SessionStore（accessGroup 共有）/ ShareSettings / BlobRef / Facet / PostRecordCreate
 └── Localizable.xcstrings          # share.title / share.notLoggedIn / share.notLoggedInMessage（11言語）
 ```
+
+---
+
+## 将来タスク: macOS Catalyst 機能強化
+
+### Catalyst システムトレイアイコン（NSStatusItem）
+
+- [ ] `MacStatusBar` サービスクラスを作成（NSStatusItem ライフサイクル管理）
+- [ ] `NSClassFromString("NSApplication")` → `NSStatusBar.system` で NSStatusItem を KVC 経由で作成
+- [ ] NSMenu を構築し、既存の `MenuCommandRelay` 経由で SwiftUI と連携
+- [ ] `AppSettings` にシステムトレイ表示 ON/OFF 設定を追加
+- [ ] `MacSceneDelegate` のライフサイクルでトレイアイコンの表示/非表示を管理
+
+**実現性:** 検証済み。既存の KVC ベース AppKit ブリッジ（`hostWindow` 経由の NSWindow アクセス）が動作実績あり。中程度の工数。
+
+**リスク:** KVC/Objective-C ランタイム依存（Private API ではないが macOS Catalyst の正式サポート範囲外）。App Store Review での指摘リスクは低い。
+
+### Catalyst ドラッグ＆ドロップ画像添付
+
+- [ ] 既存の `SubmitTextView`（UITextView サブクラス）に `UIDropInteraction` を追加
+- [ ] `UIDropInteractionDelegate` で画像ドロップを処理（`session.loadObjects(ofClass: UIImage.self)`）
+- [ ] Finder からのファイルドロップ対応（`NSItemProvider.loadFileRepresentation` が必要な場合あり）
+- [ ] `onDropImages` コールバック経由で `ComposeView` の `selectedImages` に追加
+- [ ] 実機検証：SwiftUI ボタンのクリック干渉が発生しないことを確認
+
+**経緯:** v3.7.0 で SwiftUI `.onDrop` を実装→ macOS Catalyst でボタンクリックを奪うため削除（commit 25b62cf）。現在は Cmd+V ペースト + Finder ダイアログで代替中。
+
+**推奨アプローチ:** UIKit レベルの `UIDropInteraction` は SwiftUI のヒットテストに干渉しないため、`.onDrop` の問題を回避可能。実機での動作検証が必須。

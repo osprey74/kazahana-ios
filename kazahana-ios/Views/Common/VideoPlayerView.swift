@@ -13,32 +13,59 @@ struct VideoPlayerView: View {
     @State private var player: AVPlayer? = nil
     @State private var isPresented: Bool = false
 
+    private var hasAlt: Bool {
+        if let alt = video.alt, !alt.isEmpty { return true }
+        return false
+    }
+
     var body: some View {
-        ZStack {
-            // サムネイル
-            thumbnailView
-                .overlay(alignment: .center) {
-                    if !thumbnailOnly {
-                        Button {
-                            isPresented = true
-                        } label: {
-                            Image(systemName: "play.circle.fill")
-                                .font(.system(size: 52))
-                                .foregroundStyle(.white.opacity(0.9))
-                                .shadow(color: .black.opacity(0.4), radius: 6)
+        VStack(alignment: .leading, spacing: 4) {
+            ZStack {
+                // サムネイル
+                thumbnailView
+                    .overlay(alignment: .center) {
+                        if !thumbnailOnly {
+                            Button {
+                                isPresented = true
+                            } label: {
+                                Image(systemName: "play.circle.fill")
+                                    .font(.system(size: 52))
+                                    .foregroundStyle(.white.opacity(0.9))
+                                    .shadow(color: .black.opacity(0.4), radius: 6)
+                            }
+                        } else {
+                            // サムネイルのみモード：再生不可を示すアイコン
+                            Image(systemName: "play.circle")
+                                .font(.system(size: 40))
+                                .foregroundStyle(.white.opacity(0.6))
+                                .shadow(color: .black.opacity(0.3), radius: 4)
                         }
-                    } else {
-                        // サムネイルのみモード：再生不可を示すアイコン
-                        Image(systemName: "play.circle")
-                            .font(.system(size: 40))
-                            .foregroundStyle(.white.opacity(0.6))
-                            .shadow(color: .black.opacity(0.3), radius: 4)
                     }
-                }
+                    .overlay(alignment: .bottomLeading) {
+                        if hasAlt {
+                            Text("ALT")
+                                .font(.system(size: 10, weight: .bold))
+                                .foregroundStyle(.white)
+                                .padding(.horizontal, 4)
+                                .padding(.vertical, 2)
+                                .background(.black.opacity(0.6), in: RoundedRectangle(cornerRadius: 4))
+                                .padding(8)
+                        }
+                    }
+            }
+            .frame(maxWidth: .infinity)
+            .aspectRatio(aspectRatio, contentMode: .fit)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+
+            // ALT テキスト本文（thumbnailOnly でないとき、先頭 128 文字まで表示）
+            if !thumbnailOnly, let alt = video.alt, !alt.isEmpty {
+                Text(alt.count > 128 ? String(alt.prefix(128)) + "…" : alt)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
         }
-        .frame(maxWidth: .infinity)
-        .aspectRatio(aspectRatio, contentMode: .fit)
-        .clipShape(RoundedRectangle(cornerRadius: 12))
         .fullScreenCover(isPresented: $isPresented, onDismiss: {
             player?.pause()
             player = nil
