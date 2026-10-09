@@ -21,6 +21,7 @@ struct ChatThreadView: View {
 
     private var myDID: String { authVM.client.currentSession?.did ?? "" }
     private var isGroup: Bool { convo.isGroup }
+    private var members: [ChatMember] { viewModel?.members ?? convo.members }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -50,17 +51,22 @@ struct ChatThreadView: View {
                             .padding(.vertical, 8)
                         }
 
-                        ForEach(Array((viewModel?.messages ?? []).enumerated()), id: \.offset) { _, msg in
+                        let messages = viewModel?.messages ?? []
+                        ForEach(Array(messages.enumerated()), id: \.offset) { index, msg in
                             switch msg {
                             case .system(let sysMsg):
-                                SystemMessageBubbleView(message: sysMsg)
+                                SystemMessageBubbleView(message: sysMsg, members: members)
                                     .id(sysMsg.id)
                             case .message, .deleted:
                                 MessageBubbleView(
                                     message: msg,
                                     myDID: myDID,
                                     isGroup: isGroup,
-                                    members: convo.members,
+                                    members: members,
+                                    showsSenderName: isFirstOfSenderRun(messages, at: index),
+                                    onTapSender: { did in
+                                        selectedAuthorDID = IdentifiableString(did)
+                                    },
                                     onDelete: { msgId in
                                         Task { await viewModel?.deleteMessage(messageId: msgId) }
                                     },
@@ -131,8 +137,11 @@ struct ChatThreadView: View {
                 .environment(authVM)
         }
         .task {
-            let vm = ChatThreadViewModel(chatService: chatService, convoId: convo.id)
+            let vm = ChatThreadViewModel(chatService: chatService, convoId: convo.id, members: convo.members)
             viewModel = vm
+            if isGroup {
+                Task { await vm.loadMembers() }
+            }
             await vm.loadInitial()
             vm.startPolling()
         }
@@ -194,10 +203,16 @@ struct ChatThreadView: View {
                         .fill(Color.blue)
                         .frame(width: 3)
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(String(localized: "dm.reply.replyingTo"))
-                            .font(.caption2)
-                            .fontWeight(.semibold)
-                            .foregroundStyle(.blue)
+                        HStack(spacing: 4) {
+                            Text(String(localized: "dm.reply.replyingTo"))
+                                .fontWeight(.semibold)
+                            if isGroup, let did = reply.senderDID {
+                                Text(members.resolveName(did: did))
+                                    .lineLimit(1)
+                            }
+                        }
+                        .font(.caption2)
+                        .foregroundStyle(.blue)
                         Text(reply.preview)
                             .font(.caption)
                             .lineLimit(2)
@@ -286,6 +301,20 @@ struct ChatThreadView: View {
 
     // MARK: - Helpers
 
+    /// 同一送信者の連続メッセージのうち先頭かどうか（送信者名は先頭のみ表示）
+    private func isFirstOfSenderRun(_ messages: [ChatMessageViewOrDeleted], at index: Int) -> Bool {
+        guard index > 0, let current = senderDID(messages[index]) else { return true }
+        return senderDID(messages[index - 1]) != current
+    }
+
+    private func senderDID(_ msg: ChatMessageViewOrDeleted) -> String? {
+        switch msg {
+        case .message(let m): return m.sender.did
+        case .deleted(let d): return d.sender.did
+        case .system: return nil
+        }
+    }
+
     private func messageID(_ msg: ChatMessageViewOrDeleted) -> String {
         switch msg {
         case .message(let m): return m.id
@@ -308,15 +337,17 @@ struct ReplyTargetSelection {
     let messageId: String
     let preview: String
     let isDeleted: Bool
+    var senderDID: String? = nil
 }
 
 // MARK: - SystemMessageBubbleView（システムメッセージ表示）
 
 struct SystemMessageBubbleView: View {
     let message: SystemMessageView
+    let members: [ChatMember]
 
     var body: some View {
-        Text(message.data.displayText())
+        Text(message.data.displayText(members: members))
             .font(.caption)
             .foregroundStyle(.secondary)
             .italic()
@@ -337,6 +368,8 @@ struct MessageBubbleView: View {
     let myDID: String
     let isGroup: Bool
     let members: [ChatMember]
+    var showsSenderName: Bool = true
+    var onTapSender: ((String) -> Void)? = nil
     let onDelete: (String) -> Void
     let onReaction: (String, String) -> Void  // (messageId, emoji)
     var onReply: ((ReplyTargetSelection) -> Void)? = nil
@@ -352,28 +385,32 @@ struct MessageBubbleView: View {
         }
     }
 
-    /// グループ内の送信者名を取得
-    private var senderName: String? {
-        guard isGroup, !isMine else { return nil }
-        let did: String
+    /// グループ内の送信者 DID（自分以外・連続投稿の先頭のみ）
+    private var senderDID: String? {
+        guard isGroup, !isMine, showsSenderName else { return nil }
         switch message {
-        case .message(let m): did = m.sender.did
-        case .deleted(let d): did = d.sender.did
+        case .message(let m): return m.sender.did
+        case .deleted(let d): return d.sender.did
         case .system: return nil
         }
-        return members.first { $0.did == did }?.displayNameOrHandle
     }
 
     var body: some View {
         HStack(alignment: .bottom, spacing: 0) {
             if isMine { Spacer(minLength: 40) }
             VStack(alignment: isMine ? .trailing : .leading, spacing: 2) {
-                // グループ会話では送信者名を表示（自分以外）
-                if let name = senderName {
-                    Text(name)
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                        .padding(.horizontal, 4)
+                // グループ会話では送信者名を表示（自分以外）。タップでプロフィールへ
+                if let did = senderDID {
+                    Button {
+                        onTapSender?(did)
+                    } label: {
+                        Text(members.resolveName(did: did))
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.horizontal, 4)
                 }
                 bubbleContent
                     .contextMenu {
@@ -390,7 +427,8 @@ struct MessageBubbleView: View {
                                     onReply(ReplyTargetSelection(
                                         messageId: m.id,
                                         preview: m.text,
-                                        isDeleted: false
+                                        isDeleted: false,
+                                        senderDID: m.sender.did
                                     ))
                                 } label: {
                                     Label(String(localized: "dm.reply.action"), systemImage: "arrowshape.turn.up.left")
@@ -441,9 +479,15 @@ struct MessageBubbleView: View {
                                     .fill(isMine ? Color.white.opacity(0.5) : Color.secondary.opacity(0.4))
                                     .frame(width: 2)
                                 VStack(alignment: .leading, spacing: 1) {
-                                    Text(String(localized: "dm.reply.replyingTo"))
-                                        .font(.caption2)
-                                        .fontWeight(.medium)
+                                    HStack(spacing: 4) {
+                                        Text(String(localized: "dm.reply.replyingTo"))
+                                            .fontWeight(.medium)
+                                        if isGroup {
+                                            Text(members.resolveName(did: replyTo.senderDID))
+                                                .lineLimit(1)
+                                        }
+                                    }
+                                    .font(.caption2)
                                     if replyTo.isDeleted {
                                         Text(String(localized: "dm.deletedMessage"))
                                             .font(.caption2)

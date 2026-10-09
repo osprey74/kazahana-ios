@@ -262,7 +262,7 @@ struct ConversationRowView: View {
                                 .foregroundStyle(.secondary)
                         }
 
-                        if let preview = convo.lastMessage?.previewText {
+                        if let preview = convo.lastMessage?.previewText(members: convo.members) {
                             Text(preview)
                                 .font(AppSettings.shared.fontSize.bodyFont)
                                 .foregroundStyle(.secondary)

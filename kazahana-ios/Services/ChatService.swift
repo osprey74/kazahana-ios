@@ -37,6 +37,16 @@ final class ChatService {
         return response.convo
     }
 
+    /// 会話メンバー一覧を取得する（`convo.members` は部分集合のことがあるため）
+    func getConvoMembers(convoId: String, cursor: String? = nil, limit: Int = 100) async throws -> GetConvoMembersResponse {
+        var params: [String: String] = ["convoId": convoId, "limit": "\(limit)"]
+        if let cursor { params["cursor"] = cursor }
+        return try await client.getWithProxy(
+            nsid: "chat.bsky.convo.getConvoMembers",
+            params: params
+        )
+    }
+
     // MARK: - メッセージ
 
     /// メッセージ一覧を取得する（新しい順）
