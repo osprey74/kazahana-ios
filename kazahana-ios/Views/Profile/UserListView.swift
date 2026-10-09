@@ -71,7 +71,12 @@ struct UserListView: View {
 
                             // 自分自身は非表示
                             if user.did != authVM.client.currentSession?.did {
-                                followButton(for: user)
+                                if case .following = listType {
+                                    // フォロー中一覧ではフォローボタンに代えて被フォロー状態を表示（Desktop 準拠）
+                                    followedByLabel(for: user)
+                                } else {
+                                    followButton(for: user)
+                                }
                             }
                         }
                         .task {
@@ -95,6 +100,17 @@ struct UserListView: View {
                 .environment(authVM)
         }
         .task { await loadInitial() }
+    }
+
+    // MARK: - 被フォロー表示
+
+    private func followedByLabel(for user: ProfileViewBasic) -> some View {
+        let followsYou = user.viewer?.followedBy != nil
+        return Text(followsYou ? String(localized: "profile.followsYou") : String(localized: "profile.notFollowsYou"))
+            .font(.caption2)
+            .foregroundStyle(followsYou ? Color.accentColor : Color.secondary)
+            .lineLimit(1)
+            .fixedSize()
     }
 
     // MARK: - フォローボタン

@@ -640,9 +640,21 @@ struct ProfileHeaderView: View {
                             BotBadge(size: 18)
                         }
                     }
-                    Text("@\(profile.handle)")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                    HStack(spacing: 6) {
+                        Text("@\(profile.handle)")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                        // 被フォロー表示（自分のプロフィール・ブロック中は非表示）
+                        if !isSelf, profile.viewer?.followedBy != nil, profile.viewer?.blocking == nil {
+                            Text(String(localized: "profile.followsYou"))
+                                .font(.caption2)
+                                .fontWeight(.medium)
+                                .foregroundStyle(.secondary)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(Color(.systemGray5), in: RoundedRectangle(cornerRadius: 4))
+                        }
+                    }
 
                     if let bio = profile.description, !bio.isEmpty {
                         Text(Self.profileBioAttributedString(bio))

@@ -12,6 +12,8 @@ final class ChatThreadViewModel {
     var isSending = false
     var errorMessage: String?
     var sendError: String?
+    /// 送信者・システムメッセージの名前解決に使うメンバー一覧（convo.members + getConvoMembers）
+    var members: [ChatMember]
 
     private var cursor: String?
     private var hasMore = true
@@ -19,9 +21,38 @@ final class ChatThreadViewModel {
     private let convoId: String
     private var pollingTask: Task<Void, Never>?
 
-    init(chatService: ChatService, convoId: String) {
+    init(chatService: ChatService, convoId: String, members: [ChatMember] = []) {
         self.chatService = chatService
         self.convoId = convoId
+        self.members = members
+    }
+
+    // MARK: - メンバー
+
+    /// getConvoMembers の全ページを取得し、既存メンバーにマージする（グループ会話用）
+    @MainActor
+    func loadMembers() async {
+        var fetched: [ChatMember] = []
+        var cursor: String?
+        do {
+            repeat {
+                let response = try await chatService.getConvoMembers(convoId: convoId, cursor: cursor)
+                fetched.append(contentsOf: response.members)
+                cursor = response.cursor
+            } while cursor != nil && fetched.count < 1000
+        } catch {
+            // 取得失敗時は convo.members のみで解決（短縮 DID にフォールバック）
+        }
+        guard !fetched.isEmpty else { return }
+        var merged = members
+        for member in fetched {
+            if let idx = merged.firstIndex(where: { $0.did == member.did }) {
+                merged[idx] = member
+            } else {
+                merged.append(member)
+            }
+        }
+        members = merged
     }
 
     // MARK: - 読み込み
