@@ -545,6 +545,8 @@ struct ProfileScreenView: View {
             }
             .padding(.horizontal, 8)
         }
+        // 縦配置のバー（iPhone Duo 等）の下にタブがはみ出さないよう、セーフエリア内に描画を制限
+        .clipped()
     }
 }
 
