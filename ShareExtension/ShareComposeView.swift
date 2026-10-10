@@ -1,5 +1,5 @@
 // ShareComposeView.swift
-// Share​Extension
+// ShareExtension
 // 共有シートから受け取ったコンテンツを Bluesky に投稿するための軽量 UI
 
 import SwiftUI

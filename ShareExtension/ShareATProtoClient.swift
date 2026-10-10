@@ -1,5 +1,5 @@
 // ShareATProtoClient.swift
-// Share​Extension
+// ShareExtension
 // Share Extension 用軽量 AT Protocol クライアント
 
 import Foundation

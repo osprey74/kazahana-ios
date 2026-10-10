@@ -81,7 +81,7 @@
 			exceptions = (
 				C0365D5C2F6E520900700B14 /* Exceptions for "Share​Extension" folder in "Share​Extension" target */,
 			);
-			path = "Share​Extension";
+			path = ShareExtension;
 			sourceTree = "<group>";
 		};
 		C0D362162F6A388000E5A980 /* kazahana-ios */ = {
@@ -397,12 +397,12 @@
 		C0365D5A2F6E520900700B14 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CODE_SIGN_ENTITLEMENTS = "Share​Extension​/​Share​Extension​.entitlements";
+				CODE_SIGN_ENTITLEMENTS = ShareExtension/ShareExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 28;
 				DEVELOPMENT_TEAM = 9L6A9KDH5P;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = "Share​Extension/Info.plist";
+				INFOPLIST_FILE = ShareExtension/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = kazahana;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -428,12 +428,12 @@
 		C0365D5B2F6E520900700B14 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CODE_SIGN_ENTITLEMENTS = "Share​Extension​/​Share​Extension​.entitlements";
+				CODE_SIGN_ENTITLEMENTS = ShareExtension/ShareExtension.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 28;
 				DEVELOPMENT_TEAM = 9L6A9KDH5P;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = "Share​Extension/Info.plist";
+				INFOPLIST_FILE = ShareExtension/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = kazahana;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (

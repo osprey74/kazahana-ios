@@ -1,5 +1,5 @@
 // ShareModels.swift
-// Share​Extension
+// ShareExtension
 // Share Extension が必要とする型の定義（メインアプリとの共通型）
 
 import Foundation

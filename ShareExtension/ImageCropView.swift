@@ -1,5 +1,5 @@
 // ImageCropView.swift
-// Share​Extension
+// ShareExtension
 // 画像クロップエディタ（フルスクリーンカバー）
 
 import SwiftUI
