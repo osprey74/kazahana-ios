@@ -6,7 +6,7 @@
 //
 
 import Testing
-@testable import kazahana_ios
+@testable import kazahana
 
 struct kazahana_iosTests {
 
