@@ -9,8 +9,9 @@ import XCTest
 
 final class kazahana_iosUITestsLaunchTests: XCTestCase {
 
+    // Xcode 27.0 では true にすると同一構成（ライト × 縦/横）を際限なく繰り返し、テストが終了しないため false にする
     override class var runsForEachTargetApplicationUIConfiguration: Bool {
-        true
+        false
     }
 
     override func setUpWithError() throws {
