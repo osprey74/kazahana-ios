@@ -1,6 +1,6 @@
 # kazahana-ios 開発タスク・進捗記録
 
-最終更新: 2026-06-24 (v3.7.0 — v3.6.0 テスターフィードバック15件対応)
+最終更新: 2026-10-10 (v3.7.1〜v3.8.1 の記録を追加、iPhone Duo 対応確認 — Xcode 27.1 RC で表示検証・フィードタブ帯のはみ出し修正)
 
 ---
 
@@ -22,6 +22,10 @@
 - Phase 13 (グループチャット・QR コード): 全機能 ✅ 完了（v3.4.0）
 - Phase 14 (v3.5.0 機能): OGP charset 修正・チャット返信・引用タップ・返信先表示 ✅ 完了（v3.5.0）
 - Phase 15 (v3.7.0 機能): v3.6.0 テスターフィードバック15件対応 ✅ 完了（v3.7.0）
+- Phase 15 追加対応 (v3.7.1〜v3.7.3): テスターフィードバック追加対応 ✅ 完了（v3.7.3）
+- Phase 16 (v3.8.0 機能): 動画ALTテキスト表示・OPスレッドバッジ・メンション通知修正 ✅ 完了（v3.8.0）
+- Phase 17 (v3.8.1 機能): 被フォロー表示・グループチャット送信者表示（Desktop parity）✅ 完了（v3.8.1 審査提出済み）
+- Phase 18 (iPhone Duo 対応): 表示検証・フィードタブ帯修正 ✅ 完了（次期リリース）
 - App Store 準備: バージョン 1.1.0・Bundle ID 統一（Keychain/IAP/BGTask/CFBundleURLName）・プライバシーポリシー公開・審査用アカウント作成・v1.0 リリース完了 ✅
 
 ---
@@ -820,6 +824,78 @@
 
 ### データ
 - [x] **タイムラインパースエラー解消** — `SafeDecodable<FeedViewPost>` ラッパー導入、`PostEmbed` に try/catch フォールバック追加
+
+---
+
+## Phase 15 追加対応: v3.7.1〜v3.7.3 テスターフィードバック対応（2026-06-29〜2026-08-23）— 完了 ✅
+
+> 実装: commit `8347392` / `a909dec` / `25b62cf`（v3.7.1）、`4c55a29` / `4fb5f5d`（v3.7.2 build 25）、`ee4b475`（v3.7.3 build 26）
+
+### v3.7.1（2026-06-29）
+- [x] **フィード切替スワイプ改善（iOS）** — `DragGesture` から `TabView(.page)` に変更し、ネイティブのページングスワイプ（慣性・ライブフィードバック）を実現
+- [x] **フィード非表示バグ修正** — `showAllFeedsInSelector = true` 時に `hiddenFeedURIs` が無視されていた問題を解消
+- [x] **フィード管理刷新** — `savedFeedsPrefV2` を正本とし、Bluesky 側のフォロー/削除が管理画面に反映されるよう修正。↺ボタンは `.task(id:)` で確実に再取得
+- [x] **フィード選択の表示修正** — `showAllFeedsInSelector` ON/OFF の表示ロジック修正、OFF 時にドロップダウンボタンが消える問題を修正、「閉じる」ボタンを左上に統一
+- [x] **Share Extension** — クロップ・ALT テキスト設定に対応、画像プレビューを3列グリッド化・個別削除ボタン追加
+- [x] **新規投稿の画像プレビュー** — 3列グリッドに変更
+- [x] **ATProtoClient** — URL キャッシュを無効化し、リフレッシュ時に最新データを取得
+- [x] **macOS D&D** — `.onDrop` による画像・動画のドラッグ＆ドロップ添付と PNG ドロップ失敗の修正（`loadFileRepresentation` 方式）を実装したが、ボタンクリックを奪うため v3.7.1 で削除（「将来タスク」参照）
+
+### v3.7.2（2026-07-05）
+- [x] **アニメーション GIF** — ImageIO でフレーム抽出・再生する `AnimatedImageView` を追加。アップロード時は GIF データを保持し JPEG 変換をスキップ
+- [x] **macOS 二重起動** — `MacSceneDelegate` で既存シーンをチェックし重複シーンを破棄
+- [x] **macOS 自動ログイン** — `SessionStore.load()` に App Group UserDefaults キャッシュのフォールバックを追加（Keychain ロック時対応）
+- [x] **macOS チャットのキーアサイン** — Enter 改行／Shift+Enter 送信（`CatalystChatTextEditor`）
+
+### v3.7.3（2026-08-23）
+- [x] **macOS 二重起動防止の強化** — `flock` によるプロセスレベルの排他制御を追加（`LSMultipleInstancesProhibited` のフォールバック）
+
+---
+
+## Phase 16: v3.8.0 機能（2026-09-05）— 完了 ✅
+
+> 実装: commit `4ea6808` — v3.8.0
+
+- [x] **動画 ALT テキスト表示** — サムネイル左下に ALT バッジ + 動画下に ALT テキスト本文（タイムライン / スレッド / 通知 / 引用投稿内の全表示面）
+- [x] **動画 ALT 入力 UI** — 投稿作成画面の動画プレビューに ALT ボタン + 編集シート
+- [x] **引用投稿内メディア描画** — `QuoteEmbedView` に画像 / 動画 / リンクカードを表示（`EmbedRecordView` に embeds フィールド追加）
+- [x] **OP スレッド番号付けバッジ** — `FeedViewPost` の `opThreadPostIndex` / `opThreadPostCount` を読み取り、著者行に「2/3」形式のバッジ（`OpThreadBadge`）
+- [x] **メンション通知修正** — プロフィールからの自動メンション挿入で DID を `resolvedMentions` に渡し、正しいファセットを生成
+- [x] **Catalyst 機能強化の実現性検討** — システムトレイ / D&D の検討結果を「将来タスク」に記録
+
+---
+
+## Phase 17: v3.8.1 機能 — Desktop parity（2026-10-10）— 完了 ✅
+
+> 実装: commit `ccce8dc`（kazahana-ios#2）— v3.8.1 (build 28)、iOS / macOS とも審査提出済み
+
+- [x] **被フォロー表示** — プロフィールのハンドル横に「あなたをフォローしています」バッジ（`viewer.followedBy`、自分のプロフィール・ブロック中は非表示）
+- [x] **フォロー中一覧の被フォロー表示** — フォローボタンに代えて「あなたをフォローしています / あなたをフォローしていません」を表示（Desktop `FollowingList` 準拠）
+- [x] **グループチャットの送信者表示** — `chat.bsky.convo.getConvoMembers` を `convo.members` にマージし、同一送信者の連続投稿の先頭のみ送信者名を表示、タップでプロフィールへ。名前解決は 表示名 → ハンドル → 短縮 DID
+- [x] **システムメッセージのデコード修正** — `systemMessageReferredUser`（DID のみ）を `ChatMember` としてデコードしていたため、メンバー追加・退出等のシステムメッセージが破棄されていた不具合を修正
+- [x] **i18n** — `profile.followsYou` / `profile.notFollowsYou` を 11 言語で追加
+- 見送り: アバター表示・「5 分以内」ブロック化（Android と同じく要件緩和、kazahana#22）
+
+---
+
+## Phase 18: iPhone Duo 対応（2026-10-10）— 完了 ✅
+
+> 実装: commit `3501214`（kazahana-ios#3）— 次期リリースに含まれる。PLATFORM_MATRIX 更新: kazahana#24
+
+### 検証環境
+- [x] **Xcode 27.1 RC を併設** — `/Applications/Xcode-27.1.app`（`xcode-select` は 27.0 正式版のまま）。iOS 27.1 シミュレータの iPhone Duo で検証
+- [x] **ビルド確認** — Xcode 27.1 RC（iPhone Duo）・Xcode 27.0（iOS Simulator / Mac Catalyst）でビルド成功
+
+### 表示検証
+- [x] **外側ディスプレイ（縦・横）** — 全幅で正常表示。タブバー・ツールバーは側面に縦配置（システム標準 `TabView` / `toolbar` で自動対応）
+- [x] **内側ディスプレイ（縦・横）** — 全幅で正常表示。横画面は iPad 版と同じく右端のバー領域を除き全幅（最大幅制限は Catalyst のみ）
+- [x] **一部折りたたみ（縦の折り目）** — レイアウト変化なし。縦スクロールのタイムラインのため HIG 上許容と判断
+
+### 修正
+- [x] **フィードタブ帯のはみ出し修正** — 横スクロールのフィードタブ帯がセーフエリア外（側面のステータスバー下）まで描画されていたため `.clipped()` を追加（`TimelineView.swift`）
+
+### 将来検討
+- [ ] **折りたたみ領域（ReservedRegion）対応** — 一部折りたたみ時に画像・ボタン等を折り目から避ける個別レイアウト（必要性が出たら検討）
 
 ---
 
