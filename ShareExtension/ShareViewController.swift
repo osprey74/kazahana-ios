@@ -1,5 +1,5 @@
 // ShareViewController.swift
-// Share​Extension
+// ShareExtension
 // 共有シートのエントリポイント — SwiftUI の ShareComposeView をホストする
 
 import UIKit
