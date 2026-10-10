@@ -290,6 +290,8 @@ struct TimelineView: View {
                         }
                     }
                 }
+                // 縦配置のバー（iPhone Duo 等）の下にタブがはみ出さないよう、セーフエリア内に描画を制限
+                .clipped()
                 .background(Color(.systemBackground))
                 .overlay(alignment: .bottom) { Divider() }
                 .onChange(of: viewModel.currentFeed) { _, _ in
