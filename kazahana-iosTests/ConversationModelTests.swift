@@ -117,16 +117,21 @@ struct SystemMessageDataTests {
         }
     }
 
-    @Test func ロック解除を読み込む() throws {
+    @Test func ロック解除をロックと区別して読み込む() throws {
+        // "UnlockConvo" も "lockConvo" で終わるため、以前はロックとして読み込まれていた
         let result = try data("systemMessageDataUnlockConvo", #", "unlockedBy": { "did": "did:plc:a" }"#)
-        // "UnlockConvo" は "lockConvo" で終わるため、ロックの分岐に先に一致してしまう不具合がある
-        withKnownIssue("ロック解除がロックとして読み込まれる（SystemMessageData の判定順の不具合）") {
-            guard case .unlockConvo(let actor) = result else {
-                Issue.record("unlockConvo になっていない: \(result)")
-                return
-            }
-            #expect(actor?.did == "did:plc:a")
+        guard case .unlockConvo(let actor) = result else {
+            Issue.record("unlockConvo になっていない: \(result)")
+            return
         }
+        #expect(actor?.did == "did:plc:a")
+    }
+
+    @Test func ロック解除の表示文言はロックと異なる() throws {
+        let unlock = try data("systemMessageDataUnlockConvo").displayText(members: [])
+        let lock = try data("systemMessageDataLockConvo").displayText(members: [])
+        #expect(!unlock.isEmpty)
+        #expect(unlock != lock)
     }
 
     @Test func 未知のtypeはunknownにする() throws {

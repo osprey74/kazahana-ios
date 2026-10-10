@@ -111,10 +111,8 @@ struct PrefectureTests {
     }
 
     @Test func 空文字は一致しない() {
-        // hasPrefix("") は常に true のため、先頭の北海道に一致してしまう不具合がある
-        withKnownIssue("空文字が北海道に一致する（Prefecture.from(partialName:) の不具合）") {
-            #expect(Prefecture.from(partialName: "") == nil)
-        }
+        // hasPrefix("") は常に true のため、以前は先頭の北海道に一致していた
+        #expect(Prefecture.from(partialName: "") == nil)
     }
 }
 

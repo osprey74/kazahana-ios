@@ -414,14 +414,15 @@ enum SystemMessageData: Codable {
             self = .memberLeave(actor: actor)
         } else if type_.hasSuffix("LockConvoPermanently") || type_.hasSuffix("lockConvoPermanently") {
             self = .lockConvoPermanently
+        } else if type_.hasSuffix("UnlockConvo") || type_.hasSuffix("unlockConvo") {
+            // "UnlockConvo" も "lockConvo" で終わるため、LockConvo より先に判定する
+            let actor = try container.decodeIfPresent(SystemMessageUser.self, forKey: .unlockedBy)
+                ?? container.decodeIfPresent(SystemMessageUser.self, forKey: .actor)
+            self = .unlockConvo(actor: actor)
         } else if type_.hasSuffix("LockConvo") || type_.hasSuffix("lockConvo") {
             let actor = try container.decodeIfPresent(SystemMessageUser.self, forKey: .lockedBy)
                 ?? container.decodeIfPresent(SystemMessageUser.self, forKey: .actor)
             self = .lockConvo(actor: actor)
-        } else if type_.hasSuffix("UnlockConvo") || type_.hasSuffix("unlockConvo") {
-            let actor = try container.decodeIfPresent(SystemMessageUser.self, forKey: .unlockedBy)
-                ?? container.decodeIfPresent(SystemMessageUser.self, forKey: .actor)
-            self = .unlockConvo(actor: actor)
         } else if type_.hasSuffix("EditGroup") || type_.hasSuffix("editGroup") {
             let actor = try container.decodeIfPresent(SystemMessageUser.self, forKey: .actor)
             self = .editGroup(actor: actor)

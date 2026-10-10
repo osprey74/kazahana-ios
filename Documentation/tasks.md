@@ -27,6 +27,7 @@
 - Phase 17 (v3.8.1 機能): 被フォロー表示・グループチャット送信者表示（Desktop parity）✅ 完了（v3.8.1 審査提出済み）
 - Phase 18 (iPhone Duo 対応): 表示検証・フィードタブ帯修正 ✅ 完了（次期リリース）
 - リポジトリ整理 (2026-10-10): ShareExtension フォルダ整理・単体テストのビルド修正 ✅ 完了
+- 単体テスト (2026-10-10): モデル・サービス層 91 件、テストで見つかった不具合 2 件を修正 ✅ 完了
 - App Store 準備: バージョン 1.1.0・Bundle ID 統一（Keychain/IAP/BGTask/CFBundleURLName）・プライバシーポリシー公開・審査用アカウント作成・v1.0 リリース完了 ✅
 
 ---
@@ -918,11 +919,30 @@
 
 ---
 
+## 単体テスト（2026-10-10）— 完了 ✅
+
+> Swift Testing。ネットワーク・Keychain に依存しない処理が対象。iOS 27.0 / 27.1（iPhone Duo）で 91 件成功
+
+- [x] **RichTextParser** — Facet 検出の UTF-8 バイト位置（日本語・絵文字）、URL の全角句読点での終端、メンション・ハッシュタグ、`buildFacets`、AttributedString へのリンク付与
+- [x] **投稿モデル** — `SafeDecodable` による壊れた投稿のスキップ、OP スレッド位置、`$via`、Facet、embed（画像・ギャラリー・外部リンク・動画・unknown）
+- [x] **チャット** — 短縮 DID、名前解決、メッセージ種別、DID のみの参照ユーザー、システムメッセージ種別
+- [x] **BSAF・避難誘導** — タグ解析、フィルタ、重複キー、GitHub URL 変換、Bot 定義、避難誘導判定
+- [x] **避難所・都道府県** — 距離・方位角、最近傍検索、距離表示、都道府県検索
+- [x] **モデレーション** — システムラベル、打ち消しラベル、成人向け・グラフィック設定（App Group の設定は各テストで復元）
+- [x] **リンクプレビュー・セッション** — Standard Site URI 抽出、文字コード判定、DID ドキュメントからの PDS 解決
+- [x] **UI 起動テストの無限ループ回避** — Xcode 27.0 で `runsForEachTargetApplicationUIConfiguration = true` が同一構成を繰り返し終了しないため `false` に変更
+
+### テストで見つかった不具合の修正
+- [x] **チャットの「ロック解除」が「ロック」と表示される** — `SystemMessageData` で `UnlockConvo` が `lockConvo` の末尾一致に先に掛かっていた。判定順を修正
+- [x] **`Prefecture.from(partialName: "")` が北海道に一致する** — 空文字を除外
+
+---
+
 ## 既知の課題・TODO
 
 - [x] **ブックマーク**: `app.bsky.bookmark.*` API で実装済み（PostCardView / ThreadView ボタン + プロフィールタブ）
 - [ ] **画像読み込み**: 現在 `AsyncImage` を使用。Kingfisher or Nuke の導入を検討
-- [ ] **Unit Tests**: ビルドは修正済み（2026-10-10）だが、テストはテンプレートの空テスト 1 件のみ。モデル・サービス層のテストを追加予定
+- [x] **Unit Tests**: モデル・サービス層の単体テスト 91 件を追加（2026-10-10）。ネットワーク層（ATProtoClient 等）は未対象
 - [x] **Bundle ID**: `com.osprey74.kazahana-ios` のまま使用（変更しない方針に決定）
 - [ ] **検索デバウンス**: SearchViewModel は Task キャンセルで対応しているが、厳密なデバウンス実装は未対応
 
