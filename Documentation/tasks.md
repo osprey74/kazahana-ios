@@ -1,6 +1,6 @@
 # kazahana-ios 開発タスク・進捗記録
 
-最終更新: 2026-10-10 (v3.7.1〜v3.8.1 の記録を追加、iPhone Duo 対応確認 — Xcode 27.1 RC で表示検証・フィードタブ帯のはみ出し修正)
+最終更新: 2026-10-10 (v3.7.1〜v3.8.1 の記録を追加、iPhone Duo 対応確認、ShareExtension フォルダ整理・単体テストのビルド修正)
 
 ---
 
@@ -26,6 +26,7 @@
 - Phase 16 (v3.8.0 機能): 動画ALTテキスト表示・OPスレッドバッジ・メンション通知修正 ✅ 完了（v3.8.0）
 - Phase 17 (v3.8.1 機能): 被フォロー表示・グループチャット送信者表示（Desktop parity）✅ 完了（v3.8.1 審査提出済み）
 - Phase 18 (iPhone Duo 対応): 表示検証・フィードタブ帯修正 ✅ 完了（次期リリース）
+- リポジトリ整理 (2026-10-10): ShareExtension フォルダ整理・単体テストのビルド修正 ✅ 完了
 - App Store 準備: バージョン 1.1.0・Bundle ID 統一（Keychain/IAP/BGTask/CFBundleURLName）・プライバシーポリシー公開・審査用アカウント作成・v1.0 リリース完了 ✅
 
 ---
@@ -899,11 +900,29 @@
 
 ---
 
+## リポジトリ整理（2026-10-10）— 完了 ✅
+
+> 実装: commit `ff6965a`（kazahana-ios#4）、`105a536`、`0979721`
+
+### ShareExtension フォルダ整理
+- [x] **ゼロ幅スペース（U+200B）入りのフォルダを解消** — ソースフォルダ `Share<ZWSP>Extension/` を `ShareExtension/` に改名し、`project.pbxproj` の同期フォルダ・`INFOPLIST_FILE`・`CODE_SIGN_ENTITLEMENTS` を更新
+- [x] **エンタイトルメントの一本化** — 実際に使われていた `Share<ZWSP>Extension<ZWSP>/` 内のファイルを同内容の `ShareExtension/ShareExtension.entitlements` に統合。未使用の旧エンタイトルメント（旧 `ShareExtension/`、`kazahana<ZWSP>-ios<ZWSP>/`）を削除
+- [x] **Swift ファイル先頭コメント・pbxproj のフォルダ参照コメント** のゼロ幅スペースを除去
+- [x] **動作確認** — ビルド後のエンタイトルメント（App Group / keychain-access-groups）が整理前と同一。シミュレータで Safari → 共有シート → kazahana → 投稿画面（本文・リンクカード OGP 取得）→ キャンセルまで確認（投稿は未実行）
+
+### 単体テスト
+- [x] **ビルドエラー修正** — テンプレートのまま `@testable import kazahana_ios` になっていたのを、本体のモジュール名 `kazahana` に修正。`kazahana-iosTests` のビルド・実行が成功
+
+### 残課題
+- [ ] **ターゲット名・プロダクト名のゼロ幅スペース** — `Share<ZWSP>Extension` ターゲット / `.appex` / スキーム名に残存。変更すると `.appex` 名と Swift モジュール名が変わり Info.plist の `$(PRODUCT_MODULE_NAME).ShareViewController` にも影響するため、v3.8.1 審査完了後に別作業で対応
+
+---
+
 ## 既知の課題・TODO
 
 - [x] **ブックマーク**: `app.bsky.bookmark.*` API で実装済み（PostCardView / ThreadView ボタン + プロフィールタブ）
 - [ ] **画像読み込み**: 現在 `AsyncImage` を使用。Kingfisher or Nuke の導入を検討
-- [ ] **Unit Tests**: テストは空のまま。モデル・サービス層のテストを追加予定
+- [ ] **Unit Tests**: ビルドは修正済み（2026-10-10）だが、テストはテンプレートの空テスト 1 件のみ。モデル・サービス層のテストを追加予定
 - [x] **Bundle ID**: `com.osprey74.kazahana-ios` のまま使用（変更しない方針に決定）
 - [ ] **検索デバウンス**: SearchViewModel は Task キャンセルで対応しているが、厳密なデバウンス実装は未対応
 
