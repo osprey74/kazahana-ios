@@ -62,7 +62,22 @@ git clone https://github.com/osprey74/kazahana-ios.git
 
 # Xcode で開く
 open kazahana-ios.xcodeproj
+
+# 単体テストの実行
+xcodebuild test -project kazahana-ios.xcodeproj -scheme kazahana-ios \
+  -destination 'platform=iOS Simulator,name=iPhone 18 Pro' \
+  -only-testing:kazahana-iosTests
 ```
+
+### ディレクトリ構成
+
+| パス | 内容 |
+|------|------|
+| `kazahana-ios/` | 本体アプリ（iOS / Mac Catalyst） |
+| `ShareExtension/` | Share Extension（他アプリからの投稿） |
+| `kazahana-iosTests/` | 単体テスト（Swift Testing） |
+| `kazahana-iosUITests/` | UI テスト |
+| `Documentation/` | 開発タスク・進捗記録（`tasks.md`） |
 
 ## 関連プロジェクト
 

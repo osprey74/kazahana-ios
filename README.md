@@ -62,7 +62,22 @@ git clone https://github.com/osprey74/kazahana-ios.git
 
 # Open in Xcode
 open kazahana-ios.xcodeproj
+
+# Run unit tests
+xcodebuild test -project kazahana-ios.xcodeproj -scheme kazahana-ios \
+  -destination 'platform=iOS Simulator,name=iPhone 18 Pro' \
+  -only-testing:kazahana-iosTests
 ```
+
+### Project Structure
+
+| Path | Contents |
+|------|----------|
+| `kazahana-ios/` | Main app (iOS / Mac Catalyst) |
+| `ShareExtension/` | Share Extension (post from other apps) |
+| `kazahana-iosTests/` | Unit tests (Swift Testing) |
+| `kazahana-iosUITests/` | UI tests |
+| `Documentation/` | Development tasks and progress (`tasks.md`) |
 
 ## Related Projects
 
