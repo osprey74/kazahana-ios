@@ -114,6 +114,8 @@ enum Prefecture: String, CaseIterable, Codable {
 
     /// 都道府県名から検索（部分一致: "東京" → .tokyo）
     static func from(partialName: String) -> Prefecture? {
-        allCases.first { $0.displayName.hasPrefix(partialName) || partialName.hasPrefix($0.displayName) }
+        // 空文字は hasPrefix("") が常に true となり先頭（北海道）に一致してしまうため除外
+        guard !partialName.isEmpty else { return nil }
+        return allCases.first { $0.displayName.hasPrefix(partialName) || partialName.hasPrefix($0.displayName) }
     }
 }
