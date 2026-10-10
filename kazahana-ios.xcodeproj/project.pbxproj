@@ -59,7 +59,7 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		C0365D5C2F6E520900700B14 /* Exceptions for "Share​Extension" folder in "Share​Extension" target */ = {
+		C0365D5C2F6E520900700B14 /* Exceptions for "ShareExtension" folder in "Share​Extension" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
@@ -76,10 +76,10 @@
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		C0365D4F2F6E520900700B14 /* Share​Extension */ = {
+		C0365D4F2F6E520900700B14 /* ShareExtension */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				C0365D5C2F6E520900700B14 /* Exceptions for "Share​Extension" folder in "Share​Extension" target */,
+				C0365D5C2F6E520900700B14 /* Exceptions for "ShareExtension" folder in "Share​Extension" target */,
 			);
 			path = ShareExtension;
 			sourceTree = "<group>";
@@ -152,7 +152,7 @@
 				C0D362162F6A388000E5A980 /* kazahana-ios */,
 				C0D362262F6A388100E5A980 /* kazahana-iosTests */,
 				C0D362302F6A388100E5A980 /* kazahana-iosUITests */,
-				C0365D4F2F6E520900700B14 /* Share​Extension */,
+				C0365D4F2F6E520900700B14 /* ShareExtension */,
 				C0D362152F6A388000E5A980 /* Products */,
 				C06006792F6A410A00EC6BCF /* Documentation */,
 			);
@@ -185,7 +185,7 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				C0365D4F2F6E520900700B14 /* Share​Extension */,
+				C0365D4F2F6E520900700B14 /* ShareExtension */,
 			);
 			name = "Share​Extension";
 			packageProductDependencies = (
