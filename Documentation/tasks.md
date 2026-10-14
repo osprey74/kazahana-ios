@@ -1,6 +1,6 @@
 # kazahana-ios 開発タスク・進捗記録
 
-最終更新: 2026-10-13 (v3.9.0 iOS 版が審査通過・ストア公開)
+最終更新: 2026-10-14 (iPadOS 27 ウィンドウリサイズ対応の確認タスクを登録)
 
 ---
 
@@ -28,6 +28,7 @@
 - Phase 18 (iPhone Duo 対応): 表示検証・フィードタブ帯／プロフィールタブ帯の修正 ✅ 完了（v3.9.0 iOS 版 公開済み 2026-10-13）
 - リポジトリ整理 (2026-10-10): ShareExtension フォルダ整理・単体テストのビルド修正 ✅ 完了
 - 単体テスト (2026-10-10): モデル・サービス層 91 件、テストで見つかった不具合 2 件を修正 ✅ 完了
+- iPadOS 27 ウィンドウリサイズ対応 (2026-10-14 登録): 必須改修なし、任意対応 1 件・動作確認 3 件 ⬜ 未着手
 - App Store 準備: バージョン 1.1.0・Bundle ID 統一（Keychain/IAP/BGTask/CFBundleURLName）・プライバシーポリシー公開・審査用アカウント作成・v1.0 リリース完了 ✅
 
 ---
@@ -946,6 +947,22 @@
 - [x] **チャットの「ロック解除」が「ロック」と表示される** — `SystemMessageData` で `UnlockConvo` が `lockConvo` の末尾一致に先に掛かっていた。判定順を修正
   - 2026-10-10 シミュレータ（iPhone Duo / iOS 27.1）でテスト用グループを作成し、ロック → ロック解除を操作。チャットに「グループがロックされました」→「ロックが解除されました」と表示され、解除後に入力欄が戻ることを確認（kazahana-ios#5）
 - [x] **`Prefecture.from(partialName: "")` が北海道に一致する** — 空文字を除外
+
+---
+
+## iPadOS 27 ウィンドウリサイズ対応（2026-10-14 登録）— 未着手
+
+> 背景: iOS 27 / iPadOS 27 SDK 以降、`UIRequiresFullScreen = YES` を指定しても全画面固定にならず、ウィンドウはリサイズされる（ドラッグ終了時にまとめて変わる「段階的リサイズ」）。Apple の TN3192（2026-10-09 更新）による。kazahana-ios はこのキーを使っておらず iPadOS 26 から自由リサイズ対象のため、**必須改修はなし**（2026-10-14 調査）
+> - 調査結果: `UIRequiresFullScreen` 未設定、起動画面あり（`UILaunchScreen_Generation`）、iPad は 4 方向対応、`UIScreen` 直参照なし、最小サイズ制限（400×600）は Catalyst のみ
+> - 参考: [TN3192](https://developer.apple.com/documentation/technotes/tn3192-migrating-your-app-from-the-deprecated-uirequiresfullscreen-key)、WWDC25 Session 282、WWDC26 Session 278
+
+### 任意対応
+- [ ] **iPhone の画面向きに PortraitUpsideDown を追加** — TN3192 は自由リサイズの条件に「全方向の画面向きに対応」を挙げている。iPhone は `INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone` に上下逆さまがない（`project.pbxproj` の 2 か所）。ホームボタンのない iPhone ではシステムが上下逆さまを除外するため、影響はホームボタンのある機種のみ。「4 方向のうち欠けがあると自由リサイズの対象外」とする第三者ブログ（beta 4 時点）の記述は未確認
+
+### 動作確認（iPadOS 27 シミュレータ）
+- [ ] **ウィンドウを最小まで縮めたときの表示** — タイムライン・スレッド・プロフィール・DM・設定。極端に縦が短い場合も確認
+- [ ] **シート・全画面系の表示** — 投稿作成・画像ビューア・動画プレーヤー・プロフィール QR（240pt 固定）・避難誘導コンパス（220pt 固定）
+- [ ] **リサイズ中・後の状態保持** — スクロール位置・入力中の内容がリサイズ後も保たれるか
 
 ---
 
