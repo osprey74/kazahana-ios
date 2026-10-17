@@ -995,6 +995,8 @@
 ### 見つかった不具合
 - [x] **`kazahana://post/<AT-URI>` が開けない** — パーセントエンコードした AT-URI を渡すと `url.pathComponents` がデコード後に `/` で分割し、`at:` だけが残っていた（「Invalid at-url (got "at:")」）。生のパス（`percentEncodedPath`）から AT-URI を復元する `MainTabView.postURI(fromDeepLink:)` を追加。未エンコードの AT-URI も受け付ける
   - 単体テスト 3 件を追加（`DeepLinkTests.swift`、全 94 件成功）。2026-10-17 シミュレータで `kazahana://post/<エンコード済み AT-URI>` を開き、3 段のスレッドが返信線つきで表示されることを確認
+- [x] **新規作成したリストがフィード選択に出ない** — v3.7.1（`25b62cf`）で preferences（`savedFeedsPrefV2`）を正本にした際、自分のキュレーションリストをマージする処理も削除していた。作成しただけのリストは preferences に入らないため、Desktop では選べるのに iOS / macOS では選べなかった。`FeedService.getAllSavedFeedItems` に `getMyLists(actor:)` のマージ（重複除去）を戻した（Desktop `useMyLists` と同じ方式）。自分のリストは削除すれば `getLists` から消えるため、フォロー解除したリストの自動消去とは衝突しない
+  - 2026-10-17 @osprey74.com でブラウザから新規作成したリスト（preferences 未保存）がホームフィード管理・フィード選択に表示され、選択してタイムラインが表示されることを iOS シミュレータ（iPhone 17 Pro Max）と macOS 版で確認
 
 ---
 

@@ -372,6 +372,16 @@ struct FeedService {
             }
         }
 
+        // Step 4: 自分のキュレーションリストをマージ（重複除去）
+        // 作成しただけのリストは preferences に入らないため（Desktop の useMyLists と同じ方式）
+        // 自分のリストは削除すれば getLists から消えるので、Step 3 の自動消去とは衝突しない
+        let myLists = (try? await getMyLists(actor: actor)) ?? []
+        var seen = Set<String>(savedLists.map { $0.uri })
+        for list in myLists where !seen.contains(list.uri) {
+            seen.insert(list.uri)
+            savedLists.append(list)
+        }
+
         return (feeds: feeds, lists: savedLists)
     }
 }
