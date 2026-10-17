@@ -1,6 +1,6 @@
 # kazahana-ios 開発タスク・進捗記録
 
-最終更新: 2026-10-17 (v3.9.1: 返信の root 修正、macOS スクロール時クラッシュの調査を登録)
+最終更新: 2026-10-17 (v3.9.1: 返信の root 修正・ディープリンク修正、macOS スクロール時クラッシュの調査を登録)
 
 ---
 
@@ -29,7 +29,7 @@
 - リポジトリ整理 (2026-10-10): ShareExtension フォルダ整理・単体テストのビルド修正 ✅ 完了
 - 単体テスト (2026-10-10): モデル・サービス層 91 件、テストで見つかった不具合 2 件を修正 ✅ 完了
 - iPadOS 27 ウィンドウリサイズ対応 (2026-10-14 登録): 必須改修なし、任意対応 1 件・動作確認 3 件 ⬜ 未着手
-- v3.9.1 バグ修正 (2026-10-17 登録): 返信の root 修正 ✅、macOS スクロール時クラッシュ調査・ディープリンク修正 ⬜ 対応中
+- v3.9.1 バグ修正 (2026-10-17 登録): 返信の root 修正・ディープリンク修正 ✅、macOS スクロール時クラッシュ調査 ⬜ 対応中
 - App Store 準備: バージョン 1.1.0・Bundle ID 統一（Keychain/IAP/BGTask/CFBundleURLName）・プライバシーポリシー公開・審査用アカウント作成・v1.0 リリース完了 ✅
 
 ---
@@ -975,12 +975,14 @@
 - [x] **返信レコードの `root` を修正** — 返信先が返信のときも、返信先の投稿を `root` にしていた（初回コミットから）。会話の 2 段目以降への返信が別スレッドへの返信として扱われ、kazahana では返信線が出ず、公式 Web では前後の会話が表示されなかった。返信先の `record.reply.root` があればそれを使うよう修正（`ComposeView.swift`、Desktop `PostActions.tsx` と同じ方式）
   - 2026-10-17 シミュレータ（iPhone 17 Pro Max）で @kazahana.app から @osprey74.com の投稿へ 2 段の返信を作成。3 段目のレコードの `reply.root` が元投稿、`reply.parent` が 2 段目を指すこと、`getPostThread` で 3 段がつながることを公開 API で確認
   - 修正前に投稿された返信のレコードは直らない
+  - 2026-10-17 kazahana の画面で返信線が表示されることを目視確認
 
 ### スクロール時のクラッシュ（macOS）
 - [ ] **原因調査** — `UIScrollEvent _adjustedDeltaForPanWithAcceleration:honoringScrollDirectionPreference:` で例外。アプリのフレームは `App.main` のみで、Mac Catalyst 内部の不具合と推定（未確定）。ユーザーに入力機器・スクロール補助アプリ・ナチュラルスクロール設定・画面・頻度を確認中
 
 ### 見つかった不具合
-- [ ] **`kazahana://post/<AT-URI>` が開けない** — パーセントエンコードした AT-URI を渡すと `url.pathComponents` がデコード後に `/` で分割し、`at:` だけが残る（「Invalid at-url (got "at:")」）。`ContentView.handleDeepLink`
+- [x] **`kazahana://post/<AT-URI>` が開けない** — パーセントエンコードした AT-URI を渡すと `url.pathComponents` がデコード後に `/` で分割し、`at:` だけが残っていた（「Invalid at-url (got "at:")」）。生のパス（`percentEncodedPath`）から AT-URI を復元する `MainTabView.postURI(fromDeepLink:)` を追加。未エンコードの AT-URI も受け付ける
+  - 単体テスト 3 件を追加（`DeepLinkTests.swift`、全 94 件成功）。2026-10-17 シミュレータで `kazahana://post/<エンコード済み AT-URI>` を開き、3 段のスレッドが返信線つきで表示されることを確認
 
 ---
 
