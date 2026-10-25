@@ -1001,7 +1001,7 @@
 ### v3.9.2 リリース（2026-10-25）
 > v3.9.1 (build 30) のアーカイブ（2026-10-17 11:47）後にコミットした「新規作成したリストがフィード選択に出ない」修正（`f1b969a`）を出すためのリリース
 - [x] **バージョン** — 3.9.2 (build 31)
-- [ ] **iOS / macOS 版のアップロード**
+- [x] **iOS / macOS 版のアップロード** — 2026-10-25 Xcode 27.0 でアーカイブし、`xcodebuild -exportArchive` で両方アップロード成功
 - [ ] **Paid Applications Schedule への同意** — App Store Connect に「既存アプリの更新には Account Holder が Business で Paid Applications Schedule（Schedule 2）に同意する必要がある」と表示（2026-10-25）。審査提出の前に対応する
 - [ ] **iOS / macOS 版の審査提出**
 - [ ] **審査通過・公開**
