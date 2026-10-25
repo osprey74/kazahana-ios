@@ -1,6 +1,6 @@
 # kazahana-ios 開発タスク・進捗記録
 
-最終更新: 2026-10-25 (v3.9.1 の公開を記録、リスト修正を含む v3.9.2 (build 31) へバージョンアップ)
+最終更新: 2026-10-25 (v3.9.2 (build 31) を iOS / macOS とも審査提出)
 
 ---
 
@@ -29,7 +29,7 @@
 - リポジトリ整理 (2026-10-10): ShareExtension フォルダ整理・単体テストのビルド修正 ✅ 完了
 - 単体テスト (2026-10-10): モデル・サービス層 91 件、テストで見つかった不具合 2 件を修正 ✅ 完了
 - iPadOS 27 ウィンドウリサイズ対応 (2026-10-14 登録): 必須改修なし、任意対応 1 件・動作確認 3 件 ⬜ 未着手
-- v3.9.1 バグ修正 (2026-10-17): 返信の root 修正・ディープリンク修正 ✅ 完了（3.9.1 (build 30) iOS / macOS とも公開済み）、新規作成リストの表示修正は v3.9.2 (build 31) に同梱、macOS スクロール時クラッシュは環境依存とみて保留
+- v3.9.1 バグ修正 (2026-10-17): 返信の root 修正・ディープリンク修正 ✅ 完了（3.9.1 (build 30) iOS / macOS とも公開済み）、新規作成リストの表示修正は v3.9.2 (build 31) で 2026-10-25 iOS / macOS とも審査提出、macOS スクロール時クラッシュは環境依存とみて保留
 - App Store 準備: バージョン 1.1.0・Bundle ID 統一（Keychain/IAP/BGTask/CFBundleURLName）・プライバシーポリシー公開・審査用アカウント作成・v1.0 リリース完了 ✅
 
 ---
@@ -1002,8 +1002,8 @@
 > v3.9.1 (build 30) のアーカイブ（2026-10-17 11:47）後にコミットした「新規作成したリストがフィード選択に出ない」修正（`f1b969a`）を出すためのリリース
 - [x] **バージョン** — 3.9.2 (build 31)
 - [x] **iOS / macOS 版のアップロード** — 2026-10-25 Xcode 27.0 でアーカイブし、`xcodebuild -exportArchive` で両方アップロード成功
-- [ ] **Paid Applications Schedule への同意** — App Store Connect に「既存アプリの更新には Account Holder が Business で Paid Applications Schedule（Schedule 2）に同意する必要がある」と表示（2026-10-25）。審査提出の前に対応する
-- [ ] **iOS / macOS 版の審査提出**
+- [x] **Paid Applications Schedule への同意** — 2026-10-25 同意済み。 App Store Connect に「既存アプリの更新には Account Holder が Business で Paid Applications Schedule（Schedule 2）に同意する必要がある」と表示（2026-10-25）。審査提出の前に対応する
+- [x] **iOS / macOS 版の審査提出** — 2026-10-25 両方提出
 - [ ] **審査通過・公開**
 
 ---
