@@ -979,14 +979,16 @@
   - 2026-10-17 kazahana の画面で返信線が表示されることを目視確認
 
 ### スクロール時のクラッシュ（macOS）
-- [ ] **原因調査（保留）** — `UIScrollEvent _adjustedDeltaForPanWithAcceleration:honoringScrollDirectionPreference:` で例外。アプリのフレームは `App.main` のみで、Mac Catalyst 内部の不具合と推定（未確定）。環境依存とみて v3.9.1 では対応せず、ユーザーからの情報（入力機器・スクロール補助アプリ・ナチュラルスクロール設定・画面・頻度）や同種のクラッシュ報告が集まったら再調査
+- [ ] **原因調査** — `UIScrollEvent _adjustedDeltaForPanWithAcceleration:honoringScrollDirectionPreference:` で例外。アプリのフレームは `App.main` のみで、Mac Catalyst 内部の不具合と推定（未確定）。環境依存とみて v3.9.1 では対応せず、ユーザーからの情報（入力機器・スクロール補助アプリ・ナチュラルスクロール設定・画面・頻度）や同種のクラッシュ報告が集まったら再調査
   - 2026-10-17 ユーザーから回答: ロジクール製マウス＋ Logi Options+ 使用（スクロール速度 50%・方向 標準・スクロール力 50%・スムーズスクロール OFF・SmartShift OFF・ラチェットモード）。起動直後・数時間後とも何度も発生。レポートは 3.8.1 (28)、macOS 27.0.1 (26A434)、Mac15,3
   - Options+ が加工したスクロール入力を Catalyst が想定外の値として扱い、内部チェックで例外になったと推定（未確認）。アプリ側に `UIPanGestureRecognizer` などスクロールへ介入するコードはない
   - 「開いていた画面」は同時に起動していた他アプリの一覧として回答されたため、kazahana のどの画面で落ちるかは不明
   - 同じシンボルでの既知の報告は Web 検索では見つからなかった
-  - [ ] ユーザーに追加確認を依頼: Options+ を止めた状態（または kazahana を対象外にした状態）でも落ちるか・スムーズスクロール ON で頻度が変わるか・クラッシュ時の kazahana の画面
-  - [ ] ロジクール製マウス＋ Options+ を同じ設定にして手元で再現を試す
-  - [ ] Options+ が原因と分かったら Feedback Assistant に報告
+  - [x] ロジクール製マウス＋ Options+ を同じ設定にして手元で再現を試す — 2026-10-26 App Store 版 3.9.2 で再現（macOS 27.0.1）。起動直後のホーム画面でホイールスクロールを続けると数十秒〜1分ほどで落ちる
+    - 仕組み: スクロールのたびに `-[UIScrollEvent _adjustedDeltaForPanWithAcceleration:honoringScrollDirectionPreference:]` で `*** Assertion failure in <private>, UIScrollEvent.m:618`（`NSInternalInconsistencyException`、理由は `<redacted reason>`）が起き、AppKit が例外を握りつぶす。4 回たまると `-[UIApplication sendEvent:]: sendEvent: nesting level: 5; exceeded maximum: 4` となり `EXC_BREAKPOINT (SIGTRAP)` で終了する。呼び出し元は `-[UIGestureRecognizer _internalShouldReceiveEvent:]`（ジェスチャー認識の判定）。直前に `[com.apple.Gestures:Critical] [!] <private> has been in <private> phase for <private>` も出る
+    - Options+ のエージェント（`com.logi.cp-dev-mgr`）を `launchctl bootout` で止めた状態でも同じアサーションで落ちた（Options+ 有効時より時間はかかった）ため、Options+ は原因ではない
+    - タイムラインにアプリ独自のジェスチャーはない（`DragGesture` などは画像ビューア・切り抜きのみ）
+  - [ ] Apple 純正の Catalyst アプリ・最小構成の Catalyst アプリで同じマウスでも落ちるかを確認し、Feedback Assistant に報告
 
 ### v3.9.1 リリース（2026-10-17）
 - [x] **バージョン** — 3.9.1 (build 30)
