@@ -115,9 +115,19 @@ struct ComposeView: View {
         self.replyToPost = replyTo
         self.quotePost = quotedPost
         if let replyTo {
+            // 返信先自体が返信なら、その record.reply.root がスレッドの起点（root）
+            let rootUri: String
+            let rootCid: String
+            if let root = replyTo.record.reply?.root, let uri = root.uri, let cid = root.cid {
+                rootUri = uri
+                rootCid = cid
+            } else {
+                rootUri = replyTo.uri
+                rootCid = replyTo.cid
+            }
             self.replyTarget = ReplyTarget(
-                rootUri: replyTo.uri,
-                rootCid: replyTo.cid,
+                rootUri: rootUri,
+                rootCid: rootCid,
                 parentUri: replyTo.uri,
                 parentCid: replyTo.cid
             )

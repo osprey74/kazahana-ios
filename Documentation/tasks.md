@@ -1,6 +1,6 @@
 # kazahana-ios 開発タスク・進捗記録
 
-最終更新: 2026-10-13 (v3.9.0 iOS 版が審査通過・ストア公開)
+最終更新: 2026-10-26 (v3.9.2 (build 31) が iOS / macOS とも公開)
 
 ---
 
@@ -28,6 +28,8 @@
 - Phase 18 (iPhone Duo 対応): 表示検証・フィードタブ帯／プロフィールタブ帯の修正 ✅ 完了（v3.9.0 iOS 版 公開済み 2026-10-13）
 - リポジトリ整理 (2026-10-10): ShareExtension フォルダ整理・単体テストのビルド修正 ✅ 完了
 - 単体テスト (2026-10-10): モデル・サービス層 91 件、テストで見つかった不具合 2 件を修正 ✅ 完了
+- iPadOS 27 ウィンドウリサイズ対応 (2026-10-14 登録): 必須改修なし、任意対応 1 件・動作確認 3 件 ⬜ 未着手
+- v3.9.1 バグ修正 (2026-10-17): 返信の root 修正・ディープリンク修正 ✅ 完了（3.9.1 (build 30) iOS / macOS とも公開済み）、新規作成リストの表示修正は v3.9.2 (build 31) で 2026-10-26 iOS / macOS とも公開済み、macOS スクロール時クラッシュは環境依存とみて保留
 - App Store 準備: バージョン 1.1.0・Bundle ID 統一（Keychain/IAP/BGTask/CFBundleURLName）・プライバシーポリシー公開・審査用アカウント作成・v1.0 リリース完了 ✅
 
 ---
@@ -946,6 +948,63 @@
 - [x] **チャットの「ロック解除」が「ロック」と表示される** — `SystemMessageData` で `UnlockConvo` が `lockConvo` の末尾一致に先に掛かっていた。判定順を修正
   - 2026-10-10 シミュレータ（iPhone Duo / iOS 27.1）でテスト用グループを作成し、ロック → ロック解除を操作。チャットに「グループがロックされました」→「ロックが解除されました」と表示され、解除後に入力欄が戻ることを確認（kazahana-ios#5）
 - [x] **`Prefecture.from(partialName: "")` が北海道に一致する** — 空文字を除外
+
+---
+
+## iPadOS 27 ウィンドウリサイズ対応（2026-10-14 登録）— 未着手
+
+> 背景: iOS 27 / iPadOS 27 SDK 以降、`UIRequiresFullScreen = YES` を指定しても全画面固定にならず、ウィンドウはリサイズされる（ドラッグ終了時にまとめて変わる「段階的リサイズ」）。Apple の TN3192（2026-10-09 更新）による。kazahana-ios はこのキーを使っておらず iPadOS 26 から自由リサイズ対象のため、**必須改修はなし**（2026-10-14 調査）
+> - 調査結果: `UIRequiresFullScreen` 未設定、起動画面あり（`UILaunchScreen_Generation`）、iPad は 4 方向対応、`UIScreen` 直参照なし、最小サイズ制限（400×600）は Catalyst のみ
+> - 参考: [TN3192](https://developer.apple.com/documentation/technotes/tn3192-migrating-your-app-from-the-deprecated-uirequiresfullscreen-key)、WWDC25 Session 282、WWDC26 Session 278
+
+### 任意対応
+- [ ] **iPhone の画面向きに PortraitUpsideDown を追加** — TN3192 は自由リサイズの条件に「全方向の画面向きに対応」を挙げている。iPhone は `INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone` に上下逆さまがない（`project.pbxproj` の 2 か所）。ホームボタンのない iPhone ではシステムが上下逆さまを除外するため、影響はホームボタンのある機種のみ。「4 方向のうち欠けがあると自由リサイズの対象外」とする第三者ブログ（beta 4 時点）の記述は未確認
+
+### 動作確認（iPadOS 27 シミュレータ）
+- [ ] **ウィンドウを最小まで縮めたときの表示** — タイムライン・スレッド・プロフィール・DM・設定。極端に縦が短い場合も確認
+- [ ] **シート・全画面系の表示** — 投稿作成・画像ビューア・動画プレーヤー・プロフィール QR（240pt 固定）・避難誘導コンパス（220pt 固定）
+- [ ] **リサイズ中・後の状態保持** — スクロール位置・入力中の内容がリサイズ後も保たれるか
+
+---
+
+## v3.9.1 バグ修正（2026-10-17 登録）— 完了 ✅
+
+> 発端: macOS 版ユーザーからの報告（2026-10-15、v3.8.1 (28) / macOS 27.0.1）
+
+### 返信のスレッドがつながらない
+- [x] **返信レコードの `root` を修正** — 返信先が返信のときも、返信先の投稿を `root` にしていた（初回コミットから）。会話の 2 段目以降への返信が別スレッドへの返信として扱われ、kazahana では返信線が出ず、公式 Web では前後の会話が表示されなかった。返信先の `record.reply.root` があればそれを使うよう修正（`ComposeView.swift`、Desktop `PostActions.tsx` と同じ方式）
+  - 2026-10-17 シミュレータ（iPhone 17 Pro Max）で @kazahana.app から @osprey74.com の投稿へ 2 段の返信を作成。3 段目のレコードの `reply.root` が元投稿、`reply.parent` が 2 段目を指すこと、`getPostThread` で 3 段がつながることを公開 API で確認
+  - 修正前に投稿された返信のレコードは直らない
+  - 2026-10-17 kazahana の画面で返信線が表示されることを目視確認
+
+### スクロール時のクラッシュ（macOS）
+- [ ] **原因調査（保留）** — `UIScrollEvent _adjustedDeltaForPanWithAcceleration:honoringScrollDirectionPreference:` で例外。アプリのフレームは `App.main` のみで、Mac Catalyst 内部の不具合と推定（未確定）。環境依存とみて v3.9.1 では対応せず、ユーザーからの情報（入力機器・スクロール補助アプリ・ナチュラルスクロール設定・画面・頻度）や同種のクラッシュ報告が集まったら再調査
+  - 2026-10-17 ユーザーから回答: ロジクール製マウス＋ Logi Options+ 使用（スクロール速度 50%・方向 標準・スクロール力 50%・スムーズスクロール OFF・SmartShift OFF・ラチェットモード）。起動直後・数時間後とも何度も発生。レポートは 3.8.1 (28)、macOS 27.0.1 (26A434)、Mac15,3
+  - Options+ が加工したスクロール入力を Catalyst が想定外の値として扱い、内部チェックで例外になったと推定（未確認）。アプリ側に `UIPanGestureRecognizer` などスクロールへ介入するコードはない
+  - 「開いていた画面」は同時に起動していた他アプリの一覧として回答されたため、kazahana のどの画面で落ちるかは不明
+  - 同じシンボルでの既知の報告は Web 検索では見つからなかった
+  - [ ] ユーザーに追加確認を依頼: Options+ を止めた状態（または kazahana を対象外にした状態）でも落ちるか・スムーズスクロール ON で頻度が変わるか・クラッシュ時の kazahana の画面
+  - [ ] ロジクール製マウス＋ Options+ を同じ設定にして手元で再現を試す
+  - [ ] Options+ が原因と分かったら Feedback Assistant に報告
+
+### v3.9.1 リリース（2026-10-17）
+- [x] **バージョン** — 3.9.1 (build 30)
+- [x] **iOS / macOS 版の審査提出** — 2026-10-17 両方提出。macOS 版は v3.9.0 で見送ったチャット「ロック解除」表示修正（`c065977`）も同梱
+- [x] **審査通過・公開** — iOS / macOS とも公開済み（2026-10-25 時点で確認）
+
+### 見つかった不具合
+- [x] **`kazahana://post/<AT-URI>` が開けない** — パーセントエンコードした AT-URI を渡すと `url.pathComponents` がデコード後に `/` で分割し、`at:` だけが残っていた（「Invalid at-url (got "at:")」）。生のパス（`percentEncodedPath`）から AT-URI を復元する `MainTabView.postURI(fromDeepLink:)` を追加。未エンコードの AT-URI も受け付ける
+  - 単体テスト 3 件を追加（`DeepLinkTests.swift`、全 94 件成功）。2026-10-17 シミュレータで `kazahana://post/<エンコード済み AT-URI>` を開き、3 段のスレッドが返信線つきで表示されることを確認
+- [x] **新規作成したリストがフィード選択に出ない** — v3.7.1（`25b62cf`）で preferences（`savedFeedsPrefV2`）を正本にした際、自分のキュレーションリストをマージする処理も削除していた。作成しただけのリストは preferences に入らないため、Desktop では選べるのに iOS / macOS では選べなかった。`FeedService.getAllSavedFeedItems` に `getMyLists(actor:)` のマージ（重複除去）を戻した（Desktop `useMyLists` と同じ方式）。自分のリストは削除すれば `getLists` から消えるため、フォロー解除したリストの自動消去とは衝突しない
+  - 2026-10-17 @osprey74.com でブラウザから新規作成したリスト（preferences 未保存）がホームフィード管理・フィード選択に表示され、選択してタイムラインが表示されることを iOS シミュレータ（iPhone 17 Pro Max）と macOS 版で確認
+
+### v3.9.2 リリース（2026-10-25）
+> v3.9.1 (build 30) のアーカイブ（2026-10-17 11:47）後にコミットした「新規作成したリストがフィード選択に出ない」修正（`f1b969a`）を出すためのリリース
+- [x] **バージョン** — 3.9.2 (build 31)
+- [x] **iOS / macOS 版のアップロード** — 2026-10-25 Xcode 27.0 でアーカイブし、`xcodebuild -exportArchive` で両方アップロード成功
+- [x] **Paid Applications Schedule への同意** — 2026-10-25 同意済み。 App Store Connect に「既存アプリの更新には Account Holder が Business で Paid Applications Schedule（Schedule 2）に同意する必要がある」と表示（2026-10-25）。審査提出の前に対応する
+- [x] **iOS / macOS 版の審査提出** — 2026-10-25 両方提出
+- [x] **審査通過・公開** — iOS / macOS とも公開済み（2026-10-26 確認）
 
 ---
 

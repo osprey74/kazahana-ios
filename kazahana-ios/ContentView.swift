@@ -324,6 +324,15 @@ struct MainTabView: View {
         #endif
     }
 
+    /// kazahana://post/{at_uri} から AT-URI を取り出す（エンコード済み・未エンコードの両方に対応）
+    /// pathComponents はデコード後に "/" で分割するため、エンコード済みの AT-URI でも "at:" だけになる。生のパスから復元する
+    static func postURI(fromDeepLink url: URL) -> String? {
+        guard let rawPath = URLComponents(url: url, resolvingAgainstBaseURL: false)?.percentEncodedPath else { return nil }
+        let encoded = rawPath.hasPrefix("/") ? String(rawPath.dropFirst()) : rawPath
+        guard let decoded = encoded.removingPercentEncoding, decoded.hasPrefix("at://") else { return nil }
+        return decoded
+    }
+
     /// kazahana:// ディープリンクを処理する
     /// - kazahana://profile/{did_or_handle}
     /// - kazahana://post/{at_uri_encoded}
@@ -339,10 +348,8 @@ struct MainTabView: View {
                 deepLinkProfileActor = actor
             }
         case "post":
-            // AT-URI は URL エンコードされて渡ってくる想定
-            if let encoded = path.first,
-               let decoded = encoded.removingPercentEncoding {
-                deepLinkPostURI = IdentifiableString(value: decoded)
+            if let uri = Self.postURI(fromDeepLink: url) {
+                deepLinkPostURI = IdentifiableString(value: uri)
             }
         case "hashtag":
             // ハッシュタグは検索タブに切り替え、タグ文字列を SearchView に通知
