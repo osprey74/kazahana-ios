@@ -154,12 +154,13 @@ struct PostCardView: View {
 
                             // 本文（リッチテキスト）
                             if !post.record.text.isEmpty {
-                                Text(RichTextParser.attributedString(
-                                    text: post.record.text,
-                                    facets: post.record.facets
-                                ))
-                                .font(AppSettings.shared.fontSize.bodyFont)
-                                .lineLimit(20)
+                                RichTextView(
+                                    text: RichTextParser.attributedString(
+                                        text: post.record.text,
+                                        facets: post.record.facets
+                                    ),
+                                    lineLimit: 20
+                                )
                                 .fixedSize(horizontal: false, vertical: true)
                                 .environment(\.openURL, OpenURLAction { url in
                                     if url.scheme == "kazahana" {

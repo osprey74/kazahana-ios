@@ -506,8 +506,7 @@ struct MessageBubbleView: View {
                         .buttonStyle(.plain)
                     }
 
-                    Text(richText(for: m))
-                        .font(AppSettings.shared.fontSize.bodyFont)
+                    RichTextView(text: richText(for: m), textColor: isMine ? .white : .label)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 8)
 

@@ -659,8 +659,11 @@ struct ProfileHeaderView: View {
                     }
 
                     if let bio = profile.description, !bio.isEmpty {
-                        Text(Self.profileBioAttributedString(bio))
-                            .font(.subheadline)
+                        RichTextView(
+                            text: Self.profileBioAttributedString(bio),
+                            font: .subheadline,
+                            uiFont: .preferredFont(forTextStyle: .subheadline)
+                        )
                             .padding(.top, 4)
                             .environment(\.openURL, OpenURLAction { url in
                                 if url.scheme == "kazahana" {
