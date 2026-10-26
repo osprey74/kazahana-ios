@@ -354,12 +354,9 @@ struct MainTabView: View {
         case "hashtag":
             // ハッシュタグは検索タブに切り替え、タグ文字列を SearchView に通知
             if let tag = path.first, !tag.isEmpty {
+                SearchView.pendingHashtag = tag
                 selectedTab = .search
-                NotificationCenter.default.post(
-                    name: .searchHashtag,
-                    object: nil,
-                    userInfo: ["tag": tag]
-                )
+                NotificationCenter.default.post(name: .searchHashtag, object: nil)
             }
         case "compose":
             // Share Extension / Edge共有 から起動

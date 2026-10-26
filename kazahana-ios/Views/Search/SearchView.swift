@@ -13,8 +13,12 @@ struct SearchView: View {
     @State private var viewModel: SearchViewModel?
     @State private var selectedActor: IdentifiableActor?
     @State private var selectedPostURI: IdentifiableString?
-    /// タブ切り替え直後に通知が届いた場合に備えて保持するハッシュタグ
-    @State private var pendingHashtag: String? = nil
+    /// 表示中かどうか（非表示中に届いたハッシュタグは次の onAppear で処理する）
+    @State private var isVisible = false
+
+    /// ハッシュタグリンクから要求された検索タグ。
+    /// macOS ではタブ切替時に TabView を作り直すため、View の State ではなく static に保持する
+    @MainActor static var pendingHashtag: String?
 
     var body: some View {
         NavigationStack {
@@ -42,25 +46,24 @@ struct SearchView: View {
                 let searchService = SearchService(client: authVM.client)
                 viewModel = SearchViewModel(searchService: searchService)
             }
-            // タブ切り替え前に受信した pendingHashtag があれば検索実行
-            if let tag = pendingHashtag, let vm = viewModel {
-                pendingHashtag = nil
-                vm.query = "#\(tag)"
-                vm.selectedTab = .posts
-                Task { await vm.search() }
-            }
+            isVisible = true
+            // タブ切り替え前に要求されたハッシュタグがあれば検索実行
+            searchPendingHashtag()
         }
-        .onReceive(NotificationCenter.default.publisher(for: .searchHashtag)) { note in
-            guard let tag = note.userInfo?["tag"] as? String, !tag.isEmpty else { return }
-            if let vm = viewModel {
-                vm.query = "#\(tag)"
-                vm.selectedTab = .posts  // ハッシュタグは投稿タブで検索
-                Task { await vm.search() }
-            } else {
-                // viewModel 未初期化の場合は onAppear で処理
-                pendingHashtag = tag
-            }
+        .onDisappear { isVisible = false }
+        .onReceive(NotificationCenter.default.publisher(for: .searchHashtag)) { _ in
+            // 検索タブ表示中にハッシュタグがタップされた場合（タブ切替がなく onAppear が来ない）
+            if isVisible { searchPendingHashtag() }
         }
+    }
+
+    /// pendingHashtag を取り出して投稿タブで検索する
+    private func searchPendingHashtag() {
+        guard let tag = Self.pendingHashtag, let vm = viewModel else { return }
+        Self.pendingHashtag = nil
+        vm.query = "#\(tag)"
+        vm.selectedTab = .posts  // ハッシュタグは投稿タブで検索
+        Task { await vm.search() }
     }
 
     @ViewBuilder
