@@ -22,6 +22,10 @@ struct FeedManagementView: View {
         let name: String
         let icon: String
         let isListType: Bool  // true = リスト, false = カスタムフィード
+
+        /// 非表示セクション用の行 ID。表示セクションと同じ ID だと、表示に切り替えた行が
+        /// 非表示セクションの行（並び替えなし）として使い回され、ハンドルが付かない
+        var hiddenRowID: String { "hidden:" + id }
     }
 
     init(client: ATProtoClient, actorDID: String) {
@@ -45,6 +49,13 @@ struct FeedManagementView: View {
             // 表示フィード（ドラッグで並び替え可能）
             if !visibleItems.isEmpty {
                 Section(String(localized: "settings.visibleFeeds")) {
+                    #if targetEnvironment(macCatalyst)
+                    // macOS 27 の Catalyst ではドラッグのドロップが確定しないため（.onMove /
+                    // .dropDestination とも）、行の上下ボタンで並び替える
+                    ForEach(visibleItems) { item in
+                        feedItemRow(item: item, isHidden: false)
+                    }
+                    #else
                     ForEach(visibleItems) { item in
                         feedItemRow(item: item, isHidden: false)
                     }
@@ -52,13 +63,14 @@ struct FeedManagementView: View {
                         visibleItems.move(fromOffsets: from, toOffset: to)
                         saveOrder()
                     }
+                    #endif
                 }
             }
 
             // 非表示フィード
             if !hiddenItems.isEmpty {
                 Section(String(localized: "settings.hiddenFeeds")) {
-                    ForEach(hiddenItems) { item in
+                    ForEach(hiddenItems, id: \.hiddenRowID) { item in
                         feedItemRow(item: item, isHidden: true)
                     }
                 }
@@ -81,7 +93,9 @@ struct FeedManagementView: View {
         }
         .navigationTitle(String(localized: "settings.feedManagement"))
         .navigationBarTitleDisplayMode(.inline)
+        #if !targetEnvironment(macCatalyst)
         .environment(\.editMode, .constant(.active))
+        #endif
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button {
@@ -119,6 +133,28 @@ struct FeedManagementView: View {
             }
 
             Spacer()
+
+            #if targetEnvironment(macCatalyst)
+            if !isHidden, let index = visibleItems.firstIndex(of: item) {
+                Button {
+                    moveItem(at: index, by: -1)
+                } label: {
+                    Image(systemName: "chevron.up")
+                }
+                .buttonStyle(.borderless)
+                .disabled(index == 0)
+                .accessibilityLabel(String(localized: "settings.moveUp"))
+
+                Button {
+                    moveItem(at: index, by: 1)
+                } label: {
+                    Image(systemName: "chevron.down")
+                }
+                .buttonStyle(.borderless)
+                .disabled(index == visibleItems.count - 1)
+                .accessibilityLabel(String(localized: "settings.moveDown"))
+            }
+            #endif
 
             // 表示/非表示トグルボタン
             Button {
@@ -182,6 +218,18 @@ struct FeedManagementView: View {
         let all = visibleItems + hiddenItems
         buildItemLists(all: all)
     }
+
+    #if targetEnvironment(macCatalyst)
+    /// 表示フィードの index 番目の行を offset（-1 = 上, 1 = 下）だけ移動する
+    private func moveItem(at index: Int, by offset: Int) {
+        let target = index + offset
+        guard visibleItems.indices.contains(target) else { return }
+        withAnimation {
+            visibleItems.swapAt(index, target)
+        }
+        saveOrder()
+    }
+    #endif
 
     private func saveOrder() {
         settings.pinnedFeedURIs = visibleItems.map { $0.id } + hiddenItems.map { $0.id }
