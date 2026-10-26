@@ -993,7 +993,7 @@
   - [x] 最小構成の Catalyst アプリ（scratchpad の ScrollTest）で切り分け — `List` / `.refreshable` / 横スクロールのタブバー / `TabView` + `NavigationStack`（kazahana と同じ構成）/ `ScrollView` + `LazyVStack` / 行の `.onTapGesture`・`.contextMenu`・`.onHover` はいずれもアサーション 0 件。**`AttributedString` の `.link` を含む `Text` を並べただけで再現**（アサーション 4 回で落ちる）。同じ文字列を `UITextView`（編集不可・スクロール不可）で表示すると 0 件
   - [x] kazahana のデバッグビルドで切り分け — 投稿セルを本文テキストだけにすると 0 件、埋め込み・アクションバーを外しても落ち、本文をリンクなしの `Text` にすると 0 件。原因は本文のリンク付き `Text`（`RichTextParser.attributedString`）
   - [x] **回避（`92a6f25`）** — `RichTextView` を追加し、投稿セル本文・スレッドの中心投稿・プロフィールの自己紹介・チャットのメッセージを置き換え。Catalyst のみ `UITextView` で表示（リンク以外のクリックは背後の SwiftUI に素通し、リンクは SwiftUI の `openURL` に渡す）。iOS は従来どおり `Text`。修正後はスクロールイベント 2,000 件超でアサーション 0 件、リンク・投稿タップ・右クリックメニュー・いいね等の動作を確認
-  - [ ] Feedback Assistant に報告（最小再現プロジェクト CatalystLinkScrollCrash と報告文の下書きを作成済み、送信は総司さん）
+  - [x] Feedback Assistant に報告 — **FB25324141**（2026-10-26 送信。対象: デベロッパテクノロジーとSDK / Mac Catalyst / SwiftUI / 不正な/予期しない動作 / macOS 27.0.1（26A434）。最小再現プロジェクト CatalystLinkScrollCrash・クラッシュレポート・sysdiagnose を添付）
   - [ ] テスターに修正版（v3.9.4）を案内し、解消したか確認
 
 ### macOS 版で見つかった不具合（2026-10-26、クラッシュ修正の動作確認中に発見）
