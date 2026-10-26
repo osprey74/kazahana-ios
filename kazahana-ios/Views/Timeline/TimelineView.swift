@@ -61,7 +61,7 @@ struct TimelineView: View {
 
                 // FAB（投稿作成ボタン）
                 Button {
-                    replyToPost = nil; quotePost = nil; showCompose = true
+                    showCompose = true
                 } label: {
                     Image(systemName: "pencil")
                         .font(.system(size: 22, weight: .semibold))
@@ -149,14 +149,24 @@ struct TimelineView: View {
                 PostQuoteListView(postURI: item.value)
                     .environment(authVM)
             }
-            // 投稿作成シート（新規投稿 or 返信 or 引用投稿）
-            .sheet(isPresented: $showCompose, onDismiss: { replyToPost = nil; quotePost = nil }) {
-                ComposeView(postService: postService, replyTo: replyToPost, quotedPost: quotePost)
+            // 投稿作成シート（新規投稿）
+            .sheet(isPresented: $showCompose) {
+                ComposeView(postService: postService)
+                    .environment(AppSettings.shared)
+            }
+            // 返信・引用投稿のシートは対象を item で渡す（isPresented + 別 State だと
+            // シート生成時に対象が反映されず、macOS で新規投稿になることがあったため）
+            .sheet(item: $replyToPost) { replyTo in
+                ComposeView(postService: postService, replyTo: replyTo)
+                    .environment(AppSettings.shared)
+            }
+            .sheet(item: $quotePost) { quoted in
+                ComposeView(postService: postService, quotedPost: quoted)
                     .environment(AppSettings.shared)
             }
             // macOS: メニューバーからの新規投稿
             .onReceive(NotificationCenter.default.publisher(for: .composeNewPost)) { _ in
-                replyToPost = nil; quotePost = nil; showCompose = true
+                showCompose = true
             }
             // macOS: メニューバーからの再読み込み
             .onReceive(NotificationCenter.default.publisher(for: .reloadTimeline)) { _ in
@@ -358,10 +368,10 @@ struct TimelineView: View {
                     bsafDuplicateInfo: viewModel.bsafDuplicateInfo[feedPost.post.uri],
                     onTapPost: { post in selectedPost = post },
                     onTapAuthor: { did in selectedAuthorDID = IdentifiableString(did) },
-                    onTapReply: { post in replyToPost = post; DispatchQueue.main.async { showCompose = true } },
+                    onTapReply: { post in replyToPost = post },
                     onTapLikeCount: { post in postActorListType = .likes(postURI: post.uri) },
                     onTapRepostCount: { post in postActorListType = .reposts(postURI: post.uri) },
-                    onTapQuote: { post in quotePost = post; DispatchQueue.main.async { showCompose = true } },
+                    onTapQuote: { post in quotePost = post },
                     onTapViewQuotes: { post in quotesPostURI = IdentifiableString(post.uri) },
                     onDelete: { post in viewModel.removePost(uri: post.uri) },
                     onTapMuteUser: { post in muteTargetPost = post },
