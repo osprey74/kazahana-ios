@@ -1,6 +1,6 @@
 # kazahana-ios 開発タスク・進捗記録
 
-最終更新: 2026-10-26 (v3.9.3 (build 32) を iOS / macOS とも審査提出)
+最終更新: 2026-10-26 (macOS スクロール時クラッシュを特定・回避し、v3.9.4 (build 33) へバージョンアップ)
 
 ---
 
@@ -29,8 +29,9 @@
 - リポジトリ整理 (2026-10-10): ShareExtension フォルダ整理・単体テストのビルド修正 ✅ 完了
 - 単体テスト (2026-10-10): モデル・サービス層 91 件、テストで見つかった不具合 2 件を修正 ✅ 完了
 - iPadOS 27 ウィンドウリサイズ対応 (2026-10-14 登録): 必須改修なし、任意対応 1 件・動作確認 3 件 ⬜ 未着手
-- v3.9.1 バグ修正 (2026-10-17): 返信の root 修正・ディープリンク修正 ✅ 完了（3.9.1 (build 30) iOS / macOS とも公開済み）、新規作成リストの表示修正は v3.9.2 (build 31) で 2026-10-26 iOS / macOS とも公開済み、macOS スクロール時クラッシュは環境依存とみて保留
+- v3.9.1 バグ修正 (2026-10-17): 返信の root 修正・ディープリンク修正 ✅ 完了（3.9.1 (build 30) iOS / macOS とも公開済み）、新規作成リストの表示修正は v3.9.2 (build 31) で 2026-10-26 iOS / macOS とも公開済み、macOS スクロール時クラッシュは v3.9.4 で回避（リンク付き Text が原因の OS 不具合）
 - v3.9.3 バグ修正 (2026-10-26): macOS 版のフィード並べ替え不具合を修正 ✅ 完了（3.9.3 (build 32) iOS / macOS とも 2026-10-26 審査提出）
+- v3.9.4 バグ修正 (2026-10-26): macOS スクロール時クラッシュの回避・ハッシュタグ検索・返信シートの修正 ✅ 完了（3.9.4 (build 33) 準備中）
 - App Store 準備: バージョン 1.1.0・Bundle ID 統一（Keychain/IAP/BGTask/CFBundleURLName）・プライバシーポリシー公開・審査用アカウント作成・v1.0 リリース完了 ✅
 
 ---
@@ -979,7 +980,7 @@
   - 2026-10-17 kazahana の画面で返信線が表示されることを目視確認
 
 ### スクロール時のクラッシュ（macOS）
-- [ ] **原因調査** — `UIScrollEvent _adjustedDeltaForPanWithAcceleration:honoringScrollDirectionPreference:` で例外。アプリのフレームは `App.main` のみで、Mac Catalyst 内部の不具合と推定（未確定）。環境依存とみて v3.9.1 では対応せず、ユーザーからの情報（入力機器・スクロール補助アプリ・ナチュラルスクロール設定・画面・頻度）や同種のクラッシュ報告が集まったら再調査
+- [x] **原因調査・回避** — `UIScrollEvent _adjustedDeltaForPanWithAcceleration:honoringScrollDirectionPreference:` で例外。アプリのフレームは `App.main` のみで、Mac Catalyst 内部の不具合と推定（未確定）。環境依存とみて v3.9.1 では対応せず、ユーザーからの情報（入力機器・スクロール補助アプリ・ナチュラルスクロール設定・画面・頻度）や同種のクラッシュ報告が集まったら再調査
   - 2026-10-17 ユーザーから回答: ロジクール製マウス＋ Logi Options+ 使用（スクロール速度 50%・方向 標準・スクロール力 50%・スムーズスクロール OFF・SmartShift OFF・ラチェットモード）。起動直後・数時間後とも何度も発生。レポートは 3.8.1 (28)、macOS 27.0.1 (26A434)、Mac15,3
   - Options+ が加工したスクロール入力を Catalyst が想定外の値として扱い、内部チェックで例外になったと推定（未確認）。アプリ側に `UIPanGestureRecognizer` などスクロールへ介入するコードはない
   - 「開いていた画面」は同時に起動していた他アプリの一覧として回答されたため、kazahana のどの画面で落ちるかは不明
@@ -988,7 +989,17 @@
     - 仕組み: スクロールのたびに `-[UIScrollEvent _adjustedDeltaForPanWithAcceleration:honoringScrollDirectionPreference:]` で `*** Assertion failure in <private>, UIScrollEvent.m:618`（`NSInternalInconsistencyException`、理由は `<redacted reason>`）が起き、AppKit が例外を握りつぶす。4 回たまると `-[UIApplication sendEvent:]: sendEvent: nesting level: 5; exceeded maximum: 4` となり `EXC_BREAKPOINT (SIGTRAP)` で終了する。呼び出し元は `-[UIGestureRecognizer _internalShouldReceiveEvent:]`（ジェスチャー認識の判定）。直前に `[com.apple.Gestures:Critical] [!] <private> has been in <private> phase for <private>` も出る
     - Options+ のエージェント（`com.logi.cp-dev-mgr`）を `launchctl bootout` で止めた状態でも同じアサーションで落ちた（Options+ 有効時より時間はかかった）ため、Options+ は原因ではない
     - タイムラインにアプリ独自のジェスチャーはない（`DragGesture` などは画像ビューア・切り抜きのみ）
-  - [ ] Apple 純正の Catalyst アプリ・最小構成の Catalyst アプリで同じマウスでも落ちるかを確認し、Feedback Assistant に報告
+  - [x] 入力機器の切り分け（2026-10-26）— Magic Mouse（連続スクロール）ではアサーション 0 件で落ちない。ノッチ付きホイール（Logicool Pebble Mouse 2 M350s、ラチェット）でのみ発生
+  - [x] 最小構成の Catalyst アプリ（scratchpad の ScrollTest）で切り分け — `List` / `.refreshable` / 横スクロールのタブバー / `TabView` + `NavigationStack`（kazahana と同じ構成）/ `ScrollView` + `LazyVStack` / 行の `.onTapGesture`・`.contextMenu`・`.onHover` はいずれもアサーション 0 件。**`AttributedString` の `.link` を含む `Text` を並べただけで再現**（アサーション 4 回で落ちる）。同じ文字列を `UITextView`（編集不可・スクロール不可）で表示すると 0 件
+  - [x] kazahana のデバッグビルドで切り分け — 投稿セルを本文テキストだけにすると 0 件、埋め込み・アクションバーを外しても落ち、本文をリンクなしの `Text` にすると 0 件。原因は本文のリンク付き `Text`（`RichTextParser.attributedString`）
+  - [x] **回避（`92a6f25`）** — `RichTextView` を追加し、投稿セル本文・スレッドの中心投稿・プロフィールの自己紹介・チャットのメッセージを置き換え。Catalyst のみ `UITextView` で表示（リンク以外のクリックは背後の SwiftUI に素通し、リンクは SwiftUI の `openURL` に渡す）。iOS は従来どおり `Text`。修正後はスクロールイベント 2,000 件超でアサーション 0 件、リンク・投稿タップ・右クリックメニュー・いいね等の動作を確認
+  - [ ] Feedback Assistant に報告（最小再現プロジェクト CatalystLinkScrollCrash と報告文の下書きを作成済み、送信は総司さん）
+  - [ ] テスターに修正版（v3.9.4）を案内し、解消したか確認
+
+### macOS 版で見つかった不具合（2026-10-26、クラッシュ修正の動作確認中に発見）
+- [x] **ハッシュタグをクリックしても検索欄が空になる（`ff95622`）** — macOS 版はタブ切替時に `TabView` を作り直す（`166360d` 以来）ため、`SearchView` の State に保持したハッシュタグが消えていた。`SearchView.pendingHashtag`（static）に保持し、検索画面の表示時に取り出すようにした
+- [x] **タイムラインの返信ボタンで新規投稿の画面になる（`9045de6`）** — `.sheet(isPresented:)` と別 State の `replyToPost` では返信先が反映されないことがあった。他画面と同じ `.sheet(item:)` に変更（引用も同様）
+  - 2026-10-26 macOS 版で両方の修正を確認、iOS シミュレータでも動作を確認
 
 ### v3.9.1 リリース（2026-10-17）
 - [x] **バージョン** — 3.9.1 (build 30)
@@ -1021,6 +1032,13 @@
 - [x] **バージョン** — 3.9.3 (build 32)
 - [x] **iOS / macOS 版のアップロード** — 2026-10-26 Xcode 27.1 (27A9275) でアーカイブし、`xcodebuild -exportArchive` で両方アップロード成功
 - [x] **iOS / macOS 版の審査提出** — 2026-10-26 両方提出
+- [ ] **審査通過・公開**
+
+### v3.9.4 リリース（2026-10-26）
+> v3.9.3 は審査中のためそのまま公開し、macOS スクロール時クラッシュの回避と上記 2 件の修正を v3.9.4 として続けて出す（総司さん判断）
+- [x] **バージョン** — 3.9.4 (build 33)
+- [ ] **iOS / macOS 版のアップロード**
+- [ ] **iOS / macOS 版の審査提出**（v3.9.3 の公開後）
 - [ ] **審査通過・公開**
 
 ---
