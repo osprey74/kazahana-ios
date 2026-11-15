@@ -60,6 +60,9 @@ kazahana は全機能を網羅するスタンドアロンアプリではなく�
 # リポジトリのクローン
 git clone https://github.com/osprey74/kazahana-ios.git
 
+# シークレット用の設定ファイルを作成（Git 管理外）
+cp Config/Secrets.example.xcconfig Config/Secrets.xcconfig
+
 # Xcode で開く
 open kazahana-ios.xcodeproj
 

@@ -60,6 +60,9 @@ Kazahana is designed as a **lightweight companion app** — not a full-featured 
 # Clone the repository
 git clone https://github.com/osprey74/kazahana-ios.git
 
+# Create the secrets config file (not tracked by Git)
+cp Config/Secrets.example.xcconfig Config/Secrets.xcconfig
+
 # Open in Xcode
 open kazahana-ios.xcodeproj
 

@@ -49,6 +49,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		C0A5EC012FC8000000A5EC01 /* App.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = App.xcconfig; sourceTree = "<group>"; };
 		C02EE7562F7F4E7700B135D2 /* HANDOFF-multi-account.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = "HANDOFF-multi-account.md"; sourceTree = "<group>"; };
 		C02EE7592F7F6FA100B135D2 /* HANDOFF-v1.1.0.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = "HANDOFF-v1.1.0.md"; sourceTree = "<group>"; };
 		C0365D4E2F6E520900700B14 /* Share​Extension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = "Share​Extension.appex"; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -136,6 +137,14 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		C0A5EC022FC8000000A5EC01 /* Config */ = {
+			isa = PBXGroup;
+			children = (
+				C0A5EC012FC8000000A5EC01 /* App.xcconfig */,
+			);
+			path = Config;
+			sourceTree = "<group>";
+		};
 		C06006792F6A410A00EC6BCF /* Documentation */ = {
 			isa = PBXGroup;
 			children = (
@@ -155,6 +164,7 @@
 				C0365D4F2F6E520900700B14 /* ShareExtension */,
 				C0D362152F6A388000E5A980 /* Products */,
 				C06006792F6A410A00EC6BCF /* Documentation */,
+				C0A5EC022FC8000000A5EC01 /* Config */,
 			);
 			sourceTree = "<group>";
 		};
@@ -579,6 +589,7 @@
 		};
 		C0D362382F6A388100E5A980 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = C0A5EC012FC8000000A5EC01 /* App.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
@@ -615,6 +626,7 @@
 		};
 		C0D362392F6A388100E5A980 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = C0A5EC012FC8000000A5EC01 /* App.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;

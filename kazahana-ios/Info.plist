@@ -8,6 +8,8 @@
 	<string>public.app-category.social-networking</string>
 	<key>LSMultipleInstancesProhibited</key>
 	<true/>
+	<key>PushAPISecret</key>
+	<string>$(PUSH_API_SECRET)</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 	<key>BGTaskSchedulerPermittedIdentifiers</key>

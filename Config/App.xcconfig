@@ -1,0 +1,8 @@
+// App.xcconfig
+// アプリ本体ターゲット (kazahana-ios) の Debug / Release 共通のベース構成。
+// シークレットは Git 管理外の Secrets.xcconfig から読み込む。
+// Secrets.xcconfig が無くてもビルドできるよう、省略可能インクルード (#include?) を使う。
+
+PUSH_API_SECRET =
+
+#include? "Secrets.xcconfig"

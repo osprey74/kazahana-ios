@@ -1,6 +1,6 @@
 # kazahana-ios 開発タスク・進捗記録
 
-最終更新: 2026-10-28 (v3.9.4 (build 33) の公開を記録)
+最終更新: 2026-11-15 (プッシュ通知 API シークレット入れ替えの iOS 側コード変更を記録)
 
 ---
 
@@ -32,6 +32,7 @@
 - v3.9.1 バグ修正 (2026-10-17): 返信の root 修正・ディープリンク修正 ✅ 完了（3.9.1 (build 30) iOS / macOS とも公開済み）、新規作成リストの表示修正は v3.9.2 (build 31) で 2026-10-26 iOS / macOS とも公開済み、macOS スクロール時クラッシュは v3.9.4 で回避（リンク付き Text が原因の OS 不具合）
 - v3.9.3 バグ修正 (2026-10-26): macOS 版のフィード並べ替え不具合を修正 ✅ 完了（3.9.3 (build 32) iOS / macOS とも公開済み）
 - v3.9.4 バグ修正 (2026-10-26): macOS スクロール時クラッシュの回避・ハッシュタグ検索・返信シートの修正 ✅ 完了（3.9.4 (build 33) iOS / macOS とも 2026-10-28 公開済み）
+- プッシュ通知 API シークレット入れ替え (2026-11-15): 直書きの廃止（xcconfig + Info.plist 経由）は実装済み・iOS 実機で新シークレットでの登録を確認済み、リリースは未実施
 - App Store 準備: バージョン 1.1.0・Bundle ID 統一（Keychain/IAP/BGTask/CFBundleURLName）・プライバシーポリシー公開・審査用アカウント作成・v1.0 リリース完了 ✅
 
 ---
@@ -1040,6 +1041,27 @@
 - [x] **iOS / macOS 版のアップロード** — 2026-10-26 Xcode 27.1 (27A9275) でアーカイブし、`xcodebuild -exportArchive` で両方アップロード成功
 - [x] **iOS / macOS 版の審査提出** — 2026-10-27 両方提出（v3.9.3 の公開後）
 - [x] **審査通過・公開** — 2026-10-28 公開（総司さんより報告）
+
+---
+
+## プッシュ通知 API シークレット入れ替え（2026-11-15 登録）— 進行中
+> 手順書: `docs/HANDOFF-push-api-secret-rotation.md`。公開リポジトリに直書きされていたバックエンドの API シークレットを入れ替える。バックエンド側（新旧両方の受け付け）は対応済み
+
+### 直書きの廃止（手順 3）
+- [x] **`Config/App.xcconfig`** — アプリ本体ターゲットの Debug / Release のベース構成。`#include? "Secrets.xcconfig"` で読み込むため、`Secrets.xcconfig` が無くてもビルドできる
+- [x] **`Config/Secrets.example.xcconfig`** — 値なしのひな形。`Config/Secrets.xcconfig` は `.gitignore` に追加
+- [x] **`Info.plist`** — `PushAPISecret` = `$(PUSH_API_SECRET)` を追加
+- [x] **`PushNotificationService.swift`** — シークレットを Info.plist から読む。空のときはバックエンド呼び出しをスキップ。登録・削除の成功ログは HTTP 2xx のときだけ出す
+- [x] **README** — クローン後に `Secrets.example.xcconfig` をコピーする手順を追記（EN / JA）
+- [x] 作業ツリーに旧シークレットの文字列がないこと（`git grep` で確認）
+- [x] シミュレータ向けビルド成功（シークレット未設定の状態）
+
+### 動作確認とリリース
+- [x] `Config/Secrets.xcconfig` に新シークレットを記入（総司様が直接編集）
+- [x] iOS 実機で `[Push] Registered token for ...` が出て、HTTP 401 が出ないこと（2026-11-15 確認）
+- [x] Mac Catalyst — バックエンド呼び出しは `#if !targetEnvironment(macCatalyst)` で除外されており対象外。起動に問題がないことを確認（2026-11-15）
+- [ ] バージョンを上げて App Store（iOS・Mac）に提出
+- [ ] 公開
 
 ---
 

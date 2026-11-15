@@ -44,3 +44,6 @@ fastlane/test_output
 iOSInjectionProject/
 scripts/mergeFromCity_2.csv
 scripts/mergeFromCity_2.csv
+
+# Secrets (Git 管理外)
+Config/Secrets.xcconfig

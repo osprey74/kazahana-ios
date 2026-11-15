@@ -18,7 +18,13 @@ final class PushNotificationService {
     // MARK: - 定数
 
     private let backendURL = "https://kazahana-push-backend.fly.dev"
-    private let apiSecret = "G(|2NLm2W&MtF%uN"
+    /// バックエンドの API シークレット。
+    /// Git 管理外の `Config/Secrets.xcconfig` の `PUSH_API_SECRET` を、Info.plist の `PushAPISecret` 経由で読む。
+    /// 未設定（空）の場合はバックエンド呼び出しをスキップする。
+    private let apiSecret: String = {
+        let value = Bundle.main.object(forInfoDictionaryKey: "PushAPISecret") as? String
+        return value?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+    }()
 
     // MARK: - State
 
@@ -75,12 +81,12 @@ final class PushNotificationService {
             print("[Push] No device token yet, skipping registration for \(did)")
             return
         }
-        await callBackend(
+        let succeeded = await callBackend(
             method: "POST",
             path: "/api/device-token",
             body: ["did": did, "token": token, "platform": "ios"]
         )
-        print("[Push] Registered token for \(did)")
+        if succeeded { print("[Push] Registered token for \(did)") }
     }
 
     /// 保存済み全アカウント（全 DID）に対してデバイストークンを登録する。
@@ -97,12 +103,12 @@ final class PushNotificationService {
     /// 指定 DID のデバイストークンをバックエンドから削除する。
     /// アカウント削除時・ログアウト時に AuthViewModel から呼ぶ。
     func unregisterToken(for did: String) async {
-        await callBackend(
+        let succeeded = await callBackend(
             method: "DELETE",
             path: "/api/device-token",
             body: ["did": did, "platform": "ios"]
         )
-        print("[Push] Unregistered token for \(did)")
+        if succeeded { print("[Push] Unregistered token for \(did)") }
     }
 
     // MARK: - バッジリセット
@@ -117,8 +123,14 @@ final class PushNotificationService {
 
     // MARK: - Private
 
-    private func callBackend(method: String, path: String, body: [String: String]) async {
-        guard let url = URL(string: backendURL + path) else { return }
+    /// バックエンドを呼び出す。HTTP 2xx が返ったときだけ true を返す。
+    @discardableResult
+    private func callBackend(method: String, path: String, body: [String: String]) async -> Bool {
+        guard !apiSecret.isEmpty else {
+            print("[Push] PUSH_API_SECRET is not set, skipping backend \(method) \(path)")
+            return false
+        }
+        guard let url = URL(string: backendURL + path) else { return false }
         var request = URLRequest(url: url)
         request.httpMethod = method
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -128,9 +140,12 @@ final class PushNotificationService {
             let (_, response) = try await URLSession.shared.data(for: request)
             if let http = response as? HTTPURLResponse, !(200..<300).contains(http.statusCode) {
                 print("[Push] Backend \(method) \(path) returned HTTP \(http.statusCode)")
+                return false
             }
+            return true
         } catch {
             print("[Push] Backend \(method) \(path) error: \(error)")
+            return false
         }
     }
 }
