@@ -1060,8 +1060,13 @@
 - [x] `Config/Secrets.xcconfig` に新シークレットを記入（総司様が直接編集）
 - [x] iOS 実機で `[Push] Registered token for ...` が出て、HTTP 401 が出ないこと（2026-11-15 確認）
 - [x] Mac Catalyst — バックエンド呼び出しは `#if !targetEnvironment(macCatalyst)` で除外されており対象外。起動に問題がないことを確認（2026-11-15）
-- [ ] バージョンを上げて App Store（iOS・Mac）に提出
-- [ ] 公開
+- [x] 動作確認は上記のとおり完了
+
+### v3.9.5 リリース
+- [x] **バージョン** — 3.9.5 (build 34)
+- [ ] **iOS / macOS 版のアップロード**
+- [ ] **iOS / macOS 版の審査提出**
+- [ ] **審査通過・公開**
 
 ---
 
